@@ -293,6 +293,25 @@ of how the two applications share a session.
 
 ---
 
+# Run in Visual Studio Code
+
+The repository ships with a VS Code configuration for all three
+services.
+
+```text
+Ctrl+Shift+P  ->  Tasks: Run Task  ->  Setup: everything
+Ctrl+Shift+P  ->  Tasks: Run Task  ->  Dev: all services
+```
+
+The second command starts the backend, the news dashboard and the
+landing page in separate terminals. `F5` offers a configuration that
+starts everything and opens the landing page in Chrome with the Python
+debugger attached to the backend.
+
+See [docs/vscode.md](docs/vscode.md) for the details.
+
+---
+
 # Development Workflow
 
 Create a feature branch

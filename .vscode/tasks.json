@@ -2,11 +2,200 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run Backend",
+            "label": "Setup: backend dependencies",
+            "detail": "Create the virtual environment and install the backend packages",
             "type": "shell",
-            "command": "python -m uvicorn app.main:app --reload",
+            "command": "uv sync --all-groups",
             "options": {
                 "cwd": "${workspaceFolder}/backend"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: news frontend dependencies",
+            "detail": "Install the packages of the news dashboard",
+            "type": "shell",
+            "command": "npm install",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: landing page dependencies",
+            "detail": "Install the packages of the landing page hub",
+            "type": "shell",
+            "command": "npm install",
+            "options": {
+                "cwd": "${workspaceFolder}/landing"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: seed demo users",
+            "detail": "Create the demo accounts, for example Admin / Admin@news26",
+            "type": "shell",
+            "command": "uv run python seed_users.py",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Setup: backend dependencies"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: everything",
+            "detail": "Install all dependencies and seed the demo users",
+            "type": "shell",
+            "command": "echo 'Setup finished. Run the Dev: all services task to start.'",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "Setup: news frontend dependencies",
+                "Setup: landing page dependencies",
+                "Setup: seed demo users"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Run: backend",
+            "detail": "FastAPI on http://127.0.0.1:8000",
+            "type": "shell",
+            "command": "uv run uvicorn app.main:app --reload",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "python",
+                "fileLocation": ["relative", "${workspaceFolder}/backend"],
+                "pattern": {
+                    "regexp": "^(.*?):(\\d+):(\\d+)\\s+-?\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "message": 4
+                }
+            }
+        },
+        {
+            "label": "Run: news frontend",
+            "detail": "News dashboard on http://localhost:5173",
+            "type": "shell",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": "^$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE.*ready in",
+                    "endsPattern": "Local:.*http"
+                }
+            }
+        },
+        {
+            "label": "Run: landing page",
+            "detail": "Landing page hub on http://localhost:5174",
+            "type": "shell",
+            "command": "npm run dev",
+            "options": {
+                "cwd": "${workspaceFolder}/landing"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "vite",
+                "pattern": {
+                    "regexp": "^$",
+                    "file": 1,
+                    "location": 2,
+                    "message": 3
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "VITE.*ready in",
+                    "endsPattern": "Local:.*http"
+                }
+            }
+        },
+        {
+            "label": "Dev: all services",
+            "detail": "Backend, news dashboard and landing page, each in its own terminal",
+            "type": "shell",
+            "command": "echo 'Starting the backend, the news dashboard and the landing page.'",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "Run: backend",
+                "Run: news frontend",
+                "Run: landing page"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: backend",
+            "detail": "Authentication endpoint tests",
+            "type": "shell",
+            "command": "uv run pytest -q",
+            "options": {
+                "cwd": "${workspaceFolder}/backend"
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: news frontend",
+            "detail": "Frame session bridge tests",
+            "type": "shell",
+            "command": "npm test",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: landing page",
+            "detail": "Hub frame bridge tests",
+            "type": "shell",
+            "command": "npm test",
+            "options": {
+                "cwd": "${workspaceFolder}/landing"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: all",
+            "detail": "Run every test suite",
+            "type": "shell",
+            "command": "echo 'Running the backend, news frontend and landing page test suites.'",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "Test: backend",
+                "Test: news frontend",
+                "Test: landing page"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Check: lint and build",
+            "detail": "Lint and build both frontend applications",
+            "type": "shell",
+            "command": "npm run lint && npm run build",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
             },
             "problemMatcher": []
         }

@@ -37,3 +37,9 @@ dev = [
     "ruff",
     "mypy",
 ]
+
+[tool.pytest.ini_options]
+# The application package lives in the backend directory, so it has to be
+# importable from the tests regardless of how pytest is invoked.
+pythonpath = ["."]
+testpaths = ["tests"]

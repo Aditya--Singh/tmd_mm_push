@@ -1,11 +1,39 @@
 {
-    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+    // The backend virtual environment. Pointing at the folder lets the
+    // Python extension resolve the interpreter on Windows, Linux and
+    // macOS. If it is not picked up automatically, run
+    // "Python: Select Interpreter" and choose backend/.venv.
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv",
     "python.terminal.activateEnvironment": true,
+    "python.analysis.typeCheckingMode": "basic",
+
+    // The frontend applications each have their own ESLint flat config.
+    "eslint.workingDirectories": [
+        "frontend",
+        "landing"
+    ],
+    "eslint.validate": [
+        "javascript",
+        "javascriptreact"
+    ],
+
     "editor.formatOnSave": true,
-    "editor.rulers": [100],
+    "editor.rulers": [
+        100
+    ],
+
     "files.exclude": {
         "**/__pycache__": true,
-        "**/.pytest_cache": true
+        "**/.pytest_cache": true,
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.venv": true
     },
-    "python.analysis.typeCheckingMode": "basic"
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/dist": true,
+        "**/.venv": true,
+        "**/uv.lock": true,
+        "**/package-lock.json": true
+    }
 }

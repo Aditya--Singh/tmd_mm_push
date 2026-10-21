@@ -2,8 +2,8 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "FastAPI",
-            "type": "python",
+            "name": "Backend: FastAPI",
+            "type": "debugpy",
             "request": "launch",
             "module": "uvicorn",
             "args": [
@@ -11,7 +11,41 @@
                 "--reload"
             ],
             "cwd": "${workspaceFolder}/backend",
-            "jinja": true
+            "jinja": true,
+            "justMyCode": false
+        },
+        {
+            "name": "Landing page (Chrome)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5174",
+            "webRoot": "${workspaceFolder}/landing",
+            "sourceMaps": true
+        },
+        {
+            "name": "News dashboard (Chrome)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/frontend",
+            "sourceMaps": true
+        },
+        {
+            "name": "Debug: landing page with all services",
+            "detail": "Starts the backend, the news dashboard and the landing page, and opens the hub in Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5174",
+            "webRoot": "${workspaceFolder}/landing",
+            "sourceMaps": true,
+            "preLaunchTask": "Dev: all services",
+            "compound": {
+                "name": "Debug: landing page with all services",
+                "configurations": [
+                    "Backend: FastAPI",
+                    "Landing page (Chrome)"
+                ]
+            }
         }
     ]
 }
