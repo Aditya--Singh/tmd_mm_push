@@ -82,6 +82,13 @@ copy .env.example .env
 
 Populate local values as required.
 
+`JWT_SECRET_KEY` is required and has no default, so the backend will not
+start without it. Generate one:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
 Never commit `.env` or secrets to Git.
 
 ## 7. Database
@@ -160,7 +167,7 @@ http://localhost:5173/
 
 ## 12. Backend + Frontend Ports
 
-Run both services:
+Run all three services:
 
 ```text
 Terminal 1
@@ -168,8 +175,12 @@ FastAPI
 http://127.0.0.1:8000
 
 Terminal 2
-React/Vite
+React/Vite (news dashboard)
 http://localhost:5173
+
+Terminal 3
+React/Vite (landing page hub)
+http://localhost:5174
 ```
 
 The current Axios client is:
@@ -178,7 +189,12 @@ The current Axios client is:
 frontend/src/api/client.js
 ```
 
-and currently points to the FastAPI development URL.
+Its base URL comes from `VITE_API_BASE_URL` and defaults to the current
+origin. During development, Vite proxies `/api` to the backend.
+
+The landing page reads its configuration from `landing/.env`. Both
+frontend applications work without a `.env` file in development, because
+the defaults cover the standard local setup.
 
 ## 13. Verify the Dashboard
 
@@ -363,6 +379,23 @@ Check FastAPI CORS configuration and confirm the frontend origin is allowed.
 
 Do not allow every origin in production merely to hide a configuration problem.
 
+## 19a. Run the Landing Page
+
+```powershell
+cd bank-news-ai\landing
+npm install
+npm run dev
+```
+
+Then open <http://localhost:5174> and sign in with a seeded account, for
+example `Admin` / `Admin@news26`.
+
+Select **News Feed** in the sidebar to open the dashboard inside the
+workspace. It is already signed in: the landing page passes the session
+to the embedded application.
+
+See `docs/integration.md` for the full description.
+
 ## 20. Quick Startup
 
 ### Terminal 1
@@ -382,6 +415,16 @@ npm run dev
 ```
 
 Then open the Vite URL.
+
+### Terminal 3
+
+```powershell
+cd bank-news-ai\landing
+npm install
+npm run dev
+```
+
+Then open <http://localhost:5174>.
 
 ## 21. First-Time Machine Checklist
 

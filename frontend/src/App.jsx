@@ -26,17 +26,17 @@ import NewsFilters from "./components/NewsFilters";
 
 import ApplicationInsights from "./components/ApplicationInsights";
 import NewsPipelineControl from "./components/NewsPipelineControl";
+import {
+  getBridge,
+  isEmbeddedContext,
+  onSessionChange,
+  resolveInitialSession,
+} from "./session";
+import { clearSession, writeSession } from "./session/storage";
 
 function App() {
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(
-        localStorage.getItem("bankNewsUser") || "null"
-      );
-    } catch {
-      return null;
-    }
-  });
+  const [user, setUser] = useState(null);
+  const [authStatus, setAuthStatus] = useState("resolving");
   const [summary, setSummary] = useState(null);
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -45,6 +45,7 @@ function App() {
   const [adminTab, setAdminTab] = useState("backend-summary");
   const [topBanks, setTopBanks] = useState([]);
   const [topTopics, setTopTopics] = useState([]);
+  const [embedded] = useState(() => isEmbeddedContext());
   const [filters, setFilters] = useState({
     source: "",
     bank: "",
@@ -79,21 +80,93 @@ function App() {
   const newsSectionRef = useRef(null);
 
   const handleLogout = () => {
-    localStorage.removeItem("bankNewsUser");
+    clearSession(window.localStorage);
 
     setUser(null);
+    setAuthStatus("anonymous");
     setShowFeedback(false);
     setAdminTab("backend-summary");
+
+    // Keep the landing page in step when this application is embedded.
+    if (embedded) {
+      getBridge().notifyParentLogout();
+    }
   };
 
   const handleLogin = (loggedInUser) => {
-    localStorage.setItem(
-      "bankNewsUser",
-      JSON.stringify(loggedInUser),
-    );
+    writeSession(loggedInUser, window.localStorage);
 
     setUser(loggedInUser);
+    setAuthStatus("authenticated");
   };
+
+  // Resolve the session once, on start-up. When embedded, the landing
+  // page owns authentication and hands the session over.
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      const session = await resolveInitialSession();
+
+      if (cancelled) {
+        return;
+      }
+
+      if (session) {
+        setUser(session);
+        setAuthStatus("authenticated");
+      } else {
+        setUser(null);
+        setAuthStatus("anonymous");
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The API client clears the stored session and fires this event when a
+  // request is rejected as unauthorised.
+  useEffect(() => {
+    const handleExpired = () => {
+      setUser(null);
+      setAuthStatus("anonymous");
+      setShowFeedback(false);
+      setSummary(null);
+      setNews([]);
+      setTopBanks([]);
+      setTopTopics([]);
+
+      if (embedded) {
+        getBridge().notifyParentLogout();
+      }
+    };
+
+    window.addEventListener("auth-expired", handleExpired);
+
+    return () =>
+      window.removeEventListener("auth-expired", handleExpired);
+  }, [embedded]);
+
+  // React to a session that the landing page changes, for example when
+  // the user signs out there.
+  useEffect(() => {
+    return onSessionChange((change) => {
+      if (change.status === "anonymous") {
+        setUser(null);
+        setAuthStatus("anonymous");
+        setShowFeedback(false);
+      }
+
+      if (change.status === "authenticated") {
+        setUser(change.session);
+        setAuthStatus("authenticated");
+      }
+    });
+  }, []);
 
 
   useEffect(() => {
@@ -126,10 +199,10 @@ function App() {
       }
     };
 
+    // The dashboard is only rendered for a signed-in user, so there is
+    // nothing to load until a session exists.
     if (user?.accessToken) {
       loadDashboard();
-    } else {
-      setLoading(false);
     }
   }, [user]);
 
@@ -168,6 +241,16 @@ function App() {
     }
   }, [user, currentPage, pageSize, filters]);
 
+  if (authStatus === "resolving") {
+    return (
+      <div className="loading">
+        {embedded
+          ? "Establishing secure session..."
+          : "Loading Bank News Intelligence..."}
+      </div>
+    );
+  }
+
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
@@ -201,39 +284,11 @@ function App() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div>
-          {/* <h1>Bank News Intelligence</h1>
-          <p>Executive News &amp; Risk Dashboard</p> */}
-          <h1>AI-Enabled Top Management Decision Support Platform</h1>
-          <p>Insights from External Sources</p>
-        </div>
-
-        <div className="header-actions">
-          <div className="header-user">
-            <div className="header-user-avatar">
-              {user.username.charAt(0).toUpperCase()}
-            </div>
-
-            <div className="header-user-info">
-              <span className="header-user-greeting">
-                Welcome
-              </span>
-
-              <strong>
-                {user.username}
-              </strong>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="feedback-header-button"
-            onClick={() => setShowFeedback(true)}
-          >
-            Give Feedback
-          </button>
-
+      {embedded ? (
+        // Inside the landing page the platform header, the signed-in user
+        // and the logout control belong to the host application. Only the
+        // actions that stay local to this application are kept here.
+        <div className="embedded-toolbar">
           <div className="header-date">
             {new Date().toLocaleDateString("en-IN", {
               day: "2-digit",
@@ -244,13 +299,64 @@ function App() {
 
           <button
             type="button"
-            className="logout-button"
-            onClick={handleLogout}
+            className="feedback-header-button"
+            onClick={() => setShowFeedback(true)}
           >
-            Logout
+            Give Feedback
           </button>
         </div>
-      </header>
+      ) : (
+        <header className="header">
+          <div>
+            {/* <h1>Bank News Intelligence</h1>
+            <p>Executive News &amp; Risk Dashboard</p> */}
+            <h1>AI-Enabled Top Management Decision Support Platform</h1>
+            <p>Insights from External Sources</p>
+          </div>
+
+          <div className="header-actions">
+            <div className="header-user">
+              <div className="header-user-avatar">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+
+              <div className="header-user-info">
+                <span className="header-user-greeting">
+                  Welcome
+                </span>
+
+                <strong>
+                  {user.username}
+                </strong>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="feedback-header-button"
+              onClick={() => setShowFeedback(true)}
+            >
+              Give Feedback
+            </button>
+
+            <div className="header-date">
+              {new Date().toLocaleDateString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
+            </div>
+
+            <button
+              type="button"
+              className="logout-button"
+              onClick={handleLogout}
+            >
+              Logout
+            </button>
+          </div>
+        </header>
+      )}
 
       <main className="dashboard">
 

@@ -1,0 +1,280 @@
+import { chromium } from "playwright";
+
+const HUB_URL = process.env.HUB_URL || "http://localhost:5174/";
+const USERNAME = process.env.E2E_USERNAME || "Admin";
+const PASSWORD = process.env.E2E_PASSWORD || "Admin@news26";
+const FRAME_MATCH = process.env.E2E_FRAME_MATCH || "5173";
+
+const results = [];
+
+function check(name, ok, detail = "") {
+    results.push({ name, ok });
+    console.log(
+        `${ok ? "PASS" : "FAIL"} - ${name}${detail ? `  ::  ${detail}` : ""}`,
+    );
+}
+
+const browser = await chromium.launch();
+const context = await browser.newContext();
+const page = await context.newPage();
+
+const consoleErrors = [];
+const apiResponses = [];
+
+page.on("console", (message) => {
+    if (message.type() === "error") {
+        consoleErrors.push(message.text());
+    }
+});
+
+page.on("pageerror", (error) => {
+    consoleErrors.push(String(error));
+});
+
+page.on("response", (response) => {
+    const url = response.url();
+
+    if (url.includes("/api/news") || url.includes("/api/dashboard")) {
+        apiResponses.push({ url, status: response.status() });
+    }
+});
+
+// ------------------------------------------------------------------
+// 1. The landing page asks for credentials before showing the hub
+// ------------------------------------------------------------------
+
+await page.goto(HUB_URL, { waitUntil: "networkidle" });
+
+check(
+    "landing page shows a sign-in screen",
+    await page.locator(".login-button").isVisible(),
+);
+
+check(
+    "no service is embedded before sign-in",
+    (await page.locator(".workspace-frame iframe").count()) === 0,
+);
+
+// ------------------------------------------------------------------
+// 2. Signing in opens the hub
+// ------------------------------------------------------------------
+
+await page.fill("#username", USERNAME);
+await page.fill("#password", PASSWORD);
+await page.click(".login-button");
+
+await page.waitForSelector(".user-badge", { timeout: 20000 });
+
+check(
+    "hub shell is rendered after sign-in",
+    await page.locator(".platform-title").isVisible(),
+);
+
+const badge = (await page.locator(".user-badge").innerText()).trim();
+check(
+    "role badge reflects the signed-in role",
+    badge === "Administrator",
+    badge,
+);
+
+const userName = (await page.locator(".user-name").innerText()).trim();
+check("signed-in user is shown", userName === USERNAME, userName);
+
+const cardCount = await page.locator(".app-card").count();
+check("all four intelligence services are listed", cardCount === 4, `${cardCount}`);
+
+const plannedBadge = await page
+    .locator(".app-card", { hasText: "SQL Genie" })
+    .locator(".app-badge")
+    .innerText();
+check(
+    "unimplemented services are marked as planned",
+    plannedBadge.trim().toLowerCase() === "planned",
+    plannedBadge,
+);
+
+// ------------------------------------------------------------------
+// 3. A service that is not built yet does not open a frame
+// ------------------------------------------------------------------
+
+await page.locator(".app-card", { hasText: "SQL Genie" }).click();
+await page.waitForTimeout(500);
+
+check(
+    "a planned service shows a placeholder instead of a frame",
+    (await page.locator(".workspace-frame iframe").count()) === 0 &&
+        (await page.locator(".placeholder").isVisible()),
+);
+
+// ------------------------------------------------------------------
+// 4. The news feed opens inside the workspace, already signed in
+// ------------------------------------------------------------------
+
+await page.locator(".app-card", { hasText: "News Feed" }).click();
+await page.waitForSelector(".workspace-frame iframe", { timeout: 20000 });
+
+const frame = page.frameLocator(".workspace-frame iframe");
+
+await frame.locator(".dashboard").waitFor({ timeout: 25000 });
+
+check(
+    "the embedded application renders the dashboard, not a sign-in screen",
+    (await frame.locator(".login-button").count()) === 0,
+);
+
+check(
+    "the embedded application hides its own platform header",
+    (await frame.locator("header.header").count()) === 0,
+);
+
+check(
+    "the embedded application shows its compact toolbar",
+    await frame.locator(".embedded-toolbar").isVisible(),
+);
+
+const childFrame = page.frames().find((f) => f.url().includes(FRAME_MATCH));
+check("the embedded frame was located", Boolean(childFrame));
+
+if (childFrame) {
+    const stored = await childFrame.evaluate(() =>
+        localStorage.getItem("bankNewsUser"),
+    );
+
+    check(
+        "the session was handed over and stored in the frame",
+        Boolean(stored) && stored.includes("accessToken"),
+        stored ? "token present" : "no session stored",
+    );
+
+    const hubStored = await page.evaluate(() =>
+        localStorage.getItem("bankHubSession"),
+    );
+
+    check(
+        "the landing page keeps its own session",
+        Boolean(hubStored) && hubStored.includes("accessToken"),
+    );
+}
+
+// The frame must be able to call the API with the transferred token.
+const newsCalls = apiResponses.filter((entry) =>
+    entry.url.includes("/api/news"),
+);
+
+check(
+    "the embedded application can read the news API with the transferred token",
+    newsCalls.length > 0 && newsCalls.every((entry) => entry.status === 200),
+    newsCalls.map((entry) => entry.status).join(",") || "no calls seen",
+);
+
+check(
+    "the embedded application is never rejected as unauthorised",
+    !apiResponses.some((entry) => entry.status === 401),
+);
+
+// ------------------------------------------------------------------
+// 5. An expired session in the frame signs the user out of the hub
+// ------------------------------------------------------------------
+
+if (childFrame) {
+    await childFrame.evaluate(() => {
+        window.dispatchEvent(new Event("auth-expired"));
+    });
+
+    await page.waitForSelector(".login-button", { timeout: 15000 });
+
+    check(
+        "an expired session in the embedded application returns the hub to the sign-in screen",
+        await page.locator(".login-button").isVisible(),
+    );
+} else {
+    check("an expired session in the embedded application returns the hub to the sign-in screen", false, "no frame");
+}
+
+// ------------------------------------------------------------------
+// 6. Signing out of the hub removes the embedded application
+// ------------------------------------------------------------------
+
+await page.fill("#username", USERNAME);
+await page.fill("#password", PASSWORD);
+await page.click(".login-button");
+await page.waitForSelector(".user-badge", { timeout: 20000 });
+
+await page.locator(".app-card", { hasText: "News Feed" }).click();
+await page.waitForSelector(".workspace-frame iframe", { timeout: 20000 });
+
+// Wait for the embedded application to be ready before signing out, as
+// a user would.
+await page
+    .frameLocator(".workspace-frame iframe")
+    .locator(".dashboard")
+    .waitFor({ timeout: 25000 });
+
+await page.locator(".logout-btn").click();
+await page.waitForSelector(".login-button", { timeout: 15000 });
+
+check(
+    "signing out of the hub returns to the sign-in screen",
+    await page.locator(".login-button").isVisible(),
+);
+
+check(
+    "signing out of the hub removes the embedded application",
+    (await page.locator(".workspace-frame iframe").count()) === 0,
+);
+
+// The embedded application keeps its own copy of the session, because it
+// usually runs on a different origin. It must be cleared too, otherwise
+// the dashboard stays signed in when it is opened directly.
+const storageState = await context.storageState();
+
+const childOriginState = storageState.origins.find((entry) =>
+    entry.origin.includes(FRAME_MATCH),
+);
+
+const childSession = childOriginState?.localStorage?.find(
+    (entry) => entry.name === "bankNewsUser",
+);
+
+
+check(
+    "signing out of the hub also clears the session inside the embedded application",
+    !childSession,
+    childSession ? "session still present" : "cleared",
+);
+
+const hubStoredAfter = await page.evaluate(() =>
+    localStorage.getItem("bankHubSession"),
+);
+
+check(
+    "signing out clears the stored session",
+    hubStoredAfter === null,
+);
+
+await browser.close();
+
+// ------------------------------------------------------------------
+
+const failed = results.filter((result) => !result.ok);
+
+console.log("");
+console.log(`Checks: ${results.length}, failed: ${failed.length}`);
+
+if (consoleErrors.length > 0) {
+    console.log("");
+    console.log("Browser console errors:");
+    for (const error of consoleErrors) {
+        console.log(`  - ${error}`);
+    }
+}
+
+if (failed.length > 0) {
+    console.log("");
+    console.log("Failed checks:");
+    for (const result of failed) {
+        console.log(`  - ${result.name}`);
+    }
+
+    process.exit(1);
+}

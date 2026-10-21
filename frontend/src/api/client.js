@@ -1,8 +1,13 @@
 import axios from "axios";
 
+import { env } from "../config/env";
+
+// The API base URL is configurable so that the same build can be pointed
+// at a local backend, a shared environment, or a reverse-proxied path.
+// An empty value keeps the browser on the current origin, which is what
+// both the development proxy and a reverse proxied deployment expect.
 const apiClient = axios.create({
-    baseURL: "http://127.0.0.1:8000",
-    // baseURL: "",
+    baseURL: env.VITE_API_BASE_URL || "",
     headers: {
         "Content-Type": "application/json",
     },

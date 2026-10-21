@@ -7,17 +7,14 @@ The application is currently running in a local development environment.
 Current components:
 
 ```text
-React / Vite
+Landing Page (React / Vite)
         |
         v
-FastAPI
-        |
-        v
-SQLAlchemy
-        |
-        v
-SQLite
+React / Vite  ->  FastAPI  ->  SQLAlchemy  ->  SQLite
 ```
+
+The landing page hosts the news dashboard in a frame and hands the
+session over to it, so a user signs in once.
 
 ## 2. Local Backend
 
@@ -37,23 +34,30 @@ The development frontend is served by Vite, currently using the standard develop
 
 The frontend communicates with the FastAPI backend using Axios.
 
+The landing page is a second React/Vite application in `landing/`, served
+on port 5174 during development.
+
 ## 4. Current Configuration
 
-The frontend API client currently contains a development base URL:
+The API base URL is read from the environment and defaults to the current
+origin, so the browser stays on a single origin:
 
 ```javascript
 const apiClient = axios.create({
-    baseURL: "http://127.0.0.1:8000",
+    baseURL: env.VITE_API_BASE_URL || "",
 });
 ```
 
-### Planned improvement
+During development, Vite proxies `/api` to the backend, so no CORS
+configuration is needed. Set `VITE_API_BASE_URL` to a full origin to
+call the backend directly.
 
-Move this to an environment variable, for example:
+The origins allowed to exchange session messages are configured with
+`VITE_ALLOWED_PARENT_ORIGINS` and `VITE_ALLOWED_CHILD_ORIGINS`. Both
+default to the development origins.
 
-```text
-VITE_API_BASE_URL
-```
+The allowed CORS origins on the backend are configured with the
+`CORS_ORIGINS` environment variable.
 
 ## 5. Source Control
 
@@ -88,7 +92,28 @@ The eventual deployment should address:
 - AI processing jobs
 - Database backups
 
-## 7. Containerization — Planned
+## 7. Reverse Proxy Layout — Planned
+
+The intended production arrangement serves everything from one origin:
+
+```text
+https://newsintel.pnbbank.in/          landing page
+https://newsintel.pnbbank.in/news/     news dashboard
+https://newsintel.pnbbank.in/api/      FastAPI
+```
+
+The news dashboard must be built with a base path so that its assets
+resolve under `/news/`:
+
+```bash
+cd frontend
+VITE_BASE_PATH=/news/ npm run build
+```
+
+Serving both applications from one origin lets the dashboard adopt the
+session from shared storage directly.
+
+## 8. Containerization — Planned
 
 Dockerization has not yet been completed.
 
@@ -115,11 +140,13 @@ A potential production structure is:
 
 The final infrastructure and hosting platform have not yet been selected.
 
-## 8. Security
+## 9. Security
 
 Production security requirements are still pending, including:
 
 - Restricted CORS origins
+- Restricted session message origins
+- A generated `JWT_SECRET_KEY` per environment
 - Secret/API-key management
 - Authentication/authorization where required
 - HTTPS

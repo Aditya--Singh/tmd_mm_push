@@ -11,3 +11,9 @@ class LoginResponse(BaseModel):
     token_type: str
     username: str
     role: str
+
+
+class MeResponse(BaseModel):
+    id: int
+    username: str
+    role: str

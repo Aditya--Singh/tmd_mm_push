@@ -25,11 +25,14 @@ dependencies = [
     "apscheduler",
     "pydantic-settings>=2.14.2",
     "alembic>=1.19.0",
+    "bcrypt",
+    "python-jose",
 ]
 
 [dependency-groups]
 dev = [
     "pytest",
+    "httpx",
     "black",
     "ruff",
     "mypy",

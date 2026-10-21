@@ -23,6 +23,25 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 480
 
+    # Comma-separated list of browser origins allowed to call the API.
+    # Includes the news frontend (5173) and the landing page hub (5174).
+    cors_origins: str = (
+        "http://localhost:5173,"
+        "http://127.0.0.1:5173,"
+        "http://newsintel.pnbbank.in:5173,"
+        "http://localhost:5174,"
+        "http://127.0.0.1:5174,"
+        "http://newsintel.pnbbank.in:5174"
+    )
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
+
 
 @lru_cache
 def get_settings() -> Settings:

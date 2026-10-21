@@ -14,6 +14,8 @@ An AI-powered banking news aggregation platform that collects news from multiple
 - Provider abstraction (OpenAI/Azure OpenAI ready)
 - REST APIs with FastAPI
 - React dashboard
+- JWT authentication with role based access
+- Landing page hub with single sign-on into embedded services
 - Semantic search (planned)
 - Executive insights & analytics (planned)
 
@@ -94,6 +96,24 @@ uv.lock
 frontend/
 ```
 src/
+├── api/
+├── components/
+├── config/
+├── pages/
+├── session/        # frame session bridge
+public/
+
+```
+
+landing/
+```
+src/
+├── api/
+├── components/
+├── config/
+├── pages/
+├── session/        # hub frame bridge
+├── styles/
 public/
 
 ```
@@ -122,6 +142,10 @@ FastAPI
 │
 ▼
 React Dashboard
+│
+│  session handed over
+▼
+Landing Page Hub
 
 ```
 
@@ -181,6 +205,17 @@ source .venv/bin/activate
 
 Create a `.env` file inside the backend directory.
 
+```bash
+cd backend
+cp .env.example .env
+```
+
+`JWT_SECRET_KEY` is required and has no default. Generate one with:
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
 ```text
 DATABASE_URL=sqlite:///news.db
 
@@ -191,7 +226,13 @@ OLLAMA_MODEL=qwen3:8b
 TIMEZONE=Asia/Kolkata
 
 NEWS_CUTOFF_DATE=2026-06-20
+
+JWT_SECRET_KEY=<generated>
 ```
+
+The frontend applications read their own `.env` files, which are optional
+in development because sensible defaults are built in. See
+[docs/integration.md](docs/integration.md) for the full list.
 
 ---
 
@@ -211,7 +252,7 @@ python run_scraper.py
 
 ---
 
-# Run Frontend
+# Run News Frontend
 
 ```bash
 cd ../frontend
@@ -220,6 +261,35 @@ npm install
 
 npm run dev
 ```
+
+---
+
+# Run Landing Page
+
+The landing page is a separate application that hosts the intelligence
+services and owns authentication.
+
+```bash
+cd ../landing
+
+npm install
+
+npm run dev
+```
+
+Open <http://localhost:5174> and sign in with a seeded account, for
+example `Admin` / `Admin@news26`. The news dashboard opens inside the
+workspace and is already signed in.
+
+Seed the users once with:
+
+```bash
+cd ../backend
+python seed_users.py
+```
+
+See [docs/integration.md](docs/integration.md) for the full description
+of how the two applications share a session.
 
 ---
 
@@ -273,6 +343,8 @@ Completed
 - Pagination
 - Duplicate detection
 - IST timezone support
+- JWT authentication with admin and user roles
+- Landing page hub with single sign-on into the embedded dashboard
 
 In Progress
 
@@ -281,7 +353,7 @@ In Progress
 
 Planned
 
-- React dashboard
+- SQL Genie, Data Summarizer and Peer Benchmarking services
 - Semantic search
 - Multi-source scraping
 - Scheduler

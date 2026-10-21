@@ -109,6 +109,30 @@ button {
 }
 
 /* =========================================================
+   Embedded Toolbar
+   Shown instead of the platform header when the application runs
+   inside the landing page, which owns the header and the logout.
+   ========================================================= */
+
+.embedded-toolbar {
+  background: var(--pnb-red);
+  color: #ffffff;
+
+  border-bottom: 4px solid var(--pnb-gold);
+
+  padding: 10px 24px;
+
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
+}
+
+.embedded-toolbar .header-date {
+  font-size: 13px;
+}
+
+/* =========================================================
    Feedback Header Button
    ========================================================= */
 

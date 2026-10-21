@@ -4,8 +4,21 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Set VITE_BASE_PATH to serve the application from a sub-path, for
+  // example /news/ when it is hosted behind a reverse proxy next to
+  // the landing page.
+  base: process.env.VITE_BASE_PATH || '/',
   server: {
     host: true,
     allowedHosts: ["newsintel.pnbbank.in"],
+    // The API is proxied so that the browser stays on a single origin
+    // during development, the same way it is behind a reverse proxy in
+    // production.
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
   },
 });
