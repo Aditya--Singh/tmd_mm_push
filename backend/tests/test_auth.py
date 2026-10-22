@@ -176,3 +176,38 @@ def test_me_rejects_an_invalid_token(client):
 def test_protected_routes_require_a_token(client):
     assert client.get("/api/news").status_code == 401
     assert client.get("/api/dashboard/summary").status_code == 401
+
+
+def test_the_root_endpoint_reports_the_application(client):
+    """
+    The root endpoint is what a person opens to check that the backend is
+    running, so it has to work.
+    """
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+
+    body = response.json()
+
+    assert body["application"]
+    assert body["environment"]
+
+
+def test_the_health_endpoint_reports_healthy(client):
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "healthy"}
+
+
+def test_every_setting_used_by_the_application_exists(client):
+    """
+    Guards against a setting being read that is not declared, which
+    fails at request time rather than at start-up.
+    """
+
+    from app.config.settings import Settings
+
+    for name in ("app_name", "env", "database_url", "cors_origin_list"):
+        assert hasattr(Settings(), name), f"Settings.{name} is missing"

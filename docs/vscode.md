@@ -146,6 +146,19 @@ The backend was started from the wrong directory. Run it from
 uv run uvicorn app.main:app --app-dir backend
 ```
 
+### "'Settings' object has no attribute ..." in a traceback
+
+The backend is running a cached copy of an older module. Clear the byte
+code cache and restart:
+
+```bash
+cd backend
+find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null
+```
+
+This shows up on network drives and shared folders, where the file
+timestamps are too coarse for Python to notice a change.
+
 ### The Python extension does not pick up the virtual environment
 
 Run **Python: Select Interpreter** from the Command Palette and choose

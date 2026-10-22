@@ -15,7 +15,7 @@ from app.api.auth import router as auth_router
 from app.api.pipeline import router as pipeline_router
 
 app = FastAPI(
-    title="Bank News AI",
+    title=settings.app_name,
     version="1.0.0",
 )
 
@@ -38,9 +38,16 @@ Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def home():
+    """
+    A quick way to confirm that the API is running.
+
+    The interactive documentation is at /docs.
+    """
+
     return {
-        "application": settings.APP_NAME,
-        "environment": settings.ENV,
+        "application": settings.app_name,
+        "environment": settings.env,
+        "docs": "/docs",
     }
 
 

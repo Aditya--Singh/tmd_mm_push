@@ -25,6 +25,12 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite:///news.db"
 
+    app_name: str = "Bank News AI"
+
+    # Names the environment the backend is running in, for example
+    # development or production.
+    env: str = "development"
+
     ollama_base_url: str = "http://localhost:11434"
 
     ollama_model: str = "qwen3:8b"
