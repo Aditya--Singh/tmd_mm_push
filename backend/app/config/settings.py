@@ -1,11 +1,25 @@
+import sys
 from functools import lru_cache
+from pathlib import Path
 
+from loguru import logger
+from pydantic import ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+# backend/app/config/settings.py -> backend -> repository root
+BACKEND_DIR = Path(__file__).resolve().parents[2]
+REPO_ROOT = BACKEND_DIR.parent
+
+PLACEHOLDER_SECRET = "change-me-generate-a-random-secret"
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        # The environment file in the backend directory takes precedence.
+        # A file in the repository root is read as a fallback, so the
+        # backend can be started from either directory.
+        env_file=(REPO_ROOT / ".env", BACKEND_DIR / ".env"),
         extra="ignore",
     )
 
@@ -19,7 +33,7 @@ class Settings(BaseSettings):
 
     news_cutoff_date: str = "2026-06-20"
 
-    jwt_secret_key: str
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 480
 
@@ -33,6 +47,28 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5174,"
         "http://newsintel.pnbbank.in:5174"
     )
+
+    @model_validator(mode="after")
+    def validate_secret_key(self):
+        if not self.jwt_secret_key.strip():
+            raise ValueError(
+                "JWT_SECRET_KEY is not set.\n"
+                "Copy the example environment file and give it a random "
+                "value:\n"
+                "    cp backend/.env.example backend/.env\n"
+                "    python -c \"import secrets; "
+                "print(secrets.token_urlsafe(48))\"\n"
+                "then put the generated value in JWT_SECRET_KEY."
+            )
+
+        if self.jwt_secret_key == PLACEHOLDER_SECRET:
+            logger.warning(
+                "JWT_SECRET_KEY still holds the example value. Generate a "
+                "real one before this is used anywhere but on a developer "
+                "machine."
+            )
+
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -49,4 +85,20 @@ def get_settings() -> Settings:
 
 
 # Singleton instance
-settings = get_settings()
+try:
+    settings = get_settings()
+except ValidationError as exc:
+    # Report a configuration problem as a readable message instead of a
+    # traceback, because the usual cause is a missing .env file.
+    detail = exc.errors()[0].get("msg", str(exc))
+
+    print(
+        "\n"
+        "=========================================================\n"
+        "The backend is not configured yet.\n"
+        "=========================================================\n"
+        f"{detail}\n",
+        file=sys.stderr,
+    )
+
+    raise SystemExit(1) from None

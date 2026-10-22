@@ -96,6 +96,56 @@ commands work in `landing/`.
 
 ## 7. Troubleshooting
 
+### "The backend is not configured yet"
+
+The backend needs a signing key for its access tokens and refuses to
+start without one. Create the environment file and give it a random
+value:
+
+```bash
+cd backend
+cp .env.example .env
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Paste the generated value into `JWT_SECRET_KEY` in `backend/.env`, then
+start the backend again. A `.env` in the repository root is read as a
+fallback, so either location works.
+
+### "No module named uvicorn" or "No module named fastapi"
+
+The backend is being started with a Python that does not have the
+packages installed, usually because the virtual environment is not
+active in that terminal.
+
+Use the `Run: backend` task. It starts the server through `uv run`, so
+it does not need the virtual environment to be activated. If you start
+the backend by hand, either activate the environment:
+
+```bash
+source backend/.venv/bin/activate
+```
+
+or prefix the command:
+
+```bash
+cd backend
+uv run uvicorn app.main:app --reload
+```
+
+If the task list still shows only the old "Run Backend" entry, the
+workspace is on a version of the branch from before the VS Code
+configuration was updated. Pull the branch and reload the window.
+
+### "No module named app"
+
+The backend was started from the wrong directory. Run it from
+`backend/`, or pass the application directory:
+
+```bash
+uv run uvicorn app.main:app --app-dir backend
+```
+
 ### The Python extension does not pick up the virtual environment
 
 Run **Python: Select Interpreter** from the Command Palette and choose
@@ -121,6 +171,12 @@ npm run dev -- --port 5180
 
 Also update `VITE_NEWS_APP_URL` in `landing/.env` and the allowed
 origins, so that the two applications can still find each other.
+
+### "[Errno 98] Address already in use" on port 8000
+
+Another backend is already running, most likely one you started earlier.
+Stop it, or start the backend on a different port and point the
+frontend at it with `VITE_API_BASE_URL`.
 
 ### The embedded dashboard asks for a sign-in
 

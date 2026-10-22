@@ -216,6 +216,10 @@ cp .env.example .env
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
+The backend stops with a readable message instead of a traceback when
+the key is missing. A `.env` in the repository root is read as a
+fallback, so either location works.
+
 ```text
 DATABASE_URL=sqlite:///news.db
 

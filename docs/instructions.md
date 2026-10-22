@@ -83,11 +83,15 @@ copy .env.example .env
 Populate local values as required.
 
 `JWT_SECRET_KEY` is required and has no default, so the backend will not
-start without it. Generate one:
+start without it. It stops with a readable message instead of a
+traceback. Generate one:
 
 ```powershell
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
+
+A `.env` in the repository root is read as a fallback, so either
+location works. The one in `backend/` takes precedence.
 
 Never commit `.env` or secrets to Git.
 
