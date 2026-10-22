@@ -4,9 +4,11 @@ import "./styles/landing.css";
 
 import { me } from "./api/auth";
 import AppCard from "./components/AppCard";
+import FeedbackModal from "./components/FeedbackModal";
 import Workspace from "./components/Workspace";
 import Login from "./pages/Login";
 import { envList } from "./config/env";
+import { submitFeedback } from "./api/feedback";
 import { createFrameBridge } from "./session/frameBridge";
 import {
     clearHubSession,
@@ -32,6 +34,8 @@ function App() {
     const [activeServiceId, setActiveServiceId] = useState(null);
 
     const [pendingLogout, setPendingLogout] = useState(false);
+
+    const [showFeedback, setShowFeedback] = useState(false);
 
     const clearSession = useCallback(() => {
         clearHubSession(window.localStorage);
@@ -189,14 +193,39 @@ function App() {
                     </div>
 
                     <div className="header-actions">
-                        <span className="user-name">{session.username}</span>
+                        <div className="header-user">
+                            <div className="header-avatar">
+                                {session.username.charAt(0).toUpperCase()}
+                            </div>
 
-                        <div className="user-badge">{roleLabel}</div>
+                            <div className="header-user-info">
+                                <span>Welcome</span>
+
+                                <strong>{session.username}</strong>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            className="feedback-header-button"
+                            onClick={() => setShowFeedback(true)}
+                        >
+                            Give Feedback
+                        </button>
+
+                        <div className="header-date">
+                            {new Date().toLocaleDateString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                            })}
+                        </div>
 
                         <button
                             type="button"
                             className="logout-btn"
                             onClick={handleLogout}
+                            title={`Signed in as ${roleLabel}`}
                         >
                             Logout
                         </button>
@@ -239,6 +268,23 @@ function App() {
                     />
                 </main>
             </div>
+
+            {showFeedback && (
+                <FeedbackModal
+                    onClose={() => setShowFeedback(false)}
+                    onSubmit={async (feedback) => {
+                        try {
+                            await submitFeedback(feedback);
+
+                            setShowFeedback(false);
+                        } catch (err) {
+                            console.error("Feedback submission failed:", err);
+
+                            setShowFeedback(false);
+                        }
+                    }}
+                />
+            )}
         </div>
     );
 }

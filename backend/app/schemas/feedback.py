@@ -2,8 +2,11 @@ from pydantic import BaseModel, Field
 
 
 class FeedbackCreate(BaseModel):
-    username: str = Field(..., min_length=1, max_length=100)
-    role: str = Field(..., pattern="^(user|admin)$")
+    # The signed-in user is taken from the access token, so these two
+    # fields are not used. They are still accepted so that existing
+    # clients keep working.
+    username: str | None = Field(default=None, max_length=100)
+    role: str | None = None
 
     relevance: int = Field(..., ge=1, le=5)
     accuracy: int = Field(..., ge=1, le=5)

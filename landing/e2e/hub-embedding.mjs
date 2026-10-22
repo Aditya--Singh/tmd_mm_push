@@ -63,25 +63,47 @@ await page.fill("#username", USERNAME);
 await page.fill("#password", PASSWORD);
 await page.click(".login-button");
 
-await page.waitForSelector(".user-badge", { timeout: 20000 });
+await page.waitForSelector(".header-avatar", { timeout: 20000 });
 
 check(
     "hub shell is rendered after sign-in",
     await page.locator(".platform-title").isVisible(),
 );
 
-const badge = (await page.locator(".user-badge").innerText()).trim();
-check(
-    "role badge reflects the signed-in role",
-    badge === "Administrator",
-    badge,
-);
-
-const userName = (await page.locator(".user-name").innerText()).trim();
+const userName = (await page.locator(".header-user-info strong").innerText()).trim();
 check("signed-in user is shown", userName === USERNAME, userName);
 
 const cardCount = await page.locator(".app-card").count();
 check("all four intelligence services are listed", cardCount === 4, `${cardCount}`);
+
+const headerButtons = await page.locator(".header-actions button").allInnerTexts();
+
+check(
+    "the landing page header carries the feedback and logout controls",
+    headerButtons.some((label) => label.includes("Give Feedback")) &&
+        headerButtons.some((label) => label.includes("Logout")),
+    headerButtons.join(", "),
+);
+
+check(
+    "the landing page header shows the current date",
+    /\d{2} \w{3} \d{4}/.test(
+        await page.locator(".header-date").innerText(),
+    ),
+    await page.locator(".header-date").innerText(),
+);
+
+check(
+    "the landing page header greets the signed-in user",
+    (await page.locator(".header-user-info strong").innerText()).trim() ===
+        USERNAME,
+);
+
+check(
+    "the landing page header shows the user avatar",
+    (await page.locator(".header-avatar").innerText()).trim() ===
+        USERNAME.charAt(0).toUpperCase(),
+);
 
 const plannedBadge = await page
     .locator(".app-card", { hasText: "SQL Genie" })
@@ -123,13 +145,9 @@ check(
 );
 
 check(
-    "the embedded application hides its own platform header",
-    (await frame.locator("header.header").count()) === 0,
-);
-
-check(
-    "the embedded application shows its compact toolbar",
-    await frame.locator(".embedded-toolbar").isVisible(),
+    "the embedded application shows no header of its own",
+    (await frame.locator("header.header").count()) === 0 &&
+        (await frame.locator(".embedded-toolbar").count()) === 0,
 );
 
 const childFrame = page.frames().find((f) => f.url().includes(FRAME_MATCH));
@@ -172,6 +190,38 @@ check(
     !apiResponses.some((entry) => entry.status === 401),
 );
 
+// The feedback the landing page collects must reach the backend.
+let feedbackStatus = null;
+
+page.on("response", (response) => {
+    if (response.url().includes("/api/feedback")) {
+        feedbackStatus = response.status();
+    }
+});
+
+await page.locator(".feedback-header-button").click();
+await page.waitForSelector(".feedback-modal", { timeout: 10000 });
+
+const ratingRows = await page.locator(".feedback-rating-row").all();
+
+for (const row of ratingRows) {
+    await row.locator(".star").nth(3).click();
+}
+
+await page.fill("#feedback-comments", "Verification of the feedback flow.");
+
+await page.locator(".feedback-button.primary").click();
+await page.waitForSelector(".feedback-modal", {
+    state: "detached",
+    timeout: 10000,
+});
+
+check(
+    "the landing page can submit feedback with its own session",
+    feedbackStatus === 201,
+    `status=${feedbackStatus}`,
+);
+
 // ------------------------------------------------------------------
 // 5. An expired session in the frame signs the user out of the hub
 // ------------------------------------------------------------------
@@ -198,7 +248,7 @@ if (childFrame) {
 await page.fill("#username", USERNAME);
 await page.fill("#password", PASSWORD);
 await page.click(".login-button");
-await page.waitForSelector(".user-badge", { timeout: 20000 });
+await page.waitForSelector(".header-avatar", { timeout: 20000 });
 
 await page.locator(".app-card", { hasText: "News Feed" }).click();
 await page.waitForSelector(".workspace-frame iframe", { timeout: 20000 });

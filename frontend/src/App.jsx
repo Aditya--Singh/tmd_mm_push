@@ -284,28 +284,10 @@ function App() {
 
   return (
     <div className="app">
-      {embedded ? (
+      {embedded ? null : (
         // Inside the landing page the platform header, the signed-in user
-        // and the logout control belong to the host application. Only the
-        // actions that stay local to this application are kept here.
-        <div className="embedded-toolbar">
-          <div className="header-date">
-            {new Date().toLocaleDateString("en-IN", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            })}
-          </div>
-
-          <button
-            type="button"
-            className="feedback-header-button"
-            onClick={() => setShowFeedback(true)}
-          >
-            Give Feedback
-          </button>
-        </div>
-      ) : (
+        // and the logout control belong to the host application, so the
+        // embedded application starts straight at its content.
         <header className="header">
           <div>
             {/* <h1>Bank News Intelligence</h1>

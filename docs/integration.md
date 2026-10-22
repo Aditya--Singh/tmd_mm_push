@@ -100,6 +100,30 @@ any special configuration.
   are embedded later, give them their own origin and their own
   allowlist entry.
 
+## 3.3 Who owns which part of the screen
+
+The landing page is the shell, so it owns everything around the
+services:
+
+| Element | Owner |
+|---|---|
+| Platform title and subtitle | Landing page |
+| Signed-in user, avatar and greeting | Landing page |
+| Give Feedback | Landing page |
+| Current date | Landing page |
+| Logout | Landing page |
+| The service itself | The embedded application |
+
+The embedded application therefore renders no header of its own and
+starts straight at its content. Opened directly, without the landing
+page, it keeps its own full header, because that is then the only
+chrome around it.
+
+Feedback is collected by the landing page and posted to
+`POST /api/feedback` with the landing page's own access token. The
+signed-in user is taken from the token, so the request body only
+carries the ratings.
+
 ## 4. Signing out
 
 Signing out is propagated in both directions, so the two shells never

@@ -110,24 +110,93 @@ button {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 18px;
 }
 
-.user-name {
-  color: #f1dede;
-  font-size: 14px;
-  font-weight: 600;
+/* =========================================================
+   Signed-in user
+   ========================================================= */
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.user-badge {
+.header-avatar {
+  width: 46px;
+  height: 46px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
   background: var(--accent);
-  color: #000000;
+  color: var(--primary-dark);
 
-  padding: 10px 18px;
-  border-radius: 25px;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.header-user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.header-user-info span {
+  color: #f1dede;
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.header-user-info strong {
+  color: #ffffff;
+
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.header-date {
+  color: #ffffff;
+
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* =========================================================
+   Give Feedback
+   ========================================================= */
+
+.feedback-header-button {
+  border: 1px solid var(--accent);
+
+  background: var(--accent);
+  color: var(--primary-dark);
+
+  padding: 13px 26px;
+  border-radius: 10px;
 
   font-size: 14px;
   font-weight: 700;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.feedback-header-button:hover {
+  background: #ffd633;
+  transform: translateY(-1px);
+}
+
+.feedback-header-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
 }
 
 .logout-btn {
@@ -135,8 +204,8 @@ button {
   color: #ffffff;
   background: none;
 
-  padding: 10px 18px;
-  border-radius: 8px;
+  padding: 13px 26px;
+  border-radius: 10px;
 
   font-size: 14px;
   font-weight: 600;
@@ -710,5 +779,377 @@ button {
 
   .login-card {
     padding: 30px 24px 24px;
+  }
+}
+
+/* =========================================================
+   Feedback Modal
+   ========================================================= */
+
+.feedback-overlay {
+  position: fixed;
+  inset: 0;
+
+  z-index: 1000;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 24px;
+
+  background: rgba(70, 0, 0, 0.55);
+
+  backdrop-filter: blur(2px);
+}
+
+.feedback-modal {
+  width: min(680px, 100%);
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  background: #ffffff;
+
+  border-top: 5px solid var(--primary);
+  border-radius: 10px;
+
+  padding: 28px 30px;
+
+  box-shadow: 0 20px 60px rgba(101, 0, 0, 0.3);
+}
+
+.feedback-header {
+  display: flex;
+
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 20px;
+
+  padding-bottom: 20px;
+
+  border-bottom: 1px solid var(--border);
+}
+
+.feedback-header h2 {
+  margin: 0;
+
+  color: var(--primary-dark);
+
+  font-size: 21px;
+  font-weight: 700;
+}
+
+.feedback-header p {
+  margin: 6px 0 0;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.feedback-close {
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  border: 1px solid var(--border);
+  border-radius: 50%;
+
+  background: #ffffff;
+  color: var(--text-secondary);
+
+  font-size: 22px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.feedback-close:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+
+  color: #ffffff;
+}
+
+/* ---------------------------------------------------------
+   Ratings
+   --------------------------------------------------------- */
+
+.feedback-ratings {
+  display: flex;
+  flex-direction: column;
+
+  margin-top: 6px;
+}
+
+.feedback-rating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  padding: 18px 4px;
+
+  border-bottom: 1px solid var(--border-light);
+}
+
+.feedback-rating-row:last-child {
+  border-bottom: none;
+}
+
+.feedback-rating-label {
+  display: flex;
+  flex-direction: column;
+
+  gap: 4px;
+  flex: 1;
+}
+
+.feedback-rating-label strong {
+  color: var(--text);
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.feedback-rating-label span {
+  color: var(--muted);
+
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.star-rating {
+  display: flex;
+  align-items: center;
+
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.star {
+  width: 30px;
+  height: 30px;
+
+  padding: 0;
+
+  border: none;
+  background: transparent;
+
+  color: #d7d1c7;
+
+  font-size: 25px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.star:hover {
+  color: var(--accent);
+  transform: scale(1.12);
+}
+
+.star.active {
+  color: var(--accent-dark);
+
+  text-shadow: 0 1px 2px rgba(101, 0, 0, 0.15);
+}
+
+.star.active:hover {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------
+   Comments
+   --------------------------------------------------------- */
+
+.feedback-comments {
+  margin-top: 20px;
+}
+
+.feedback-comments label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: var(--text);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.feedback-comments label span {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.feedback-comments textarea {
+  width: 100%;
+  min-height: 100px;
+
+  resize: vertical;
+  padding: 12px 14px;
+
+  border: 1px solid #d8d0c4;
+  border-radius: 6px;
+
+  background: var(--surface-soft);
+
+  color: var(--text);
+
+  font-size: 13px;
+  line-height: 1.5;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.feedback-comments textarea::placeholder {
+  color: #999999;
+}
+
+.feedback-comments textarea:hover {
+  border-color: #bcae9c;
+}
+
+.feedback-comments textarea:focus {
+  background: #ffffff;
+
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.1);
+}
+
+/* ---------------------------------------------------------
+   Footer / Buttons
+   --------------------------------------------------------- */
+
+.feedback-footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 24px;
+  padding-top: 20px;
+
+  border-top: 1px solid var(--border);
+}
+
+.feedback-button {
+  min-width: 120px;
+  height: 40px;
+
+  padding: 0 18px;
+
+  border-radius: 6px;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.feedback-button.secondary {
+  border: 1px solid #cfc5b5;
+
+  background: #ffffff;
+  color: var(--text-secondary);
+}
+
+.feedback-button.secondary:hover {
+  background: #f7f3eb;
+
+  border-color: #a99c8b;
+  color: var(--text);
+}
+
+.feedback-button.primary {
+  border: 1px solid var(--primary);
+
+  background: var(--primary);
+  color: #ffffff;
+
+  box-shadow: 0 3px 8px rgba(101, 0, 0, 0.16);
+}
+
+.feedback-button.primary:hover {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+
+  transform: translateY(-1px);
+
+  box-shadow: 0 5px 12px rgba(101, 0, 0, 0.22);
+}
+
+.feedback-button:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 600px) {
+  .feedback-overlay {
+    padding: 14px;
+  }
+
+  .feedback-modal {
+    padding: 24px 20px;
+
+    max-height: 94vh;
+  }
+
+  .feedback-rating-row {
+    align-items: flex-start;
+
+    flex-direction: column;
+
+    gap: 10px;
+  }
+
+  .star-rating {
+    width: 100%;
+
+    justify-content: flex-start;
+  }
+
+  .star {
+    width: 34px;
+    height: 34px;
+  }
+
+  .feedback-footer {
+    flex-direction: column-reverse;
+
+    align-items: stretch;
+  }
+
+  .feedback-button {
+    width: 100%;
   }
 }

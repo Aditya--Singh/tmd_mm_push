@@ -211,3 +211,90 @@ def test_every_setting_used_by_the_application_exists(client):
 
     for name in ("app_name", "env", "database_url", "cors_origin_list"):
         assert hasattr(Settings(), name), f"Settings.{name} is missing"
+
+
+def login(client, username="Admin", password="Admin@news26"):
+    response = client.post(
+        "/api/auth/login",
+        json={"username": username, "password": password},
+    )
+
+    return response.json()["access_token"]
+
+
+def test_feedback_can_be_recorded_with_only_the_ratings(client):
+    """
+    The landing page collects the feedback and identifies the user from
+    the access token, so the body does not have to carry the user.
+    """
+
+    token = login(client)
+
+    response = client.post(
+        "/api/feedback",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "relevance": 4,
+            "accuracy": 5,
+            "usefulness": 4,
+            "clarity": 3,
+            "timeliness": 5,
+            "comments": "A good platform.",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["message"] == "Feedback submitted successfully"
+
+
+def test_feedback_still_accepts_the_user_fields(client):
+    token = login(client)
+
+    response = client.post(
+        "/api/feedback",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "username": "Admin",
+            "role": "admin",
+            "relevance": 4,
+            "accuracy": 4,
+            "usefulness": 4,
+            "clarity": 4,
+            "timeliness": 4,
+        },
+    )
+
+    assert response.status_code == 201
+
+
+def test_feedback_requires_a_token(client):
+    response = client.post(
+        "/api/feedback",
+        json={
+            "relevance": 4,
+            "accuracy": 4,
+            "usefulness": 4,
+            "clarity": 4,
+            "timeliness": 4,
+        },
+    )
+
+    assert response.status_code == 401
+
+
+def test_feedback_rejects_an_incomplete_rating(client):
+    token = login(client)
+
+    response = client.post(
+        "/api/feedback",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "relevance": 4,
+            "accuracy": 4,
+            "usefulness": 4,
+            "clarity": 0,
+            "timeliness": 4,
+        },
+    )
+
+    assert response.status_code == 422
