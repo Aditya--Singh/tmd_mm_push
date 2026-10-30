@@ -54,6 +54,18 @@ class Settings(BaseSettings):
         "http://newsintel.pnbbank.in:5174"
     )
 
+    # Peer Benchmarking, which the landing page opens in its workspace.
+    #
+    # The landing page asks the benchmarking app for a single-use sign-in ticket on behalf of
+    # the person who signed in here. The shared secret never leaves this server.
+    kpi_app_url: str = "http://127.0.0.1:8077"
+
+    # The same value as HANDOFF_SECRET in the benchmarking app's .env.
+    # While it is empty, the Peer Benchmarking workspace stays closed and says why.
+    kpi_handoff_secret: str = ""
+
+    kpi_request_timeout: float = 10.0
+
     @model_validator(mode="after")
     def validate_secret_key(self):
         if not self.jwt_secret_key.strip():

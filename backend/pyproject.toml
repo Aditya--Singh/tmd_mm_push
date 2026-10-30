@@ -27,6 +27,9 @@ dependencies = [
     "alembic>=1.19.0",
     "bcrypt",
     "python-jose",
+    # Used to reach Peer Benchmarking from the server, for the sign-in
+    # ticket and for its navigation.
+    "httpx",
 ]
 
 [dependency-groups]

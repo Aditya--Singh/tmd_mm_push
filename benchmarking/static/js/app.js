@@ -1,6 +1,7 @@
 // App shell: sign-in, navigation, global quarter / provisional controls, live run indicator.
 import { state, api, $, $$, esc, icon, toast, setToken, loadToken, onUnauthorized, can, live, tip, hideTip, openDrawer, closeDrawer, prefs } from './util.js';
 import { mountMyra, updateMode, avatarSvg } from './myra.js';
+import { createBridgeClient, exchangeTicket } from './bridge.js';
 import { renderOverview } from './views/overview.js';
 import { renderTrends } from './views/trends.js';
 import { renderCompare } from './views/compare.js';
@@ -9,25 +10,101 @@ import { renderData } from './views/data.js';
 import { renderAgents } from './views/agents.js';
 import { renderGovernance } from './views/governance.js';
 
-const VIEWS = {
-  overview: { title: 'Overview', icon: 'overview', render: renderOverview },
-  trends: { title: 'Trends', icon: 'trends', render: renderTrends },
-  compare: { title: 'Peer comparison', icon: 'compare', render: renderCompare },
-  reports: { title: 'Reports', icon: 'reports', render: renderReports },
-  data: { title: 'Data & approvals', icon: 'data', render: renderData },
-  agents: { title: 'Agents & logs', icon: 'agents', render: renderAgents },
-  governance: { title: 'Governance', icon: 'governance', render: renderGovernance },
+// The screen each navigation entry draws. The titles, icons and order come from the navigation
+// manifest, so that a dashboard embedding this app can offer exactly the same list of screens.
+const RENDERERS = {
+  overview: renderOverview,
+  trends: renderTrends,
+  compare: renderCompare,
+  reports: renderReports,
+  data: renderData,
+  agents: renderAgents,
+  governance: renderGovernance,
 };
 
+let VIEWS = {};
+let NAV = { sections: [], defaultSection: 'overview', parentOrigins: [] };
+let bridge = null;
 let current = null, cleanup = null, myra = null;
 const params = new URLSearchParams(location.search);
-state.embed = params.get('embed') === '1';
+
+function isFramed() {
+  try { return window.self !== window.top; } catch { return true; }
+}
+
+state.embed = params.get('embed') === '1' || params.get('embedded') === '1' || isFramed();
+
+// Resolved once the hub has answered with a sign-in ticket, or with false when it did not.
+let settleBridgeAuth = () => {};
+const bridgeAuth = new Promise((resolve) => { settleBridgeAuth = resolve; });
+
+// --------------------------------------------------------------------------- navigation manifest
+async function loadNav() {
+  try {
+    const nav = await api('/api/ui/manifest', { noAuthRedirect: true });
+    NAV = { ...NAV, ...nav };
+    VIEWS = Object.fromEntries(NAV.sections
+      .map((s) => [s.id, { title: s.title, icon: s.icon, render: RENDERERS[s.id] }])
+      .filter(([, v]) => v.render));
+  } catch (e) {
+    console.warn('The navigation manifest could not be read; falling back to the built-in list.', e);
+    VIEWS = Object.fromEntries(Object.entries(RENDERERS).map(([id, r]) => [id, { title: id, icon: id, render: r }]));
+    NAV.sections = Object.keys(VIEWS).map((id) => ({ id, title: id, icon: id, path: '/' + id }));
+  }
+}
+
+// --------------------------------------------------------------------------- frame bridge
+function installBridge() {
+  bridge = createBridgeClient({
+    allowedParentOrigins: NAV.parentOrigins || [],
+    onAuth: async (payload) => {
+      if (!payload || !payload.ticket) return;
+      try {
+        await exchangeTicket(payload.ticket);
+        await start();
+        settleBridgeAuth(true);
+      } catch (e) {
+        showLogin(e.message || 'The sign-in could not be completed.');
+        settleBridgeAuth(false);
+      }
+    },
+    onNavigate: (payload) => {
+      const path = String(payload?.path || '').replace(/^#?\/?/, '');
+      if (!path) return;
+      const target = '#/' + path;
+      if (location.hash !== target) location.hash = target;
+    },
+    onLogout: async () => {
+      try { await api('/api/auth/logout', { method: 'POST' }); } catch { /* ignore */ }
+      setToken(null);
+      live.stop();
+      showLogin('You have been signed out.');
+      // Tell the hub the session is gone, so that it can close this frame.
+      bridge?.acknowledgeLogout();
+    },
+  });
+  bridge.install();
+}
 
 // --------------------------------------------------------------------------- boot
 async function boot() {
   document.body.classList.toggle('embed', state.embed);
   const cleanUrl = () => history.replaceState(null, '', location.pathname + (state.embed ? '?embed=1' : '') + location.hash);
   onUnauthorized(() => { setToken(null); live.stop(); showLogin(); });
+
+  await loadNav();
+
+  // Inside the hub the sign-in comes from the hub, over the frame bridge.
+  if (state.embed) {
+    installBridge();
+    const answered = await Promise.race([
+      bridgeAuth,
+      new Promise((resolve) => setTimeout(() => resolve(false), 2000)),
+    ]);
+    if (answered) return;
+    // The hub did not answer, so fall back to a session this browser already holds.
+  }
+
   if (params.get('ticket')) {
     // one-click arrival from the Top Management Dashboard: swap the single-use ticket for a session
     const ticket = params.get('ticket');
@@ -57,6 +134,17 @@ function showLogin(msg) {
   $('#app').hidden = true;
   const box = $('#login');
   box.hidden = false;
+  if (state.embed) {
+    // Inside the hub there is no sign-in form: the hub owns the sign-in.
+    box.innerHTML = `
+    <div class="login-brand">
+      <div class="brand-mark" aria-hidden="true">PNB</div>
+      <h1>Peer Benchmarking</h1>
+      <p class="login-note">${esc(msg || 'Your session has ended.')}</p>
+      <p class="muted small">Choose Peer Benchmarking again in the hub to sign in again.</p>
+    </div>`;
+    return;
+  }
   box.innerHTML = `
     <div class="login-brand">
       <div class="brand-mark" aria-hidden="true">PNB</div>
@@ -175,10 +263,13 @@ export async function refreshQuarters() {
 }
 
 function route() {
-  const name = (location.hash.replace(/^#\/?/, '').split('?')[0]) || params.get('tab') || 'overview';
-  const key = VIEWS[name] ? name : 'overview';
+  const fallback = NAV.defaultSection || 'overview';
+  const name = (location.hash.replace(/^#\/?/, '').split('?')[0]) || params.get('tab') || fallback;
+  const key = VIEWS[name] ? name : fallback;
   $$('#rail .rail-item').forEach(a => a.classList.toggle('active', a.dataset.view === key));
   current = key;
+  // Inside the hub the rail belongs to the hub, so it is told where we are.
+  bridge?.reportRoute('/' + key);
   rerender();
 }
 

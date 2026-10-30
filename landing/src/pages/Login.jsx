@@ -29,6 +29,7 @@ function Login({ onLogin }) {
             onLogin({
                 username: data.username,
                 role: data.role,
+                roleLabel: data.role_label,
                 accessToken: data.access_token,
             });
         } catch (err) {

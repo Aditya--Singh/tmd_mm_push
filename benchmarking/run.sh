@@ -40,4 +40,4 @@ echo "PNB Peer Benchmarking is starting."
 echo "Open  http://${IP:-localhost}:${PORT}   (on this machine: http://localhost:${PORT})"
 echo "Stop it with Ctrl+C."
 echo
-exec python -m app.main
+exec python -m kpibench.main

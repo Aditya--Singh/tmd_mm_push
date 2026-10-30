@@ -20,6 +20,10 @@ export function normaliseSession(session) {
 
     const role = session.role;
 
+    // The name of the role, for the interface. It is optional, because
+    // the role itself is what matters.
+    const roleLabel = session.roleLabel ?? session.role_label ?? null;
+
     if (typeof accessToken !== "string" || !accessToken) {
         return null;
     }
@@ -32,7 +36,7 @@ export function normaliseSession(session) {
         return null;
     }
 
-    return { username, role, accessToken };
+    return { username, role, accessToken, roleLabel };
 }
 
 function safeGet(storage, key) {

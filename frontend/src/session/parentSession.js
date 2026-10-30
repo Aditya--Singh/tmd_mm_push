@@ -8,10 +8,10 @@
  * access token cannot simply be read from a shared localStorage. It is
  * handed over explicitly over postMessage instead:
  *
- *   child -> parent : { type: "newsint:ready" }
- *   parent -> child : { type: "newsint:auth", payload: { username, role, accessToken } }
- *   parent -> child : { type: "newsint:logout" }
- *   child -> parent : { type: "newsint:logout" }
+ *   child -> parent : { type: "hubint:ready" }
+ *   parent -> child : { type: "hubint:auth", payload: { username, role, accessToken } }
+ *   parent -> child : { type: "hubint:logout" }
+ *   child -> parent : { type: "hubint:logout" }
  *
  * Every inbound message is checked against an origin allowlist and against
  * the expected source window, so a third-party page cannot inject a
@@ -29,13 +29,13 @@ import {
     writeSession,
 } from "./storage.js";
 
-export const MESSAGE_AUTH = "newsint:auth";
+export const MESSAGE_AUTH = "hubint:auth";
 
-export const MESSAGE_LOGOUT = "newsint:logout";
+export const MESSAGE_LOGOUT = "hubint:logout";
 
-export const MESSAGE_LOGOUT_ACK = "newsint:logout-ack";
+export const MESSAGE_LOGOUT_ACK = "hubint:logout-ack";
 
-export const MESSAGE_READY = "newsint:ready";
+export const MESSAGE_READY = "hubint:ready";
 
 export const DEFAULT_HANDSHAKE_TIMEOUT_MS = 2500;
 

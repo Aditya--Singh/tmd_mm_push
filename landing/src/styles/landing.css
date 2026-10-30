@@ -551,6 +551,86 @@ button {
   -webkit-box-orient: vertical;
 }
 
+/* =========================================================
+   Service Screens
+
+   The screens of a service that has its own navigation. They
+   sit under the service they belong to, so that the whole
+   platform is driven from one rail.
+   ========================================================= */
+
+.app-sections {
+  display: flex;
+  flex-direction: column;
+
+  margin: 2px 0 6px;
+  padding-left: 14px;
+
+  border-left: 1px solid var(--border);
+}
+
+.app-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  border: 0;
+  background: transparent;
+
+  padding: 5px 8px;
+
+  border-radius: var(--radius-sm);
+
+  font-size: 12.5px;
+  color: var(--muted);
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-section:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.app-section:focus-visible {
+  outline: 2px solid var(--accent-dark);
+  outline-offset: 2px;
+}
+
+.app-section.active {
+  background: var(--primary-50);
+  color: var(--primary-dark);
+  font-weight: 600;
+}
+
+.app-section-marker {
+  flex-shrink: 0;
+
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+
+  background: var(--border);
+}
+
+.app-section.active .app-section-marker {
+  background: var(--accent);
+}
+
+.app-section-name {
+  min-width: 0;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------------------------------------------------------
    Collapsed rail
 
@@ -584,6 +664,37 @@ button {
   white-space: normal;
   overflow: hidden;
 
+  overflow-wrap: anywhere;
+  hyphens: auto;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* In the narrow rail the screens keep their name, but in a smaller
+   type, so that the whole service can still be reached. */
+
+.container.collapsed .app-sections {
+  padding-left: 4px;
+  margin-bottom: 4px;
+}
+
+.container.collapsed .app-section {
+  padding: 4px 2px;
+
+  font-size: 10px;
+  line-height: 1.25;
+
+  text-align: center;
+}
+
+.container.collapsed .app-section-marker {
+  display: none;
+}
+
+.container.collapsed .app-section-name {
+  white-space: normal;
   overflow-wrap: anywhere;
   hyphens: auto;
 
@@ -672,6 +783,7 @@ button {
   min-height: 0;
 
   display: flex;
+  flex-direction: column;
 
   background: var(--surface-soft);
 }
@@ -684,6 +796,22 @@ button {
 
   border: none;
   display: block;
+}
+
+/* A message shown above the embedded application, for example when a
+   service cannot be reached. */
+
+.workspace-notice {
+  flex-shrink: 0;
+
+  background: var(--warn-bg);
+  color: var(--warn);
+
+  border-bottom: 1px solid var(--border);
+
+  padding: 8px 14px;
+
+  font-size: 12.5px;
 }
 
 .placeholder {

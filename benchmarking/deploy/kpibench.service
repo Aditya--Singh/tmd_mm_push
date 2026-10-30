@@ -11,7 +11,7 @@ Wants=network-online.target
 Type=simple
 User=USER
 WorkingDirectory=/home/USER/pnb-kpi-bench
-ExecStart=/home/USER/pnb-kpi-bench/.venv/bin/python -m app.main
+ExecStart=/home/USER/pnb-kpi-bench/.venv/bin/python -m kpibench.main
 Restart=on-failure
 RestartSec=5
 

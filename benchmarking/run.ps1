@@ -42,4 +42,4 @@ Write-Host 'PNB Peer Benchmarking is starting.'
 Write-Host "Open  http://${ip}:$port   (on this machine: http://localhost:$port)"
 Write-Host 'Stop it with Ctrl+C or by closing this window.'
 Write-Host ''
-& $Py -m app.main
+& $Py -m kpibench.main

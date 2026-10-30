@@ -1,0 +1,49 @@
+{
+  "service": "peer-benchmarking",
+  "title": "Peer Benchmarking",
+  "defaultSection": "overview",
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "icon": "overview",
+      "path": "/overview"
+    },
+    {
+      "id": "trends",
+      "title": "Trends",
+      "icon": "trends",
+      "path": "/trends"
+    },
+    {
+      "id": "compare",
+      "title": "Peer comparison",
+      "icon": "compare",
+      "path": "/compare"
+    },
+    {
+      "id": "reports",
+      "title": "Reports",
+      "icon": "reports",
+      "path": "/reports"
+    },
+    {
+      "id": "data",
+      "title": "Data & approvals",
+      "icon": "data",
+      "path": "/data"
+    },
+    {
+      "id": "agents",
+      "title": "Agents & logs",
+      "icon": "agents",
+      "path": "/agents"
+    },
+    {
+      "id": "governance",
+      "title": "Governance",
+      "icon": "governance",
+      "path": "/governance"
+    }
+  ]
+}

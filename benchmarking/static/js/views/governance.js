@@ -122,5 +122,5 @@ async function users(body) {
   const list = await api('/api/gov/users');
   body.innerHTML = `<section class="card"><div class="card-head"><h2>Users</h2></div><table class="tbl compact"><thead><tr><th>User ID</th><th>Name</th><th>Role</th><th>Active</th><th>Last sign-in</th></tr></thead>
     <tbody>${list.map(u => `<tr><td><code>${esc(u.username)}</code></td><td>${esc(u.full_name || '')}</td><td>${esc(u.role_label)}</td><td>${u.active ? 'Yes' : 'No'}</td><td class="small">${esc(u.last_login ? fmtTime(u.last_login, true) : 'never')}</td></tr>`).join('')}</tbody></table>
-    <p class="muted small">Users are created and reset with the command-line tool on the server (python -m app.cli). Change the default passwords before the demo.</p></section>`;
+    <p class="muted small">Users are created and reset with the command-line tool on the server (python -m kpibench.cli). Change the default passwords before the demo.</p></section>`;
 }

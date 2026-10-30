@@ -57,6 +57,23 @@ def seed_users():
                 "password": "Pankaj@news26",
                 "role": "user",
             },
+            # One account for each of the roles of Peer Benchmarking, so that the
+            # four roles can be signed in and tried from the landing page.
+            {
+                "username": "analyst",
+                "password": "Analyst@news26",
+                "role": "analyst",
+            },
+            {
+                "username": "approver",
+                "password": "Approver@news26",
+                "role": "approver",
+            },
+            {
+                "username": "gm",
+                "password": "Gm@news26",
+                "role": "gm",
+            },
         ]
 
         for item in users:

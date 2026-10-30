@@ -1,14 +1,23 @@
 /**
  * Frame session bridge.
  *
- * The landing page embeds the news application in a frame and owns
+ * The landing page embeds an application in a frame and owns
  * authentication. Because the two are usually served from different
- * origins, the access token is handed to the frame explicitly:
+ * origins, the session is handed to the frame explicitly:
  *
- *   child -> parent : { type: "newsint:ready" }
- *   parent -> child : { type: "newsint:auth", payload: { username, role, accessToken } }
- *   parent -> child : { type: "newsint:logout" }
- *   child -> parent : { type: "newsint:logout" }
+ *   child -> parent : { type: "hubint:ready" }
+ *   parent -> child : { type: "hubint:auth", payload: { username, role, accessToken } }
+ *   parent -> child : { type: "hubint:logout" }
+ *   child -> parent : { type: "hubint:logout" }
+ *
+ * The payload depends on the service. The news application shares this
+ * platform's token and takes { username, role, accessToken }. Peer
+ * Benchmarking keeps its own sessions, so it is handed a single-use
+ * sign-in ticket instead: { username, role, ticket }.
+ *
+ * The landing page can also drive the frame:
+ *
+ *   parent -> child : { type: "hubint:navigate", payload: { path } }
  *
  * Messages are only ever sent to the exact origin the frame was loaded
  * from, and messages are only accepted from the frame that is currently
@@ -18,13 +27,17 @@
  * unit tested under plain Node.
  */
 
-export const MESSAGE_AUTH = "newsint:auth";
+export const MESSAGE_AUTH = "hubint:auth";
 
-export const MESSAGE_LOGOUT = "newsint:logout";
+export const MESSAGE_LOGOUT = "hubint:logout";
 
-export const MESSAGE_LOGOUT_ACK = "newsint:logout-ack";
+export const MESSAGE_LOGOUT_ACK = "hubint:logout-ack";
 
-export const MESSAGE_READY = "newsint:ready";
+export const MESSAGE_READY = "hubint:ready";
+
+export const MESSAGE_NAVIGATE = "hubint:navigate";
+
+export const MESSAGE_ROUTE = "hubint:route";
 
 /**
  * A frame that is still starting up has not attached its message listener
@@ -67,6 +80,7 @@ export function createFrameBridge(options = {}) {
         win = typeof window !== "undefined" ? window : undefined,
         onChildLogout = () => {},
         onChildLogoutAck = () => {},
+        onChildRoute = () => {},
     } = options;
 
     const configuredOrigins = normaliseOrigins(allowedChildOrigins);
@@ -91,7 +105,12 @@ export function createFrameBridge(options = {}) {
 
     let installed = false;
 
-    let currentSession = null;
+    // The payload handed to the frame.
+    //
+    // It is the only thing the frame is ever given, so a service that is
+    // still waiting for its sign-in ticket simply holds nothing: null
+    // means "nothing to send yet".
+    let authPayload = null;
 
     // Set once the host has asked the frame to sign out. The session is
     // not handed over again while this is set, so that a handshake that
@@ -101,6 +120,9 @@ export function createFrameBridge(options = {}) {
     let logoutRetries = null;
 
     let logoutRetryCount = 0;
+
+    // Told which screen the embedded application moved to.
+    let routeHandler = onChildRoute;
 
     function frameOrigin() {
         if (!frameElement) {
@@ -138,8 +160,10 @@ export function createFrameBridge(options = {}) {
         }
 
         if (data.type === MESSAGE_READY) {
-            // The frame is asking for a session. Answer immediately.
-            sendSession();
+            // The frame is asking for a session. Answer immediately, and
+            // to the origin the frame really has, which is known for
+            // certain here.
+            sendSession(event.origin);
             return;
         }
 
@@ -152,6 +176,13 @@ export function createFrameBridge(options = {}) {
             stopLogoutRetries();
 
             onChildLogoutAck();
+            return;
+        }
+
+        if (data.type === MESSAGE_ROUTE) {
+            // The embedded application moved to another screen. The rail
+            // follows, so that the two never disagree.
+            routeHandler(data.payload ?? {});
         }
     }
 
@@ -203,12 +234,20 @@ export function createFrameBridge(options = {}) {
         win.removeEventListener("message", handleMessage);
     }
 
-    function post(message) {
+    /**
+     * Send a message to the frame.
+     *
+     * The origin is taken from the frame's address unless a caller knows
+     * better. A frame that has not navigated yet holds an empty document
+     * that belongs to this page, so posting to it would go astray; the
+     * address of the frame is used instead.
+     */
+    function post(message, knownOrigin = null) {
         if (!frameElement) {
             return false;
         }
 
-        const target = frameOrigin();
+        const target = knownOrigin ?? frameOrigin();
 
         if (!target || !isAllowedOrigin(target, allowedOrigins)) {
             return false;
@@ -222,21 +261,20 @@ export function createFrameBridge(options = {}) {
         }
     }
 
-    function sendSession() {
-        const session = currentSession;
+    function sendSession(knownOrigin = null) {
+        const payload = authPayload;
 
-        if (!session || signedOut) {
+        if (!payload || signedOut) {
             return false;
         }
 
-        return post({
-            type: MESSAGE_AUTH,
-            payload: {
-                username: session.username,
-                role: session.role,
-                accessToken: session.accessToken,
+        return post(
+            {
+                type: MESSAGE_AUTH,
+                payload,
             },
-        });
+            knownOrigin,
+        );
     }
 
     return {
@@ -250,15 +288,57 @@ export function createFrameBridge(options = {}) {
                 stopLogoutRetries();
             }
         },
+        /**
+         * Hand the session of the landing page to the frame. This is what
+         * a service that shares this platform's sessions takes.
+         */
         setSession(session) {
-            currentSession = session;
-
             if (session) {
                 // A new session replaces a session that was ended.
                 signedOut = false;
 
                 stopLogoutRetries();
+
+                authPayload = {
+                    username: session.username,
+                    role: session.role,
+                    accessToken: session.accessToken,
+                };
             }
+        },
+        /**
+         * Set exactly what is handed to the frame. Pass null when there
+         * is nothing to send yet, which is what a service that is still
+         * waiting for its sign-in ticket needs.
+         */
+        setAuthPayload(payload) {
+            authPayload = payload;
+
+            if (payload) {
+                signedOut = false;
+
+                stopLogoutRetries();
+            }
+        },
+        /**
+         * Ask the embedded application to show a different screen.
+         */
+        navigate(path) {
+            if (typeof path !== "string" || !path) {
+                return false;
+            }
+
+            return post({
+                type: MESSAGE_NAVIGATE,
+                payload: { path },
+            });
+        },
+        /**
+         * Set what happens when the embedded application moves to
+         * another screen.
+         */
+        setRouteHandler(handler) {
+            routeHandler = typeof handler === "function" ? handler : () => {};
         },
         post,
         sendSession,

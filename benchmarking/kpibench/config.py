@@ -59,6 +59,14 @@ class Settings:
     HANDOFF_ALLOWED_IPS = [x.strip() for x in os.getenv("HANDOFF_ALLOWED_IPS", "").split(",") if x.strip()]
     HANDOFF_TICKET_SECONDS = int(os.getenv("HANDOFF_TICKET_SECONDS", "120"))
     HANDOFF_ALLOW_STAFF = _bool("HANDOFF_ALLOW_STAFF", False)        # analysts/approvers/admins use passwords
+    # When the dashboard states the role its user holds, that role replaces the local one.
+    # Off by default so that a dashboard cannot silently promote or demote an account.
+    HANDOFF_SYNC_ROLE = _bool("HANDOFF_SYNC_ROLE", False)
+
+    # The Executive Intelligence Hub embeds this app in a frame and signs the user in through
+    # the frame bridge. Only these origins may drive it; see docs/INTEGRATION.md.
+    EMBED_PARENT_ORIGINS = [x.strip().rstrip("/") for x in
+                            os.getenv("EMBED_PARENT_ORIGINS", "").split(",") if x.strip()]
 
     # LLM (local only by default -> no data egress)
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")  # ollama | openai_compatible | none

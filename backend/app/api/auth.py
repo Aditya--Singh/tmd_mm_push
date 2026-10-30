@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.auth.dependencies import get_current_user
+from app.auth.roles import role_label
 from app.auth.security import (
     create_access_token,
     verify_password,
@@ -52,6 +53,7 @@ def login(
         token_type="bearer",
         username=user.username,
         role=user.role,
+        role_label=role_label(user.role),
     )
 
 
@@ -73,4 +75,5 @@ def me(
         id=current_user.id,
         username=current_user.username,
         role=current_user.role,
+        role_label=role_label(current_user.role),
     )

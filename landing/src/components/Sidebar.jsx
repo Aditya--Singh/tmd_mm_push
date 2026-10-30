@@ -19,9 +19,12 @@ function ChevronIcon() {
 function Sidebar({
     services,
     activeServiceId,
+    activeSectionId,
+    sections,
     isCollapsed,
     onToggle,
     onSelect,
+    onSelectSection,
 }) {
     return (
         <aside className="sidebar">
@@ -54,15 +57,63 @@ function Sidebar({
                 </div>
 
                 <div className="app-list" id="hub-services">
-                    {services.map((service) => (
-                        <AppCard
-                            key={service.id}
-                            service={service}
-                            isActive={service.id === activeServiceId}
-                            isCollapsed={isCollapsed}
-                            onSelect={onSelect}
-                        />
-                    ))}
+                    {services.map((service) => {
+                        const serviceSections =
+                            service.id === activeServiceId
+                                ? sections?.[service.id] ?? []
+                                : [];
+
+                        return (
+                            <div className="app-group" key={service.id}>
+                                <AppCard
+                                    service={service}
+                                    isActive={service.id === activeServiceId}
+                                    isCollapsed={isCollapsed}
+                                    onSelect={onSelect}
+                                />
+
+                                {serviceSections.length > 0 && (
+                                    <div
+                                        className="app-sections"
+                                        role="group"
+                                        aria-label={`${service.name} screens`}
+                                    >
+                                        {serviceSections.map((section) => (
+                                            <button
+                                                key={section.id}
+                                                type="button"
+                                                className={`app-section${
+                                                    section.id ===
+                                                    activeSectionId
+                                                        ? " active"
+                                                        : ""
+                                                }`}
+                                                onClick={() =>
+                                                    onSelectSection(section)
+                                                }
+                                                aria-current={
+                                                    section.id ===
+                                                    activeSectionId
+                                                        ? "page"
+                                                        : undefined
+                                                }
+                                                title={section.title}
+                                            >
+                                                <span
+                                                    className="app-section-marker"
+                                                    aria-hidden="true"
+                                                />
+
+                                                <span className="app-section-name">
+                                                    {section.title}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </aside>

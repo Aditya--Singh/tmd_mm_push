@@ -5,5 +5,5 @@ Canara Bank Q2 FY27, Union Bank Q2 FY27) as published on each bank's investor-re
 `===PAGE===` block. `truth.json` holds the headline values checked by hand against those pages.
 `pdf/` holds the same text re-rendered as small PDFs so the whole pipeline can be exercised offline.
 
-These files are used only by `python -m app.cli selftest`, which runs in a temporary folder and deletes it
+These files are used only by `python -m kpibench.cli selftest`, which runs in a temporary folder and deletes it
 afterwards. They are never loaded into the application's database.

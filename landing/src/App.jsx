@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "./styles/landing.css";
 
 import { me } from "./api/auth";
+import { fetchManifest, requestTicket } from "./api/benchmarking";
 import FeedbackModal from "./components/FeedbackModal";
 import Sidebar from "./components/Sidebar";
 import Workspace from "./components/Workspace";
@@ -19,17 +20,20 @@ import {
     readHubSession,
     writeHubSession,
 } from "./session/hubSession";
-import { servicesForRole } from "./services";
+import { servicesForRole, SESSION_MODE } from "./services";
 
 /**
- * Origins the embedded application may be served from when they are not
+ * Origins an embedded application may be served from when they are not
  * configured explicitly. These are the development and shared-hosting
- * addresses of the news frontend.
+ * addresses of the news frontend and of Peer Benchmarking.
  */
 const DEFAULT_CHILD_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://newsintel.pnbbank.in:5173",
+    "http://localhost:8077",
+    "http://127.0.0.1:8077",
+    "http://newsintel.pnbbank.in:8077",
 ];
 
 function App() {
@@ -40,6 +44,15 @@ function App() {
     const [pendingLogout, setPendingLogout] = useState(false);
 
     const [showFeedback, setShowFeedback] = useState(false);
+
+    // The screens of the service that has its own navigation, keyed by
+    // service, and the one that is on show.
+    const [sections, setSections] = useState({});
+    const [activeSectionId, setActiveSectionId] = useState(null);
+
+    // The single-use sign-in ticket for Peer Benchmarking. It is spent
+    // once, so a new one is asked for every time the service is opened.
+    const [benchmark, setBenchmark] = useState({ ticket: null, notice: "" });
 
     const [isCollapsed, setIsCollapsed] = useState(() =>
         readSidebarCollapsed(window.localStorage),
@@ -52,6 +65,7 @@ function App() {
         setAuthStatus("anonymous");
         setActiveServiceId(null);
         setPendingLogout(false);
+        setBenchmark({ ticket: null, notice: "" });
     }, []);
 
     // The embedded application confirms that it has cleared its session.
@@ -92,10 +106,9 @@ function App() {
         return () => bridge.uninstall();
     }, [bridge]);
 
-    // The bridge hands the current session to the embedded application.
-    useEffect(() => {
-        bridge.setSession(session);
-    }, [bridge, session]);
+    // The workspace decides what the embedded application is handed, so
+    // the bridge is not given the session here: the news application
+    // shares it, while Peer Benchmarking is given a ticket of its own.
 
     // Restore a session left over from a previous visit, but only after
     // the backend has confirmed that the token is still valid.
@@ -123,6 +136,7 @@ function App() {
                 setSession({
                     username: user.username,
                     role: user.role,
+                    roleLabel: user.role_label ?? stored.roleLabel,
                     accessToken: stored.accessToken,
                 });
 
@@ -141,6 +155,18 @@ function App() {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    // The embedded application tells the hub which screen it moved to,
+    // so that the rail follows a journey made inside the application.
+    const handleChildRoute = useCallback((payload) => {
+        const path = String(payload?.path ?? "").replace(/^#?\/?/, "");
+
+        if (!path) {
+            return;
+        }
+
+        setActiveSectionId(path);
     }, []);
 
     const handleToggleSidebar = useCallback(() => {
@@ -181,6 +207,97 @@ function App() {
         [services, activeServiceId],
     );
 
+    // Peer Benchmarking has its own navigation and its own sessions. When
+    // it is opened, the hub asks it for the list of screens and for a
+    // single-use sign-in ticket for the person who signed in here.
+    useEffect(() => {
+        if (activeService?.id !== "benchmark") {
+            return undefined;
+        }
+
+        let cancelled = false;
+
+        const open = async () => {
+            try {
+                const manifest = await fetchManifest();
+
+                if (cancelled) {
+                    return;
+                }
+
+                setSections((previous) => ({
+                    ...previous,
+                    benchmark: manifest.sections ?? [],
+                }));
+
+                setActiveSectionId(manifest.defaultSection ?? "overview");
+
+                const ticket = await requestTicket();
+
+                if (cancelled) {
+                    return;
+                }
+
+                setBenchmark({ ticket: ticket.ticket, notice: "" });
+            } catch (err) {
+                if (cancelled) {
+                    return;
+                }
+
+                console.error("Peer Benchmarking could not be opened:", err);
+
+                setBenchmark({
+                    ticket: null,
+                    notice:
+                        err.response?.data?.detail ??
+                        "Peer Benchmarking is not available right now.",
+                });
+            }
+        };
+
+        open();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [activeService?.id]);
+
+    // What the embedded application is handed. The news application
+    // shares this platform's token; Peer Benchmarking is given a ticket
+    // of its own.
+    const authPayload = useMemo(() => {
+        if (!session || !activeService) {
+            return null;
+        }
+
+        if (activeService.session === SESSION_MODE.TICKET) {
+            if (!benchmark.ticket) {
+                return null;
+            }
+
+            return {
+                username: session.username,
+                role: session.role,
+                ticket: benchmark.ticket,
+            };
+        }
+
+        return {
+            username: session.username,
+            role: session.role,
+            accessToken: session.accessToken,
+        };
+    }, [session, activeService, benchmark.ticket]);
+
+    const activeSection = useMemo(() => {
+        const serviceSections = sections?.[activeService?.id] ?? [];
+
+        return (
+            serviceSections.find((section) => section.id === activeSectionId) ??
+            null
+        );
+    }, [sections, activeService?.id, activeSectionId]);
+
     if (authStatus === "resolving") {
         return <div className="loading">Loading Executive Intelligence Hub...</div>;
     }
@@ -190,9 +307,10 @@ function App() {
     }
 
     const roleLabel =
-        session.role === "admin"
+        session.roleLabel ??
+        (session.role === "admin"
             ? "Administrator"
-            : session.role.charAt(0).toUpperCase() + session.role.slice(1);
+            : session.role.charAt(0).toUpperCase() + session.role.slice(1));
 
     return (
         <div className="hub">
@@ -253,14 +371,26 @@ function App() {
                 <Sidebar
                     services={services}
                     activeServiceId={activeServiceId}
+                    activeSectionId={activeSectionId}
+                    sections={sections}
                     isCollapsed={isCollapsed}
                     onToggle={handleToggleSidebar}
-                    onSelect={(selected) =>
-                        setActiveServiceId(
+                    onSelect={(selected) => {
+                        const nextId =
                             selected.id === activeServiceId
                                 ? null
-                                : selected.id,
-                        )
+                                : selected.id;
+
+                        setActiveServiceId(nextId);
+
+                        // The ticket is spent once, so it is dropped as
+                        // soon as the service is closed.
+                        if (nextId !== "benchmark") {
+                            setBenchmark({ ticket: null, notice: "" });
+                        }
+                    }}
+                    onSelectSection={(section) =>
+                        setActiveSectionId(section.id)
                     }
                 />
 
@@ -269,6 +399,14 @@ function App() {
                         bridge={bridge}
                         service={activeService}
                         session={session}
+                        authPayload={authPayload}
+                        activeSection={activeSection}
+                        onSectionChange={handleChildRoute}
+                        notice={
+                            activeService?.id === "benchmark"
+                                ? benchmark.notice
+                                : ""
+                        }
                     />
                 </main>
             </div>

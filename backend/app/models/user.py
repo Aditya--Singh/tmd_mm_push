@@ -24,6 +24,8 @@ class User(Base):
         String(20),
         nullable=False,
         default="user",
+        # One of: admin, approver, analyst, gm, user.
+        # See app/auth/roles.py for what each role may do.
     )
 
     is_active = Column(

@@ -50,7 +50,7 @@ $Py = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
 if ($LASTEXITCODE -ne 0) {
     Write-Host ''
     Write-Host 'Some required libraries could not be downloaded. Checking the connection to the Python package index...'
-    & $Py -m app.cli netcheck
+    & $Py -m kpibench.cli netcheck
     Write-Host '  pip configuration (an index-url here means pip uses a private mirror):'
     & $Py -m pip config list
     Write-Host ''
@@ -95,7 +95,7 @@ if ($env:SKIP_MODELS -eq '1') {
 }
 
 Say '5/5  Self-test (uses a temporary folder, your data is not touched)'
-& $Py -m app.cli selftest
+& $Py -m kpibench.cli selftest
 if ($LASTEXITCODE -ne 0) { Write-Host 'Self-test reported a problem - see the lines above.'; exit 1 }
 
 $port = Get-EnvValue 'PORT' '8077'

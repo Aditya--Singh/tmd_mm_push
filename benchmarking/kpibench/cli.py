@@ -1,14 +1,14 @@
 """Command-line tools.  Run from the project folder with the virtual environment active:
 
-    python -m app.cli selftest                 # proves the install works (uses a temporary folder)
-    python -m app.cli discover                 # lists the PDF links the Source Scout can see on each bank site
-    python -m app.cli collect [--offline] [--banks PNB,SBI] [--quarters 20] [--no-llm]
-    python -m app.cli reset-password <user> [--password NEW]
-    python -m app.cli add-user <user> <admin|maker|checker|viewer> --name "Full Name" [--password NEW]
-    python -m app.cli token <user>             # prints a session token (for embedding in the dashboard)
-    python -m app.cli link gm --tab trends     # prints a one-time sign-in link for a viewer (hand-off test)
-    python -m app.cli netcheck                 # explains why pip cannot download libraries
-    python -m app.cli verify-audit
+    python -m kpibench.cli selftest                 # proves the install works (uses a temporary folder)
+    python -m kpibench.cli discover                 # lists the PDF links the Source Scout can see on each bank site
+    python -m kpibench.cli collect [--offline] [--banks PNB,SBI] [--quarters 20] [--no-llm]
+    python -m kpibench.cli reset-password <user> [--password NEW]
+    python -m kpibench.cli add-user <user> <admin|maker|checker|viewer> --name "Full Name" [--password NEW]
+    python -m kpibench.cli token <user>             # prints a session token (for embedding in the dashboard)
+    python -m kpibench.cli link gm --tab trends     # prints a one-time sign-in link for a viewer (hand-off test)
+    python -m kpibench.cli netcheck                 # explains why pip cannot download libraries
+    python -m kpibench.cli verify-audit
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def cmd_selftest(args) -> int:
         env = dict(os.environ, DATA_DIR=str(tmp), DB_URL=f"sqlite:///{tmp}/selftest.db", LLM_PROVIDER="none",
                    EXTRACT_WORKERS="2")
         shutil.copytree(FIXTURES / "pdf", tmp / "inbox")
-        r = subprocess.run([sys.executable, "-m", "app.cli", "_selftest_inner"], cwd=ROOT, env=env)
+        r = subprocess.run([sys.executable, "-m", "kpibench.cli", "_selftest_inner"], cwd=ROOT, env=env)
         return r.returncode
     finally:
         if not args.keep:
@@ -305,7 +305,7 @@ def cmd_verify_audit(args) -> int:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="python -m app.cli", description="PNB KPI Benchmarking tools")
+    p = argparse.ArgumentParser(prog="python -m kpibench.cli", description="PNB KPI Benchmarking tools")
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("selftest", help="check the installation end to end (temporary folder)")
     s.add_argument("--keep", action="store_true")

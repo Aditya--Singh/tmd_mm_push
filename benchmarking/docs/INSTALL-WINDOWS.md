@@ -95,8 +95,8 @@ py -3 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env
 notepad .env                                   # review the settings; SECRET_KEY may stay empty (the app then creates one)
-.\.venv\Scripts\python.exe -m app.cli selftest
-.\.venv\Scripts\python.exe -m app.main         # starts the app; Ctrl+C stops it
+.\.venv\Scripts\python.exe -m kpibench.cli selftest
+.\.venv\Scripts\python.exe -m kpibench.main         # starts the app; Ctrl+C stops it
 ```
 To run the PowerShell scripts directly instead of the .bat files:
 `powershell -ExecutionPolicy Bypass -File .\setup.ps1` and `powershell -ExecutionPolicy Bypass -File .\run.ps1`.
@@ -110,7 +110,7 @@ Use Task Scheduler so the app starts with Windows:
 3. **Triggers**: **New**, **At startup**.
 4. **Actions**: **New**, **Start a program**:
    - Program: `C:\Apps\pnb-kpi-bench\.venv\Scripts\python.exe`
-   - Arguments: `-m app.main`
+   - Arguments: `-m kpibench.main`
    - Start in: `C:\Apps\pnb-kpi-bench`
 5. **Settings**: untick **Stop the task if it runs longer than**. Click **OK** and enter the account password.
 
@@ -134,13 +134,13 @@ Stop the app and copy the `data` folder and the `.env` file somewhere safe.
 | --- | --- |
 | "Python 3.10 or newer was not found" | Install Python as in step 1 with "Add python.exe to PATH" ticked, close the window, run setup.bat again. |
 | "running scripts is disabled on this system" | Use the .bat files (they start PowerShell with the right option), or the commands in Manual setup. |
-| `No matching distribution found for ...` | pip cannot see that library. Run `.\.venv\Scripts\python.exe -m app.cli netcheck`. Behind a proxy, in PowerShell: `$env:HTTPS_PROXY="http://<proxy>:<port>"; $env:HTTP_PROXY=$env:HTTPS_PROXY` then `powershell -ExecutionPolicy Bypass -File .\setup.ps1` from the same window. |
+| `No matching distribution found for ...` | pip cannot see that library. Run `.\.venv\Scripts\python.exe -m kpibench.cli netcheck`. Behind a proxy, in PowerShell: `$env:HTTPS_PROXY="http://<proxy>:<port>"; $env:HTTP_PROXY=$env:HTTPS_PROXY` then `powershell -ExecutionPolicy Bypass -File .\setup.ps1` from the same window. |
 | `SSL: CERTIFICATE_VERIFY_FAILED` | The bank's network inspects HTTPS. Get the bank's root certificate (PEM) from IT, then `.\.venv\Scripts\python.exe -m pip config set global.cert C:\certs\bank-root.pem` and run setup again. |
 | Another application opens at the address | That port belongs to another program; `run.bat` moves to a free one and prints it. `netstat -ano \| findstr :8077` shows the process ID using a port. |
 | Other PCs cannot open the address | Open the firewall port (step 4). |
 | PDF reading is slow or antivirus warnings appear | Some antivirus tools block Python worker processes. The app then reads PDFs one at a time automatically; ask IT to allow `C:\Apps\pnb-kpi-bench\.venv\Scripts\python.exe` to restore full speed. |
 | Errors about long file paths | Install under a short folder such as `C:\Apps`, or enable long paths (step 1). |
 | Top bar says **Template mode** | Ollama is not installed or not running. This is fine; see the AI model section. |
-| "Account locked" | Wait 15 minutes, or `.\.venv\Scripts\python.exe -m app.cli reset-password <user>`. |
+| "Account locked" | Wait 15 minutes, or `.\.venv\Scripts\python.exe -m kpibench.cli reset-password <user>`. |
 
 For anything else, the Linux guide's troubleshooting table applies too: [INSTALL-LINUX.md](INSTALL-LINUX.md#troubleshooting).

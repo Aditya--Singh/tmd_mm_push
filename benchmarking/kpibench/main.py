@@ -1,4 +1,4 @@
-"""Application entry point: python -m app.main  (or: uvicorn app.main:app)."""
+"""Application entry point: python -m kpibench.main  (or: uvicorn kpibench.main:app)."""
 from __future__ import annotations
 
 from fastapi import FastAPI, Request
@@ -97,7 +97,7 @@ def _shutdown() -> None:
                 r.status, r.ended_at, r.error = "interrupted", now(), "Server stopped while this run was in progress"
     except Exception:  # pragma: no cover
         pass
-    if os.environ.get("KPIB_HARD_EXIT") == "1":  # only when started as the real server (python -m app.main)
+    if os.environ.get("KPIB_HARD_EXIT") == "1":  # only when started as the real server (python -m kpibench.main)
         print("PNB Peer Benchmarking stopped.", flush=True)
         os._exit(0)
 
@@ -109,5 +109,5 @@ if __name__ == "__main__":
 
     os.environ["KPIB_HARD_EXIT"] = "1"
     # timeout_graceful_shutdown: do not wait forever for open live-feed (SSE) connections
-    uvicorn.run("app.main:app", host=settings.HOST, port=settings.PORT, log_level="info",
+    uvicorn.run("kpibench.main:app", host=settings.HOST, port=settings.PORT, log_level="info",
                 timeout_graceful_shutdown=3)

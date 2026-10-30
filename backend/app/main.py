@@ -13,6 +13,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.feedback import router as feedback_router
 from app.api.auth import router as auth_router
 from app.api.pipeline import router as pipeline_router
+from app.api.integrations import router as integrations_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -32,6 +33,7 @@ app.include_router(dashboard_router)
 app.include_router(feedback_router)
 app.include_router(auth_router)
 app.include_router(pipeline_router)
+app.include_router(integrations_router)
 
 Base.metadata.create_all(bind=engine)
 

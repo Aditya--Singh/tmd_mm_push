@@ -274,7 +274,7 @@ Quarters are stored as a sortable key, FY × 10 + quarter (Q2 FY27 = 272), using
 
 **Adding it to the Top Management Dashboard.** Full instructions, including one-click sign-in from the dashboard, are in [INTEGRATION.md](INTEGRATION.md). In short, two options, usable together:
 
-- **Embed the screens.** Any page opens without header and menu with ?embed=1, for example /?embed=1&token=\<viewer token>#/overview. A viewer token is issued with python -m app.cli token gm. The dashboard host is added to FRAME\_ANCESTORS in .env so browsers allow the frame.
+- **Embed the screens.** Any page opens without header and menu with ?embed=1, for example /?embed=1&token=\<viewer token>#/overview. A viewer token is issued with python -m kpibench.cli token gm. The dashboard host is added to FRAME\_ANCESTORS in .env so browsers allow the frame.
 - **Consume the data.** The dashboard's back end signs in once and calls /api/bench/\* with a bearer token, rendering in its own style. Role checks and the audit trail apply to these calls exactly as to the screens.
 
 For production the recommended next step is single sign-on with the bank's identity provider in place of local passwords.
@@ -285,7 +285,7 @@ The platform has been run end to end on the GB10 against the five live investor 
 
 | Limitation | Effect today | Mitigation in place | Next step |
 | --- | --- | --- | --- |
-| Bank sites can be slow or blocked from some networks | A five-year first run downloads about 120 PDFs in 15 to 30 minutes | python -m app.cli discover lists what each site exposes; manual upload and inbox folder | Schedule quarterly runs outside office hours |
+| Bank sites can be slow or blocked from some networks | A five-year first run downloads about 120 PDFs in 15 to 30 minutes | python -m kpibench.cli discover lists what each site exposes; manual upload and inbox folder | Schedule quarterly runs outside office hours |
 | Bank sites change layout | A deck may be missed after a redesign | Link rules in config/sources.yaml; missing quarters raised as findings | Monthly check of findings; adjust rules |
 | Slides that are pictures have no text | Values on them are not read | Image-only pages counted and flagged per document; approver can enter the value with a reason | Add OCR (Tesseract) for image pages |
 | Banks report on different bases (quarterly or annualised slippage and credit cost; PCR with or without write-offs; standalone or consolidated) | Like-for-like needs judgement | Basis rules in the dictionary; "Basis mismatch" and "Basis note" flags; consolidated pages skipped | Bank-specific basis notes approved once by Finance |

@@ -77,7 +77,7 @@ requests on purpose); reading and checking them without the model takes a few mi
 Then change the four starter passwords (top-right menu, Change password) and add named users:
 ```bash
 source .venv/bin/activate
-python -m app.cli add-user rkumar checker --name "R Kumar"
+python -m kpibench.cli add-user rkumar checker --name "R Kumar"
 ```
 
 ## Stopping the app
@@ -171,11 +171,11 @@ All settings live in `.env`. Restart the app after changing them.
 | What you see | Cause and fix |
 | --- | --- |
 | Another application opens at the address | That port belongs to another program. `run.sh` now moves to a free port and prints it; set `PORT=` in `.env` to keep it. |
-| `No matching distribution found for ...` during setup | pip cannot see that library on the index it uses. Run `python -m app.cli netcheck` (with `.venv` active) and `pip config list`. Behind a proxy: `export HTTPS_PROXY=http://<proxy>:<port>` then `./setup.sh`. Private mirror: ask for the library to be added, or `PIP_INDEX_URL=https://pypi.org/simple ./setup.sh`. |
+| `No matching distribution found for ...` during setup | pip cannot see that library on the index it uses. Run `python -m kpibench.cli netcheck` (with `.venv` active) and `pip config list`. Behind a proxy: `export HTTPS_PROXY=http://<proxy>:<port>` then `./setup.sh`. Private mirror: ask for the library to be added, or `PIP_INDEX_URL=https://pypi.org/simple ./setup.sh`. |
 | `SSL: CERTIFICATE_VERIFY_FAILED` during setup | The bank's network inspects HTTPS. Get the bank's root certificate (PEM) from IT and run `.venv/bin/pip config set global.cert /path/to/bank-root.pem`, then `./setup.sh`. |
 | Collection seems stuck at KPI Extractor and "LLM calls" keeps growing | The model fallback was ticked; it is slow, not stuck. Stop the app (Ctrl+C), start it, and run the collection again with the box unticked. |
 | Top bar says **Template mode** | The model is not reachable. `ollama list` should show the model; if not, `ollama pull qwen2.5:14b`. Restart Ollama with `sudo systemctl restart ollama`, then refresh the page. |
-| A bank shows no documents | Run `python -m app.cli discover`. If the site is blocked or changed, upload the PDFs in **Data & approvals, Sources & upload** and run collection with "Only PDFs already placed in the inbox". |
-| "Account locked" | Wait 15 minutes, or `python -m app.cli reset-password <user>`. |
+| A bank shows no documents | Run `python -m kpibench.cli discover`. If the site is blocked or changed, upload the PDFs in **Data & approvals, Sources & upload** and run collection with "Only PDFs already placed in the inbox". |
+| "Account locked" | Wait 15 minutes, or `python -m kpibench.cli reset-password <user>`. |
 | A document shows image-only pages | Those slides are pictures with no text. The approver enters the value with **Enter a missing value**, citing the page. |
 | The page loads but shows "No data yet" | Nothing is approved yet. Approve values as **approver** (step 5). |

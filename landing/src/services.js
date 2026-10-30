@@ -7,6 +7,11 @@
  *
  * `roles` limits a service to specific roles. A service without the field
  * is available to every signed-in user.
+ *
+ * `session` says how the signed-in person is handed over to the service:
+ *   token  - the service shares this platform's token and sessions.
+ *   ticket - the service keeps its own sessions, so it is given a
+ *            single-use sign-in ticket instead of the token.
  */
 
 import { env } from "./config/env";
@@ -14,6 +19,11 @@ import { env } from "./config/env";
 export const SERVICE_STATUS = {
     LIVE: "live",
     PLANNED: "planned",
+};
+
+export const SESSION_MODE = {
+    TOKEN: "token",
+    TICKET: "ticket",
 };
 
 export const SERVICES = [
@@ -38,7 +48,9 @@ export const SERVICES = [
         icon: "📊",
         description:
             "Competitive analysis and peer performance comparison",
-        status: SERVICE_STATUS.PLANNED,
+        status: SERVICE_STATUS.LIVE,
+        url: env.VITE_BENCHMARKING_APP_URL || "http://localhost:8077/",
+        session: SESSION_MODE.TICKET,
     },
     {
         id: "news",
@@ -48,6 +60,7 @@ export const SERVICES = [
             "External business, banking and regulatory intelligence",
         status: SERVICE_STATUS.LIVE,
         url: env.VITE_NEWS_APP_URL || "http://localhost:5173/",
+        session: SESSION_MODE.TOKEN,
     },
 ];
 

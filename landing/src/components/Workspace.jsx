@@ -94,7 +94,15 @@ function PlannedPanel({ service }) {
     );
 }
 
-function Workspace({ bridge, service, session }) {
+function Workspace({
+    bridge,
+    service,
+    session,
+    authPayload,
+    activeSection,
+    onSectionChange,
+    notice,
+}) {
     const frameRef = useRef(null);
 
     const isLive = service?.status === SERVICE_STATUS.LIVE;
@@ -127,13 +135,35 @@ function Workspace({ bridge, service, session }) {
         }
     }, [isLive, bridge]);
 
+    // What the frame is given depends on the service: the news
+    // application shares this platform's token, while Peer Benchmarking
+    // is given a single-use sign-in ticket of its own.
+    useEffect(() => {
+        bridge.setAuthPayload(authPayload);
+    }, [bridge, authPayload]);
+
     // A session change must reach the frame as well, so that a re-login
     // is picked up without a reload.
     useEffect(() => {
         if (isLive) {
             bridge.sendSession();
         }
-    }, [bridge, isLive, session]);
+    }, [bridge, isLive, session, authPayload]);
+
+    // Drive the screen the embedded application shows. The service
+    // answers with the screen it ended up on, so that the rail follows
+    // a journey made inside the application.
+    useEffect(() => {
+        if (!isLive || !activeSection) {
+            return;
+        }
+
+        bridge.navigate(activeSection.path || activeSection.id);
+    }, [bridge, isLive, activeSection]);
+
+    useEffect(() => {
+        bridge.setRouteHandler(onSectionChange);
+    }, [bridge, onSectionChange]);
 
     return (
         <section id="workspace" className="workspace">
@@ -153,6 +183,10 @@ function Workspace({ bridge, service, session }) {
 
             {service && isLive && (
                 <div className="workspace-frame">
+                    {notice && (
+                        <div className="workspace-notice">{notice}</div>
+                    )}
+
                     <iframe
                         ref={registerFrame}
                         src={frameSrc}

@@ -22,7 +22,7 @@ python -m pip install --upgrade pip wheel >/dev/null || echo "(could not upgrade
 if ! python -m pip install -r requirements.txt; then
   echo
   echo "Some required libraries could not be downloaded. Checking the connection to the Python package index..."
-  python -m app.cli netcheck || true
+  python -m kpibench.cli netcheck || true
   echo "  pip configuration (an index-url here means pip uses a private mirror):"
   python -m pip config list || true
   cat <<'HELP'
@@ -67,7 +67,7 @@ else
 fi
 
 say "5/5  Self-test (uses a temporary folder, your data is not touched)"
-python -m app.cli selftest
+python -m kpibench.cli selftest
 
 cat <<MSG
 

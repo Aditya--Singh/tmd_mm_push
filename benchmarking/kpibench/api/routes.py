@@ -99,6 +99,10 @@ class HandoffIn(BaseModel):
     full_name: str | None = Field(None, max_length=120)
     tab: str = Field("overview", pattern=r"^(overview|trends|compare|reports)$")
     embed: bool = False
+    # The role the dashboard holds for this user. The Executive Intelligence Hub sends the role
+    # it read from its own user table, so that one sign-in carries the same job description
+    # into this app. Leave empty to keep the role this app already holds.
+    role: str | None = Field(None, pattern=r"^(admin|maker|checker|viewer)$")
 
 
 @router.post("/auth/handoff")
@@ -117,13 +121,19 @@ def handoff(body: HandoffIn, request: Request):
     if not _hmac.compare_digest(request.headers.get("x-handoff-secret", ""), settings.HANDOFF_SECRET):
         audit("dashboard", "auth.handoff.refused", "user", body.username, {"reason": "bad secret"}, ip)
         raise HTTPException(401, "Invalid hand-off secret")
+    # A dashboard that states a staff role needs the app to allow staff sign-ins.
+    if body.role and body.role != "viewer" and not settings.HANDOFF_ALLOW_STAFF:
+        audit("dashboard", "auth.handoff.refused", "user", body.username, {"reason": "staff role requested"}, ip)
+        raise HTTPException(403, "Analyst, approver and administrator accounts sign in with their own password")
     created = False
+    changed_role = False
     with session_scope() as s:
         u = s.execute(select(User).where(User.username == body.username)).scalar_one_or_none()
         if u is None:
             if not settings.HANDOFF_AUTO_CREATE:
                 raise HTTPException(403, "Unknown user; ask the administrator to create the account")
-            u = User(username=body.username, full_name=body.full_name or body.username, role="viewer", active=True,
+            u = User(username=body.username, full_name=body.full_name or body.username,
+                     role=body.role or "viewer", active=True,
                      password_hash=hash_password(_secrets.token_urlsafe(24)))  # signs in only via the dashboard
             s.add(u)
             s.flush()
@@ -133,12 +143,20 @@ def handoff(body: HandoffIn, request: Request):
         if u.role != "viewer" and not settings.HANDOFF_ALLOW_STAFF:
             audit("dashboard", "auth.handoff.refused", "user", body.username, {"reason": "staff account"}, ip)
             raise HTTPException(403, "Analyst, approver and administrator accounts sign in with their own password")
+        # The dashboard is authoritative only when it is configured to be.
+        if body.role and settings.HANDOFF_SYNC_ROLE and u.role != body.role:
+            audit("dashboard", "auth.handoff.role_changed", "user", u.username,
+                  {"from": u.role, "to": body.role}, ip)
+            u.role = body.role
+            changed_role = True
         username, role = u.username, u.role
     ticket = make_ticket(username, role, settings.HANDOFF_TICKET_SECONDS)
-    audit("dashboard", "auth.handoff.issued", "user", username, {"auto_created": created, "role": role}, ip)
+    audit("dashboard", "auth.handoff.issued", "user", username,
+          {"auto_created": created, "role": role, "role_changed": changed_role}, ip)
     path = f"/?ticket={ticket}{'&embed=1' if body.embed else ''}#/{body.tab}"
     return {"ticket": ticket, "expires_in": settings.HANDOFF_TICKET_SECONDS, "path": path,
-            "url": str(request.base_url).rstrip("/") + path, "role": role, "user_created": created}
+            "url": str(request.base_url).rstrip("/") + path, "role": role, "user_created": created,
+            "role_changed": changed_role}
 
 
 class ExchangeIn(BaseModel):
@@ -166,6 +184,22 @@ def exchange(body: ExchangeIn, request: Request):
 
 
 # ============================================================================ meta
+@router.get("/ui/manifest")
+def ui_manifest():
+    """The navigation of this app, for a dashboard that embeds it.
+
+    It is deliberately readable without a sign-in: it names the screens and nothing else, so that the
+    dashboard can draw its own navigation without holding a session of its own. The figures behind
+    these screens stay behind the usual role checks.
+    """
+    try:
+        nav = json.loads((settings.STATIC_DIR / "nav.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        raise HTTPException(500, "The navigation manifest could not be read")
+    return {**nav, "app": settings.APP_NAME, "version": settings.APP_VERSION,
+            "parentOrigins": settings.EMBED_PARENT_ORIGINS}
+
+
 @router.get("/meta")
 def meta(user: CurrentUser = Depends(require("view"))):
     reg = load_registry()

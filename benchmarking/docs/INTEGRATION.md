@@ -22,7 +22,7 @@ app gives you this address.
 
 1. Make the tab a link to `APP/` (same window or a new tab, as the dashboard prefers).
 2. Ask the app administrator to create an account for each executive:
-   `python -m app.cli add-user <login-id> viewer --name "<Full Name>"`.
+   `python -m kpibench.cli add-user <login-id> viewer --name "<Full Name>"`.
 3. Optional, recommended: ask the administrator to set `DASHBOARD_URL` (see [Return to the dashboard](#return-to-the-dashboard)).
 
 Nothing else is needed. You can link straight to a screen with `APP/#/trends`; after sign-in the executive lands there.
@@ -236,7 +236,7 @@ accept cross-origin calls from other sites' browser code.
 
 On the app server, with the environment active, print a one-time link exactly like the one the hand-off returns:
 ```bash
-python -m app.cli link gm --tab trends
+python -m kpibench.cli link gm --tab trends
 ```
 Open it within two minutes; it signs you in as `gm` on the Trends screen. Opening it a second time shows
 "This sign-in link has expired or was already used", which is correct.

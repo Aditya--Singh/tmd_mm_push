@@ -53,14 +53,14 @@ Run these inside the folder with the private Python environment active
 
 | Command | What it does |
 | --- | --- |
-| `python -m app.cli selftest` | checks extraction accuracy and the whole pipeline in a temporary folder |
-| `python -m app.cli discover` | lists the PDF links the Source Scout can see on each bank site |
-| `python -m app.cli collect` | runs data collection from the terminal (`--offline` = inbox only, `--no-llm` = rules only) |
-| `python -m app.cli add-user <id> viewer --name "Full Name"` | adds a user (roles: admin, maker, checker, viewer) |
-| `python -m app.cli reset-password <id>` | resets a password and unlocks the account |
-| `python -m app.cli link <viewer-id> --tab trends` | prints a one-time sign-in link (tests the dashboard hand-off) |
-| `python -m app.cli verify-audit` | checks the audit hash chain |
-| `python -m app.cli netcheck` | explains why libraries cannot be downloaded (proxy, mirror) |
+| `python -m kpibench.cli selftest` | checks extraction accuracy and the whole pipeline in a temporary folder |
+| `python -m kpibench.cli discover` | lists the PDF links the Source Scout can see on each bank site |
+| `python -m kpibench.cli collect` | runs data collection from the terminal (`--offline` = inbox only, `--no-llm` = rules only) |
+| `python -m kpibench.cli add-user <id> viewer --name "Full Name"` | adds a user (roles: admin, maker, checker, viewer) |
+| `python -m kpibench.cli reset-password <id>` | resets a password and unlocks the account |
+| `python -m kpibench.cli link <viewer-id> --tab trends` | prints a one-time sign-in link (tests the dashboard hand-off) |
+| `python -m kpibench.cli verify-audit` | checks the audit hash chain |
+| `python -m kpibench.cli netcheck` | explains why libraries cannot be downloaded (proxy, mirror) |
 
 ## What is where
 

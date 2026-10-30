@@ -14,7 +14,11 @@ function check(name, ok, detail = "") {
     );
 }
 
-const browser = await chromium.launch();
+// CHROME_BIN lets a machine without the default browser build point at
+// its own copy of Chromium.
+const browser = await chromium.launch(
+    process.env.CHROME_BIN ? { executablePath: process.env.CHROME_BIN } : {},
+);
 const context = await browser.newContext();
 const page = await context.newPage();
 
