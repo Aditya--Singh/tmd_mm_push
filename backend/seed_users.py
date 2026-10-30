@@ -2,7 +2,7 @@ from datetime import datetime
 
 # from passlib.context import CryptContext
 
-from app.database.database import SessionLocal
+from app.database.database import Base, SessionLocal, engine
 from app.models.user import User
 import bcrypt
 
@@ -13,6 +13,10 @@ import bcrypt
 
 
 def seed_users():
+    # The accounts are created before the server has ever run, so the
+    # tables may not be there yet.
+    Base.metadata.create_all(bind=engine)
+
     db = SessionLocal()
 
     try:
