@@ -1,11 +1,18 @@
-# 🏦 Bank News AI
+# 🏦 Top Management Decision Support Platform
 
-An AI-powered banking news aggregation platform that collects news from multiple Indian business publications, stores it locally, generates executive summaries using local LLMs (Ollama), and serves the results through a FastAPI backend and React dashboard.
+An AI-powered banking intelligence platform. A landing page hub owns the
+sign-in and opens three services inside it: the news dashboard, which
+collects news from Indian business publications and summarises it with a
+local language model, and Peer Benchmarking, which compares PNB with its
+peers quarter by quarter from the banks' own published figures.
+
+One sign-in opens all of them, with the same role.
 
 ---
 
 # Features
 
+- Landing page hub with single sign-on into every service it hosts
 - Multi-source news scraping
 - Incremental article ingestion
 - SQLite database
@@ -14,8 +21,9 @@ An AI-powered banking news aggregation platform that collects news from multiple
 - Provider abstraction (OpenAI/Azure OpenAI ready)
 - REST APIs with FastAPI
 - React dashboard
+- Peer benchmarking of PNB against SBI, BoB, Canara Bank and Union Bank
 - JWT authentication with role based access
-- Landing page hub with single sign-on into embedded services
+- Four roles across the platform: administrator, analyst, approver and general manager
 - Semantic search (planned)
 - Executive insights & analytics (planned)
 
@@ -118,35 +126,41 @@ public/
 
 ```
 
+benchmarking/
+```
+kpibench/           # FastAPI, its own database and audit trail
+├── agents/
+├── api/
+├── extraction/
+├── scraper/
+├── services/
+static/             # the screens, served without a build step
+docs/               # its own installation and integration guides
+```
+
 ---
 
 # Architecture
 
 ```
 
-News Sources
-│
-▼
-Scrapers
-│
-▼
-SQLite Database
-│
-├─────────────┐
-▼             ▼
-AI            Search
-Processing    Embeddings
-│
-▼
-FastAPI
-│
-▼
-React Dashboard
-│
-│  session handed over
-▼
-Landing Page Hub
-
+                       ┌──────────────────────────┐
+                       │   Landing Page Hub       │
+                       │   owns the sign-in       │
+                       └────────────┬─────────────┘
+                                    │ one session
+             ┌──────────────────────┼──────────────────────┐
+             ▼                      ▼                      ▼
+      News Dashboard        Peer Benchmarking       SQL Genie
+      (frontend/)           (benchmarking/)        (planned)
+             │                      │
+             ▼                      ▼
+        FastAPI               its own FastAPI,
+      (backend/)              its own database
+             │                      ▲
+             │  one users table,    │ a single-use sign-in
+             │  one role per        │ ticket, server to server
+             └──────────────────────┘
 ```
 
 ---
@@ -156,14 +170,38 @@ Landing Page Hub
 ## Clone
 
 ```bash
-git clone https://github.com/Aditya--Singh/bank-news-ai.git
-
-cd bank-news-ai/backend
+git clone https://github.com/Aditya--Singh/top-management-dashboard.git
+cd top-management-dashboard
 ```
 
----
+## The quick way
 
-## Install uv
+On Linux or macOS:
+
+```bash
+./setup.sh
+./run.sh
+```
+
+On Windows:
+
+```powershell
+.\setup.ps1
+.\run.ps1
+```
+
+The setup script installs everything, writes `backend/.env` and
+`benchmarking/.env` with the secret the two servers share, and creates
+the demo accounts. Then open <http://localhost:5174> and sign in with
+`Admin` / `Admin@news26`.
+
+**[docs/SETUP.md](docs/SETUP.md) has the full instructions for both
+operating systems**, including what to do when a package will not
+download and how to fix a port that is already in use.
+
+## The step by step way
+
+### Install uv
 
 Windows
 
@@ -177,11 +215,10 @@ Verify
 uv --version
 ```
 
----
-
-## Install Dependencies
+### Install the backend
 
 ```bash
+cd backend
 uv sync
 ```
 
@@ -199,15 +236,52 @@ Linux / macOS
 source .venv/bin/activate
 ```
 
+### Install Peer Benchmarking
+
+```bash
+cd benchmarking
+python -m venv .venv
+source .venv/bin/activate       # .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+```
+
+### Install the two web applications
+
+```bash
+cd frontend && npm install
+cd ../landing && npm install
+```
+
+### Write the settings files
+
+```bash
+cd ..
+python scripts/make_env.py
+```
+
+This writes `backend/.env` and `benchmarking/.env`, including the
+secret the two servers share, so that one sign-in opens both.
+
 ---
 
 # Environment Variables
 
-Create a `.env` file inside the backend directory.
+The setup script writes both settings files for you:
 
 ```bash
-cd backend
-cp .env.example .env
+python scripts/make_env.py
+```
+
+It gives the backend a signing key, gives Peer Benchmarking one of its
+own, and writes **one secret into both files**, which is what lets a
+single sign-in open both applications. It is safe to run again: existing
+values are kept.
+
+To do it by hand, copy the examples and fill in the blanks.
+
+```bash
+cp backend/.env.example backend/.env
+cp benchmarking/.env.example benchmarking/.env
 ```
 
 `JWT_SECRET_KEY` is required and has no default. Generate one with:
@@ -232,6 +306,10 @@ TIMEZONE=Asia/Kolkata
 NEWS_CUTOFF_DATE=2026-06-20
 
 JWT_SECRET_KEY=<generated>
+
+KPI_APP_URL=http://127.0.0.1:8077
+
+KPI_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in benchmarking/.env>
 ```
 
 The frontend applications read their own `.env` files, which are optional
@@ -282,8 +360,9 @@ npm run dev
 ```
 
 Open <http://localhost:5174> and sign in with a seeded account, for
-example `Admin` / `Admin@news26`. The news dashboard opens inside the
-workspace and is already signed in.
+example `Admin` / `Admin@news26`. The news dashboard and Peer
+Benchmarking both open inside the workspace, already signed in, with the
+same role.
 
 Seed the users once with:
 
@@ -292,8 +371,22 @@ cd ../backend
 python seed_users.py
 ```
 
+---
+
+# Run Peer Benchmarking
+
+```bash
+cd benchmarking
+
+.venv/bin/python -m kpibench.main      # .venv\\Scripts\\python.exe on Windows
+```
+
+It listens on <http://localhost:8077>. Opened on its own it signs in with
+its own accounts (`admin`, `analyst`, `approver`, `gm`); opened from the
+hub it is signed in with the account of the person who signed in there.
+
 See [docs/integration.md](docs/integration.md) for the full description
-of how the two applications share a session.
+of how the applications share a session.
 
 ---
 
@@ -368,6 +461,10 @@ Completed
 - IST timezone support
 - JWT authentication with admin and user roles
 - Landing page hub with single sign-on into the embedded dashboard
+- Peer benchmarking of PNB against SBI, BoB, Canara Bank and Union Bank
+- One sign-in across the hub, the news dashboard and Peer Benchmarking
+- Four roles across the platform: administrator, analyst, approver and general manager
+- One rail that drives every service, including the screens of Peer Benchmarking
 
 In Progress
 
@@ -376,7 +473,7 @@ In Progress
 
 Planned
 
-- SQL Genie, Data Summarizer and Peer Benchmarking services
+- SQL Genie and Data Summarizer services
 - Semantic search
 - Multi-source scraping
 - Scheduler

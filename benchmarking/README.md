@@ -18,12 +18,25 @@ No data leaves the server.
 | --- | --- |
 | [docs/INSTALL-LINUX.md](docs/INSTALL-LINUX.md) | install and run it on Ubuntu / the GB10, keep it running, update it |
 | [docs/INSTALL-WINDOWS.md](docs/INSTALL-WINDOWS.md) | install and run it on a Windows PC or Windows Server |
-| [docs/INTEGRATION.md](docs/INTEGRATION.md) | open it from a tab of the Top Management Dashboard (link, one-click sign-in, or embedded) |
+| [docs/INTEGRATION.md](docs/INTEGRATION.md) | open it from a tab of the Top Management Dashboard, or from the Executive Intelligence Hub in this repository (link, one-click sign-in, or embedded) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | understand the design: layers, agents, extraction, maker-checker, Myra, security |
 
 ## Quick start
 
-**Linux (Ubuntu, GB10)** - in a terminal inside this folder:
+**As part of the platform** - this application now lives in the repository of the Executive
+Intelligence Hub, so the whole platform is set up and started in one go, from the root of the
+repository:
+
+```bash
+../setup.sh     # once: every service, the settings files and the demo accounts
+../run.sh       # every time: all four services
+```
+
+Then open <http://localhost:5174> and sign in there. Choosing **Peer Benchmarking** opens this
+application in the workspace, already signed in, with the same role. See
+[../docs/SETUP.md](../docs/SETUP.md).
+
+**On its own** - in a terminal inside this folder:
 ```bash
 ./setup.sh      # once: libraries, settings file, optional AI model, self-test
 ./run.sh        # every time: starts the app and prints the address to open

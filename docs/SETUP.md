@@ -1,0 +1,326 @@
+# Setting up the platform
+
+The platform is one repository with four parts. One sign-in opens all of
+them.
+
+| Part | Folder | Runs on | What it is |
+|---|---|---|---|
+| Landing page hub | `landing/` | <http://localhost:5174> | The sign-in and the frame around every service |
+| Backend | `backend/` | <http://127.0.0.1:8000> | The API: sign-in, the news, the feedback, the bridge to Peer Benchmarking |
+| News dashboard | `frontend/` | <http://localhost:5173> | The news intelligence application |
+| Peer Benchmarking | `benchmarking/` | <http://localhost:8077> | The benchmarking application |
+
+Peer Benchmarking keeps its own database, its own sessions and its own
+audit trail. The hub does not take that over: it signs the person in and
+hands the benchmarking app a single-use ticket, so the same person is
+signed in on both sides with the same role.
+
+---
+
+## 1. What you need
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Python | 3.10 or newer | `python --version` must work. |
+| Node.js | 20 or newer | `node --version` must work. |
+| A C compiler and the headers of Python | — | Needed by a few packages of Peer Benchmarking (`pdfplumber`, `python-pptx`). On Debian and Ubuntu: `sudo apt install -y build-essential python3-dev`. |
+
+Nothing else. No database server, no message broker and no container
+runtime: both servers use a SQLite file next to the code.
+
+---
+
+## 2. Linux and macOS
+
+Open a terminal in the repository folder.
+
+```bash
+git clone https://github.com/Aditya--Singh/top-management-dashboard.git
+cd top-management-dashboard
+./setup.sh
+```
+
+The script does five things. It can be run again at any time.
+
+1. Checks that Python and Node.js are installed.
+2. Creates `backend/.venv` and installs the backend.
+3. Creates `benchmarking/.venv` and installs Peer Benchmarking.
+4. Installs the packages of the two web applications.
+5. Writes `backend/.env` and `benchmarking/.env`, **including the secret
+   the two servers share**, and creates the demo accounts.
+
+Then start everything:
+
+```bash
+./run.sh
+```
+
+Four services come up:
+
+```
+Landing page hub    http://localhost:5174
+News dashboard      http://localhost:5173
+Peer Benchmarking   http://localhost:8077
+Backend and its API http://127.0.0.1:8000/docs
+```
+
+Open <http://localhost:5174> and sign in.
+
+Stop everything with <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal that
+started `run.sh`; the other services are stopped with it.
+
+### Doing it by hand
+
+If you would rather run each part in its own terminal, that is what the
+VS Code tasks do too.
+
+```bash
+# Terminal 1 - the backend of the hub
+cd backend
+.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Terminal 2 - Peer Benchmarking
+cd benchmarking
+.venv/bin/python -m kpibench.main
+
+# Terminal 3 - the news dashboard
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+
+# Terminal 4 - the landing page hub
+cd landing
+npm run dev -- --host 127.0.0.1 --port 5174
+```
+
+---
+
+## 3. Windows
+
+Open PowerShell in the repository folder. If your machine blocks the
+script, run it once with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\setup.ps1
+```
+
+```powershell
+git clone https://github.com/Aditya--Singh/top-management-dashboard.git
+cd top-management-dashboard
+.\setup.ps1
+```
+
+Then start everything:
+
+```powershell
+.\run.ps1
+```
+
+Four windows open, one for each service. Close them to stop the
+platform.
+
+### Doing it by hand
+
+```powershell
+# Window 1 - the backend of the hub
+cd backend
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+# Window 2 - Peer Benchmarking
+cd benchmarking
+.\.venv\Scripts\python.exe -m kpibench.main
+
+# Window 3 - the news dashboard
+cd frontend
+npm run dev -- --host 127.0.0.1 --port 5173
+
+# Window 4 - the landing page hub
+cd landing
+npm run dev -- --host 127.0.0.1 --port 5174
+```
+
+---
+
+## 4. Signing in
+
+The demo accounts are created by the setup. The password of each one is
+its name followed by `@news26`.
+
+| Account | Password | Role | What it can do |
+|---|---|---|---|
+| `Admin` | `Admin@news26` | Administrator | Everything, including the user list in Peer Benchmarking |
+| `analyst` | `Analyst@news26` | Analyst | Collects the figures, runs the pipeline, drafts the reports |
+| `approver` | `Approver@news26` | Approver | Checks and approves the figures and the reports |
+| `gm` | `Gm@news26` | General Manager | Reads the approved figures, asks Myra |
+| `Aditya`, `Hemant`, `Nikhil`, `Deepak`, `Vijay`, `Vikas`, `Pankaj` | `<Name>@news26` | Reader | Reads the news; the same read-only view of the figures |
+
+The role is held **once**, in the `users` table of the backend, and
+travels with the sign-in. Peer Benchmarking is told which role the
+person holds, so the two applications never disagree.
+
+---
+
+## 5. Using the platform
+
+Open <http://localhost:5174> and sign in. The hub is the frame around
+everything: the header holds the date, the feedback control and the
+sign-out, and the rail on the left holds the services.
+
+| Service | What happens |
+|---|---|
+| **Peer Benchmarking** | Opens in the workspace, already signed in. The rail grows a list of screens underneath it, and choosing one moves the application to it. |
+| **News Feed** | Opens in the workspace, already signed in, with its own header hidden. |
+| **SQL Genie**, **Data Summarizer** | Marked **Planned**. They are part of the platform scope and are not built yet. |
+
+Signing out of the hub ends the session in every open service as well.
+
+---
+
+## 6. The settings
+
+Two files hold the settings. Both are written by the setup script and
+neither is ever sent to a browser.
+
+### `backend/.env`
+
+| Setting | Meaning |
+|---|---|
+| `JWT_SECRET_KEY` | Signs the access tokens of the hub. Generated for you. |
+| `DATABASE_URL` | The news database. A SQLite file by default. |
+| `CORS_ORIGINS` | The browser origins allowed to call the API. |
+| `KPI_APP_URL` | Where Peer Benchmarking is listening. `http://127.0.0.1:8077`. |
+| `KPI_HANDOFF_SECRET` | The secret the two servers share. **The same value as `HANDOFF_SECRET` in `benchmarking/.env`.** |
+
+### `benchmarking/.env`
+
+| Setting | Meaning |
+|---|---|
+| `SECRET_KEY` | Signs the sessions of the benchmarking app. Generated for you. |
+| `PORT` | The port the benchmarking app listens on. `8077`. |
+| `HANDOFF_SECRET` | The secret the two servers share. **The same value as `KPI_HANDOFF_SECRET` in `backend/.env`.** |
+| `HANDOFF_ALLOW_STAFF` | `true` lets the hub sign in analysts, approvers and administrators. |
+| `HANDOFF_SYNC_ROLE` | `true` makes the hub's role the role held here. |
+| `FRAME_ANCESTORS` | The sites allowed to show this app in a frame. |
+| `EMBED_PARENT_ORIGINS` | The sites allowed to drive this app. |
+| `DEFAULT_PASSWORD` | The password of the four starter accounts of the benchmarking app. |
+
+If the two secrets ever fall out of step, run the setup again:
+
+```bash
+python scripts/make_env.py
+```
+
+It writes one secret into both files and leaves everything else alone.
+
+---
+
+## 7. Running it on a server
+
+The two web applications are static builds and the backend serves the
+API, so a deployment is a reverse proxy in front of three things.
+
+```bash
+cd frontend && npm run build
+cd ../landing && npm run build
+```
+
+| Path | Goes to |
+|---|---|
+| `/` | `landing/dist` |
+| `/news/` | `frontend/dist` (built with `VITE_BASE_PATH=/news/`) |
+| `/benchmarking/` | `benchmarking/` served by its own server on port 8077 |
+| `/api/` | the backend on port 8000 |
+
+In that shape the applications share one origin, the browser stops
+treating them as separate sites, and the frames need no special
+permission.
+
+Set these in the environment of the machine:
+
+```text
+backend/.env
+CORS_ORIGINS=https://<your-host>
+KPI_APP_URL=http://127.0.0.1:8077
+
+benchmarking/.env
+FRAME_ANCESTORS='self' https://<your-host>
+EMBED_PARENT_ORIGINS=https://<your-host>
+```
+
+Serve Peer Benchmarking over HTTPS when the hub is served over HTTPS: a
+browser will not show an `http://` frame inside an `https://` page.
+
+`docs/deployment.md` has the full nginx example.
+
+---
+
+## 8. Tests
+
+```bash
+# The backend
+cd backend && .venv/bin/python -m pytest -q
+
+# Peer Benchmarking
+cd benchmarking && .venv/bin/python -m pytest tests -q
+
+# The two web applications
+cd frontend && node --test
+cd landing && node --test
+
+# The browser tests, with the platform running
+cd landing/e2e && node hub-embedding.mjs
+cd landing/e2e && node benchmarking.mjs
+```
+
+---
+
+## 9. When something does not work
+
+### "Peer Benchmarking is not connected yet"
+
+The two servers do not share a secret. Run `python scripts/make_env.py`
+and restart the backend.
+
+### "Peer Benchmarking could not be reached"
+
+The benchmarking app is not running, or `KPI_APP_URL` points somewhere
+else. Check <http://localhost:8077/healthz>.
+
+### The workspace shows "Your session has ended"
+
+The hub could not sign the app in. The usual cause is a mismatch
+between `HANDOFF_SECRET` and `KPI_HANDOFF_SECRET`, or
+`EMBED_PARENT_ORIGINS` that does not list the address the hub is served
+from. The hub must be listed exactly as the browser sees it:
+`http://localhost:5174` and `http://127.0.0.1:5174` are different
+origins.
+
+### The app is refused in the frame
+
+`FRAME_ANCESTORS` in `benchmarking/.env` must list the hub's origin.
+
+### "No module named kpibench"
+
+Peer Benchmarking was started from the wrong folder. Run it from
+`benchmarking/`, where its own package lives.
+
+### Port 8077 or 8000 is already in use
+
+Another copy is still running. Stop it, or change `PORT` in
+`benchmarking/.env` and `KPI_APP_URL` in `backend/.env` together.
+
+### The packages will not download
+
+Behind a proxy, set it first:
+
+```bash
+export HTTPS_PROXY=http://<proxy-host>:<port>
+export HTTP_PROXY=$HTTPS_PROXY
+./setup.sh
+```
+
+Behind a mirror that does not carry every package, use the public index
+once:
+
+```bash
+PIP_INDEX_URL=https://pypi.org/simple ./setup.sh
+```

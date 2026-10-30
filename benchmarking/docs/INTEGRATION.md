@@ -3,6 +3,11 @@
 Peer Benchmarking is a separate web application. The dashboard opens it when an executive clicks the
 **Peer Benchmarking** tab. There are three ways to do that; option B is recommended.
 
+> **The Executive Intelligence Hub in this repository uses the frame bridge instead of a redirect.**
+> It signs the person in, then hands this app a single-use sign-in ticket over `postMessage` rather
+> than putting it in the address. See
+> [The Executive Intelligence Hub](#the-executive-intelligence-hub) at the end of this document.
+
 | Option | What the executive experiences | Work on the dashboard side | Work on the app side |
 | --- | --- | --- | --- |
 | **A. Plain link** | Clicks the tab, sees the Peer Benchmarking sign-in page, signs in | Point the tab at the app's address | Create an account per executive |
@@ -254,3 +259,87 @@ Refused requests appear as `auth.handoff.refused` with the reason.
 | Dashboard gets 403 | its IP is not in `HANDOFF_ALLOWED_IPS`, or the username belongs to a staff account |
 | Blank frame in option C | `FRAME_ANCESTORS` does not list the dashboard, or an http app inside an https dashboard |
 | Browser cannot reach the app at all | firewall port closed, or `HOST=127.0.0.1` without a reverse proxy |
+
+---
+
+## The Executive Intelligence Hub
+
+The [Executive Intelligence Hub](../../../README.md) is the landing page of this platform. It owns the
+sign-in and opens this application inside its workspace, in a frame.
+
+It works the same way as option B, with one difference: the ticket is handed over in a message
+instead of in the address. That keeps the ticket out of the browser's history, out of the server logs
+and out of any `Referer` header.
+
+```mermaid
+sequenceDiagram
+    participant U as Browser
+    participant H as Hub
+    participant P as Peer Benchmarking
+    U->>H: signs in
+    H->>H: reads the role from its own users table
+    H->>P: POST /api/auth/handoff (X-Handoff-Secret, username, role)
+    P-->>H: a single-use ticket
+    H->>P: hubint:auth { ticket } over postMessage
+    P->>P: POST /api/auth/exchange { ticket }
+    P-->>U: signed in, with the role the hub holds
+```
+
+### Settings
+
+On this app's server:
+
+```ini
+HANDOFF_SECRET=<the same value as KPI_HANDOFF_SECRET in the backend's .env>
+HANDOFF_ALLOW_STAFF=true          # so analysts, approvers and administrators can come from the hub
+HANDOFF_SYNC_ROLE=true            # so the hub's role is the role held here
+FRAME_ANCESTORS='self' http://localhost:5174 http://127.0.0.1:5174
+EMBED_PARENT_ORIGINS=http://localhost:5174,http://127.0.0.1:5174
+```
+
+`scripts/make_env.py` in the root of the repository writes all four for
+you, and keeps the secret in step with the backend's.
+
+`EMBED_PARENT_ORIGINS` must list the hub's address exactly as the browser sees it.
+`http://localhost:5174` and `http://127.0.0.1:5174` are different origins, and only the one the
+browser used will be accepted.
+
+### The four roles
+
+The hub holds the role of every person, once, in its own users table. It tells this app which role
+the person has, and this app gives them that role:
+
+| Role on the platform | Role here | May do |
+|---|---|---|
+| `admin` | `admin` | Everything, including the list of users |
+| `analyst` | `maker` | Collect the figures, run the pipeline, draft reports |
+| `approver` | `checker` | Check and approve the figures and the reports |
+| `gm` | `viewer` | Read the approved figures, ask Myra |
+
+With `HANDOFF_SYNC_ROLE=true` a role that changes in the hub is applied here on the next sign-in,
+and an `auth.handoff.role_changed` entry is written to the audit trail. The four-eyes rule is
+unaffected: it turns on who the person is, not on which password they typed.
+
+### The navigation
+
+This app publishes its screens at `GET /api/ui/manifest`. The hub reads them and draws them in its
+own rail, so that the workspace is not a second application inside the first one. The manifest names
+the screens and nothing else; every figure behind them stays behind the usual role checks.
+
+```json
+{
+  "service": "peer-benchmarking",
+  "title": "Peer Benchmarking",
+  "defaultSection": "overview",
+  "sections": [
+    { "id": "overview", "title": "Overview", "icon": "overview", "path": "/overview" }
+  ]
+}
+```
+
+The source of truth is `static/nav.json`, which this app and the manifest both read.
+
+### Signing out
+
+The hub sends `hubint:logout`, this app clears its session and answers with `hubint:logout-ack`.
+The hub then removes the frame. Signing out of the hub therefore ends the session on both sides.

@@ -2,50 +2,72 @@
 
 ## 1. Purpose
 
-This document describes how the landing page (the hub) and the news
-application fit together, and how a single sign-on is carried from one to
+This document describes how the landing page (the hub) and the services
+it hosts fit together, and how a single sign-on is carried from one to
 the other.
 
 The hub is a separate application in `landing/`. It owns authentication
-and hosts the intelligence services. The news application in `frontend/`
-keeps working on its own: opened directly, it still shows its own sign-in
-screen and still talks to the same backend.
+and hosts the intelligence services. Two services live behind it today:
+
+- the news application in `frontend/`, which shares the hub's token,
+- Peer Benchmarking in `benchmarking/`, which keeps its own sessions and
+  is given a single-use sign-in ticket instead.
+
+Both keep working on their own: opened directly, the news application
+still shows its own sign-in screen, and Peer Benchmarking still signs in
+with its own accounts.
 
 ## 2. Components
 
 ```text
-                +-----------------------------+
-                |  Landing page (landing/)    |
-                |  port 5174 in development   |
-                |                             |
-                |  owns authentication        |
-                |  hosts the service list     |
-                +--------------+--------------+
-                               |
-              session handed  |  over postMessage
-              over a frame    |
-                               v
-                +-----------------------------+
-                |  News app (frontend/)       |
-                |  port 5173 in development   |
-                |                             |
-                |  renders inside the frame  |
-                +--------------+--------------+
-                               |
-                               v
-                +-----------------------------+
-                |  FastAPI (backend/)         |
-                |  port 8000                  |
-                |                             |
-                |  one users table            |
-                |  one token issuer           |
-                +-----------------------------+
+                +---------------------------------------------+
+                |  Landing page (landing/)                     |
+                |  port 5174 in development                    |
+                |                                               |
+                |  owns authentication                          |
+                |  hosts the service list                       |
+                +---+----------------------+------------------+
+                    |                      |
+   session handed   | over postMessage      | a sign-in ticket,
+   over a frame     v                      v over a frame
+                +--------------------+  +-----------------------+
+                |  News app          |  |  Peer Benchmarking    |
+                |  (frontend/)       |  |  (benchmarking/)      |
+                |  port 5173         |  |  port 8077            |
+                |                    |  |                       |
+                |  takes the token   |  |  keeps its own        |
+                |                    |  |  database and         |
+                |                    |  |  sessions             |
+                +---------+----------+  +-----------+-----------+
+                          |                         |
+                          v                         |
+                +---------------------------------------+
+                |  FastAPI (backend/)                   |
+                |  port 8000                            |
+                |                                       |
+                |  one users table                      |
+                |  one token issuer                     |
+                |  one role per person                  |
+                +---------------------------------------+
+                          |
+                          | asks for a sign-in ticket,
+                          | server to server
+                          v
+                +---------------------------------------+
+                |  Peer Benchmarking (backend)          |
+                |  its own users, sessions and audit    |
+                +---------------------------------------+
 ```
 
 There is a single identity system. The hub calls the same
 `POST /api/auth/login` endpoint against the same `users` table as the
 news application, and receives the same access token. No second user
 store and no second sign-in exists.
+
+Peer Benchmarking keeps its own database and its own sessions, because
+it has to keep its own audit trail of who approved which figure. It does
+not keep its own sign-in: the hub vouches for the person, and the
+benchmarking app swaps a single-use ticket for a session of its own.
 
 ## 3. How the session reaches the frame
 
@@ -57,20 +79,30 @@ force the user to sign in twice.
 The session is handed over explicitly instead:
 
 ```text
-child -> parent : { type: "newsint:ready" }
-parent -> child : { type: "newsint:auth", payload: { username, role, accessToken } }
-parent -> child : { type: "newsint:logout" }
-child -> parent : { type: "newsint:logout-ack" }
-child -> parent : { type: "newsint:logout" }
+child -> parent : { type: "hubint:ready" }
+parent -> child : { type: "hubint:auth", payload: { username, role, accessToken } }
+parent -> child : { type: "hubint:auth", payload: { username, role, ticket } }
+parent -> child : { type: "hubint:navigate", payload: { path } }
+parent -> child : { type: "hubint:logout" }
+child -> parent : { type: "hubint:logout-ack" }
+child -> parent : { type: "hubint:logout" }
+child -> parent : { type: "hubint:route", payload: { path } }
 ```
 
-1. The frame boots and posts `newsint:ready` to its parent.
-2. The hub replies with `newsint:auth` carrying the access token.
-3. The frame validates the message, stores the session under
-   `bankNewsUser` and renders the dashboard. No sign-in screen is shown.
+The names are shared by every service, so a service that is added later
+implements one contract rather than one of its own.
+
+1. The frame boots and posts `hubint:ready` to its parent.
+2. The hub replies with `hubint:auth`, carrying what that service
+   needs: the access token for the news application, a single-use
+   sign-in ticket for Peer Benchmarking.
+3. The frame validates the message, stores or exchanges what it was
+   given, and renders. No sign-in screen is shown.
 
 The hub also pushes the session when the frame finishes loading, so the
-handover succeeds regardless of which message arrives first.
+handover succeeds regardless of which message arrives first. The reply
+to `hubint:ready` is addressed to the origin the frame really has, which
+is known for certain at that moment.
 
 ### 3.1 The same-origin shortcut
 
@@ -158,6 +190,76 @@ its gold marker.
 On narrow screens the rail becomes a horizontal strip instead, with the
 same items.
 
+## 3.6 Peer Benchmarking in the workspace
+
+Peer Benchmarking cannot take the hub's token: it signs its own
+sessions with its own key, keeps its own audit trail, and its access
+rules are written against its own role names. The hub therefore vouches
+for the person instead of lending it a token.
+
+```text
+browser          hub backend      benchmarking backend
+   |                 |                    |
+   | open the        |                    |
+   | service         |                    |
+   |---------------->|                    |
+   |                 | POST /api/auth/handoff
+   |                 |  X-Handoff-Secret  |
+   |                 |  {username, role}  |
+   |                 |------------------->|
+   |                 |     one-use       |
+   |                 |     ticket        |
+   |                 |<-------------------|
+   | <-- the ticket -|                    |
+   |                                     |
+   |  hubint:auth { ticket }  over the frame bridge
+   |-------------------------------------------->|
+   |                                     |
+   |                    POST /api/auth/exchange
+   |                                     |---------->|
+   |                                     |  session  |
+   |<------------ the application is signed in -----|
+```
+
+The ticket is single use and lives for 120 seconds. It never appears in
+a URL, and the shared secret never reaches a browser: it is only ever
+used between the two servers.
+
+### The four roles
+
+The role is held once, in the `users` table of the backend, and travels
+with the sign-in. The hub translates it into the role Peer Benchmarking
+uses, server side, so a browser can never choose its own role.
+
+| Role on the platform | Role in Peer Benchmarking | May do |
+|---|---|---|
+| `admin` | `admin` | Everything, including the list of users |
+| `analyst` | `maker` | Collect the figures, run the pipeline, draft reports |
+| `approver` | `checker` | Check and approve the figures and the reports |
+| `gm` | `viewer` | Read the approved figures, ask Myra |
+| `user` | `viewer` | The same read-only view |
+
+A role the platform does not know about is treated as the read-only
+view, so an unexpected value in the user table can never grant more than
+reading.
+
+With `HANDOFF_SYNC_ROLE=true` the benchmarking app adopts the role the
+hub states, and writes an `auth.handoff.role_changed` entry to its audit
+trail. That is what keeps the two applications from disagreeing about
+what somebody may do.
+
+### One rail, not two
+
+Peer Benchmarking has seven screens. In the hub they are drawn in the
+hub's own rail, underneath the service, so that the workspace is not a
+second application inside the first one.
+
+The benchmarking app publishes its navigation at `GET /api/ui/manifest`,
+and the hub reads it through its own backend. Choosing a screen in the
+rail sends `hubint:navigate` to the frame; the app moves to it and
+answers with `hubint:route`, so the rail follows a journey made inside
+the application.
+
 ## 4. Signing out
 
 Signing out is propagated in both directions, so the two shells never
@@ -204,40 +306,31 @@ Two rules prevent this:
 
 ## 5. Running it locally
 
-Four terminals, or three if the seeded database already exists.
-
-### Terminal 1 — backend
+`docs/SETUP.md` has the full instructions for Linux and for Windows.
+The short version:
 
 ```bash
-cd backend
-uv sync --all-groups
-cp .env.example .env       # then set JWT_SECRET_KEY
-.venv/bin/python seed_users.py
-.venv/bin/python -m uvicorn app.main:app --reload
+./setup.sh      # or .\setup.ps1 on Windows
+./run.sh        # or .\run.ps1 on Windows
 ```
 
-### Terminal 2 — news application
+That is four services:
 
-```bash
-cd frontend
-npm install
-npm run dev                # http://localhost:5173
-```
-
-### Terminal 3 — landing page
-
-```bash
-cd landing
-npm install
-npm run dev                # http://localhost:5174
+```text
+cd backend      && .venv/bin/python -m uvicorn app.main:app --reload
+cd benchmarking && .venv/bin/python -m kpibench.main
+cd frontend     && npm run dev                # http://localhost:5173
+cd landing      && npm run dev                # http://localhost:5174
 ```
 
 Open <http://localhost:5174> and sign in with a seeded account, for
 example `Admin` / `Admin@news26`.
 
 The news application is still reachable on its own at
-<http://localhost:5173>, where it signs in separately. This is
-intentional: it keeps the news application independently usable.
+<http://localhost:5173>, where it signs in separately. Peer Benchmarking
+is still reachable on its own at <http://localhost:8077>, where it signs
+in with its own accounts. This is intentional: each service stays
+independently usable.
 
 ## 6. Configuration
 
@@ -250,6 +343,8 @@ intentional: it keeps the news application independently usable.
 | `JWT_ALGORITHM` | `HS256` | Token algorithm. |
 | `JWT_EXPIRATION_MINUTES` | `480` | Token lifetime. |
 | `CORS_ORIGINS` | the development origins | Comma-separated list of browser origins allowed to call the API. |
+| `KPI_APP_URL` | `http://127.0.0.1:8077` | Where Peer Benchmarking is listening. |
+| `KPI_HANDOFF_SECRET` | none | The secret the two servers share. The same value as `HANDOFF_SECRET` in the benchmarking app's `.env`. |
 
 ### Landing page (`landing/.env`)
 
@@ -257,6 +352,7 @@ intentional: it keeps the news application independently usable.
 |---|---|---|
 | `VITE_API_BASE_URL` | empty | Base URL of the API. Empty keeps the browser on the current origin, which is what the development proxy and a reverse proxy expect. |
 | `VITE_NEWS_APP_URL` | `http://localhost:5173/` | URL of the news application opened in the workspace. |
+| `VITE_BENCHMARKING_APP_URL` | `http://localhost:8077/` | URL of Peer Benchmarking opened in the workspace. |
 | `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. |
 
 ### News application (`frontend/.env`)
@@ -269,6 +365,21 @@ intentional: it keeps the news application independently usable.
 Both defaults cover the development setup, so the integration works
 without any configuration file. A configuration file is needed only when
 the origins differ from the defaults.
+
+### Peer Benchmarking (`benchmarking/.env`)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SECRET_KEY` | none, required | Signing key for its own sessions. |
+| `PORT` | `8077` | The port it listens on. |
+| `HANDOFF_SECRET` | none | The secret it shares with the backend. The same value as `KPI_HANDOFF_SECRET`. |
+| `HANDOFF_ALLOW_STAFF` | `false` | Must be `true` for the hub to sign in analysts, approvers and administrators. |
+| `HANDOFF_SYNC_ROLE` | `false` | When `true`, the role the hub states replaces the role held here. |
+| `FRAME_ANCESTORS` | `'self'` | The sites allowed to show this app in a frame. |
+| `EMBED_PARENT_ORIGINS` | empty | The sites allowed to drive this app. |
+
+`scripts/make_env.py` writes both files and keeps the two secrets in
+step, so they never have to be copied by hand.
 
 ## 7. Deployment layout
 
@@ -302,7 +413,7 @@ needed, although it remains available as a fallback.
 ## 8. Tests
 
 ```bash
-cd backend  && .venv/bin/python -m pytest      # authentication endpoints
+cd backend  && .venv/bin/python -m pytest      # authentication, roles, the bridge
 cd frontend && npm test                        # frame session bridge
 cd landing  && npm test                        # hub frame bridge
 ```
@@ -321,6 +432,18 @@ node landing/e2e/hub-embedding.mjs
 The script covers the sign-in, the handover into the frame, the
 authorised API call from the frame, the expiry of a session and the
 sign-out in both directions.
+
+A second script covers Peer Benchmarking in the workspace:
+
+```bash
+node landing/e2e/benchmarking.mjs
+```
+
+It checks that the benchmarking app opens already signed in, that it
+shows no sign-in form of its own, that it holds the role the hub holds,
+that the hub's rail offers its screens and that choosing one moves the
+application to it, and that signing out of the hub ends the session
+inside the app.
 
 To exercise the same-origin deployment, build both applications, start
 the bundled proxy and point the script at it:
@@ -345,7 +468,10 @@ HUB_URL=http://127.0.0.1:5175/ E2E_FRAME_MATCH=/news/ \
 3. If it runs on a different origin, add that origin to
    `VITE_ALLOWED_CHILD_ORIGINS` on the hub and to
    `VITE_ALLOWED_PARENT_ORIGINS` on the service.
-4. Implement the same five messages in the service so that the hub can
-   hand over the session. The implementation in
+4. Implement the same messages in the service so that the hub can hand
+   over the session. The implementation in
    `frontend/src/session/parentSession.js` can be copied as a starting
-   point.
+   point, and `benchmarking/static/js/bridge.js` shows the same contract
+   written for a service that takes a sign-in ticket instead of a token.
+5. If the service has screens of its own, publish them at
+   `GET /api/ui/manifest` and the hub will draw them in its rail.

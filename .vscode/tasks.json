@@ -32,6 +32,26 @@
             "problemMatcher": []
         },
         {
+            "label": "Setup: benchmarking dependencies",
+            "detail": "Create the virtual environment and install the Peer Benchmarking packages",
+            "type": "shell",
+            "command": "python -m venv .venv && ./.venv/bin/python -m pip install --upgrade pip && ./.venv/bin/python -m pip install -r requirements.txt",
+            "options": {
+                "cwd": "${workspaceFolder}/benchmarking"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: settings files",
+            "detail": "Write the environment files and the secret the two servers share",
+            "type": "shell",
+            "command": "python scripts/make_env.py",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": []
+        },
+        {
             "label": "Setup: seed demo users",
             "detail": "Create the demo accounts, for example Admin / Admin@news26",
             "type": "shell",
@@ -47,13 +67,15 @@
         },
         {
             "label": "Setup: everything",
-            "detail": "Install all dependencies and seed the demo users",
+            "detail": "Install all dependencies, write the settings files and seed the demo users",
             "type": "shell",
             "command": "echo 'Setup finished. Run the Dev: all services task to start.'",
             "dependsOrder": "parallel",
             "dependsOn": [
                 "Setup: news frontend dependencies",
                 "Setup: landing page dependencies",
+                "Setup: benchmarking dependencies",
+                "Setup: settings files",
                 "Setup: seed demo users"
             ],
             "problemMatcher": []
@@ -69,7 +91,10 @@
             "isBackground": true,
             "problemMatcher": {
                 "owner": "python",
-                "fileLocation": ["relative", "${workspaceFolder}/backend"],
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/backend"
+                ],
                 "pattern": {
                     "regexp": "^(.*?):(\\d+):(\\d+)\\s+-?\\s+(.*)$",
                     "file": 1,
@@ -128,13 +153,43 @@
             }
         },
         {
-            "label": "Dev: all services",
-            "detail": "Backend, news dashboard and landing page, each in its own terminal",
+            "label": "Run: benchmarking",
+            "detail": "Peer Benchmarking on http://localhost:8077",
             "type": "shell",
-            "command": "echo 'Starting the backend, the news dashboard and the landing page.'",
+            "command": "./.venv/bin/python -m kpibench.main",
+            "options": {
+                "cwd": "${workspaceFolder}/benchmarking"
+            },
+            "isBackground": true,
+            "problemMatcher": {
+                "owner": "python",
+                "fileLocation": [
+                    "relative",
+                    "${workspaceFolder}/benchmarking"
+                ],
+                "pattern": {
+                    "regexp": "^(.*?):(\\d+):(\\d+)\\s+-?\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3,
+                    "message": 4
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "PNB Peer Benchmarking 1.0.0 ready",
+                    "endsPattern": "Application startup complete"
+                }
+            }
+        },
+        {
+            "label": "Dev: all services",
+            "detail": "Backend, Peer Benchmarking, news dashboard and landing page, each in its own terminal",
+            "type": "shell",
+            "command": "echo 'Starting the backend, Peer Benchmarking, the news dashboard and the landing page.'",
             "dependsOrder": "parallel",
             "dependsOn": [
                 "Run: backend",
+                "Run: benchmarking",
                 "Run: news frontend",
                 "Run: landing page"
             ],
@@ -177,6 +232,28 @@
             "problemMatcher": []
         },
         {
+            "label": "Test: benchmarking",
+            "detail": "Hand-off and navigation tests of Peer Benchmarking",
+            "type": "shell",
+            "command": "./.venv/bin/python -m pytest tests -q",
+            "options": {
+                "cwd": "${workspaceFolder}/benchmarking"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: hub with Peer Benchmarking",
+            "detail": "Browser test: one sign-in opens the benchmarking app in the workspace",
+            "type": "shell",
+            "command": "node benchmarking.mjs",
+            "options": {
+                "cwd": "${workspaceFolder}/landing/e2e"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
             "label": "Test: all",
             "detail": "Run every test suite",
             "type": "shell",
@@ -185,7 +262,8 @@
             "dependsOn": [
                 "Test: backend",
                 "Test: news frontend",
-                "Test: landing page"
+                "Test: landing page",
+                "Test: benchmarking"
             ],
             "problemMatcher": []
         },

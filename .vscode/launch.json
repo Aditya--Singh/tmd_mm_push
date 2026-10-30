@@ -31,8 +31,25 @@
             "sourceMaps": true
         },
         {
+            "name": "Benchmarking: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "kpibench.main",
+            "cwd": "${workspaceFolder}/benchmarking",
+            "jinja": true,
+            "justMyCode": false
+        },
+        {
+            "name": "Peer Benchmarking (Chrome)",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:8077",
+            "webRoot": "${workspaceFolder}/benchmarking/static",
+            "sourceMaps": true
+        },
+        {
             "name": "Debug: landing page with all services",
-            "detail": "Starts the backend, the news dashboard and the landing page, and opens the hub in Chrome",
+            "detail": "Starts the backend, Peer Benchmarking, the news dashboard and the landing page, and opens the hub in Chrome",
             "type": "chrome",
             "request": "launch",
             "url": "http://localhost:5174",
@@ -43,6 +60,24 @@
                 "name": "Debug: landing page with all services",
                 "configurations": [
                     "Backend: FastAPI",
+                    "Landing page (Chrome)"
+                ]
+            }
+        },
+        {
+            "name": "Debug: hub and Peer Benchmarking",
+            "detail": "Starts every service with both Python servers under the debugger, and opens the hub in Chrome",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:5174",
+            "webRoot": "${workspaceFolder}/landing",
+            "sourceMaps": true,
+            "preLaunchTask": "Dev: all services",
+            "compound": {
+                "name": "Debug: hub and Peer Benchmarking",
+                "configurations": [
+                    "Backend: FastAPI",
+                    "Benchmarking: FastAPI",
                     "Landing page (Chrome)"
                 ]
             }

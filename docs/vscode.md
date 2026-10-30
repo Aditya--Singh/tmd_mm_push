@@ -1,6 +1,6 @@
 # Running the Platform in Visual Studio Code
 
-The repository ships with a VS Code configuration for all three
+The repository ships with a VS Code configuration for all four
 services, so the whole platform can be started from the editor.
 
 ## 1. Prerequisites
@@ -9,6 +9,7 @@ services, so the whole platform can be started from the editor.
 |---|---|
 | [uv](https://docs.astral.sh/uv/) | Runs the backend. `uv --version` must work in a terminal. |
 | Node.js 20 or newer | Runs both frontend applications. `node --version` must work. |
+| Python 3.10 or newer | Runs Peer Benchmarking. `python --version` must work. |
 | Python extension | Recommended by `.vscode/extensions.json`. |
 | ESLint extension | Recommended by `.vscode/extensions.json`. |
 
@@ -21,8 +22,9 @@ Open the Command Palette with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>
 (<kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd> on macOS) and run
 **Tasks: Run Task**.
 
-Choose **Setup: everything**. It installs the backend, the news
-dashboard and the landing page, and creates the demo accounts.
+Choose **Setup: everything**. It installs the backend, Peer
+Benchmarking, the news dashboard and the landing page, writes the
+settings files, and creates the demo accounts.
 
 The individual steps are available separately if you prefer to run them
 one at a time:
@@ -30,29 +32,34 @@ one at a time:
 | Task | What it does |
 |---|---|
 | `Setup: backend dependencies` | Creates `backend/.venv` and installs the packages. |
+| `Setup: benchmarking dependencies` | Creates `benchmarking/.venv` and installs the packages. |
 | `Setup: news frontend dependencies` | Installs the packages in `frontend/`. |
 | `Setup: landing page dependencies` | Installs the packages in `landing/`. |
+| `Setup: settings files` | Writes `backend/.env` and `benchmarking/.env`, including the secret the two servers share. |
 | `Setup: seed demo users` | Creates the demo accounts, for example `Admin` / `Admin@news26`. |
 
 ## 3. Running the platform
 
 **Tasks: Run Task** → **Dev: all services**.
 
-Three terminals open side by side:
+Four terminals open side by side:
 
 | Service | URL | Terminal |
 |---|---|---|
 | Landing page hub | <http://localhost:5174> | `Run: landing page` |
 | News dashboard | <http://localhost:5173> | `Run: news frontend` |
+| Peer Benchmarking | <http://localhost:8077> | `Run: benchmarking` |
 | FastAPI backend | <http://127.0.0.1:8000> | `Run: backend` |
 | API documentation | <http://127.0.0.1:8000/docs> | |
 
 Open <http://localhost:5174> and sign in with a seeded account, for
 example `Admin` / `Admin@news26`. Select **News Feed** in the sidebar
-and the dashboard opens inside the workspace, already signed in.
+and the dashboard opens inside the workspace, already signed in. Select
+**Peer Benchmarking** and the benchmarking app opens there, already
+signed in, with its own screens listed underneath it in the rail.
 
 Each service can also be started on its own with `Run: backend`,
-`Run: news frontend` or `Run: landing page`.
+`Run: benchmarking`, `Run: news frontend` or `Run: landing page`.
 
 ## 4. Debugging
 
@@ -61,13 +68,16 @@ Open the **Run and Debug** panel (<kbd>F5</kbd>).
 | Configuration | What it does |
 |---|---|
 | `Backend: FastAPI` | Runs the backend under the debugger, with breakpoints in the Python code. |
+| `Benchmarking: FastAPI` | Runs Peer Benchmarking under the debugger. |
 | `Landing page (Chrome)` | Opens the landing page in Chrome with the frontend source maps. |
 | `News dashboard (Chrome)` | Opens the news dashboard in Chrome. |
-| `Debug: landing page with all services` | Starts all three services, attaches the Python debugger to the backend and opens the landing page in Chrome. |
+| `Peer Benchmarking (Chrome)` | Opens the benchmarking app on its own. |
+| `Debug: landing page with all services` | Starts all four services, attaches the Python debugger to the backend and opens the landing page in Chrome. |
+| `Debug: hub and Peer Benchmarking` | The same, with both Python servers under the debugger. |
 
 The last one is the useful one for working on the integration: it starts
-everything, and you can set a breakpoint in `backend/app/api/auth.py` or
-in the session bridge.
+everything, and you can set a breakpoint in `backend/app/api/auth.py`, in
+`backend/app/api/integrations.py` or in the session bridge.
 
 ## 5. Tests
 
@@ -77,10 +87,12 @@ extension offers **Debug Test** on the backend suite.
 
 | Task | Suite |
 |---|---|
-| `Test: backend` | Authentication endpoints (`pytest`). |
+| `Test: backend` | Authentication, roles and the bridge (`pytest`). |
 | `Test: news frontend` | Frame session bridge (`node --test`). |
 | `Test: landing page` | Hub frame bridge (`node --test`). |
-| `Test: all` | All three, in parallel. |
+| `Test: benchmarking` | The hand-off and navigation tests of Peer Benchmarking (`pytest`). |
+| `Test: hub with Peer Benchmarking` | The browser test of the benchmarking service. It needs the platform running. |
+| `Test: all` | All five, in parallel. |
 
 `Check: lint and build` lints and builds the news frontend. The same
 commands work in `landing/`.
@@ -215,8 +227,22 @@ cd backend
 uv run python run_scraper.py
 ```
 
-### The three other services show "Planned"
+### The two other services show "Planned"
 
-That is expected. SQL Genie, Data Summarizer and Peer Benchmarking are
-part of the platform scope but are not implemented yet. They are
-registered in `landing/src/services.js`.
+That is expected. SQL Genie and Data Summarizer are part of the platform
+scope but are not implemented yet. They are registered in
+`landing/src/services.js`.
+
+### Peer Benchmarking shows "not connected yet"
+
+The backend and the benchmarking app have to share a secret. Run
+**Setup: settings files**, which writes one secret into both
+`backend/.env` and `benchmarking/.env`, and restart both services.
+
+### Peer Benchmarking shows "Your session has ended"
+
+The hub could not sign the app in. The two usual causes are a secret
+that does not match, and `EMBED_PARENT_ORIGINS` that does not list the
+address the hub is served from. `http://localhost:5174` and
+`http://127.0.0.1:5174` are different origins, and the browser uses the
+one it actually typed.

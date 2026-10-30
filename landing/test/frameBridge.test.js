@@ -5,7 +5,9 @@ import {
     MESSAGE_AUTH,
     MESSAGE_LOGOUT,
     MESSAGE_LOGOUT_ACK,
+    MESSAGE_NAVIGATE,
     MESSAGE_READY,
+    MESSAGE_ROUTE,
     createFrameBridge,
     isAllowedOrigin,
     normaliseOrigins,
@@ -381,4 +383,136 @@ test("the sign-out is repeated until the frame confirms it", async () => {
     assert.equal(frame.sent.length, confirmed);
 
     bridge.uninstall();
+});
+
+test("a service that takes a ticket is given the ticket, not the token", () => {
+    const { win } = createFakeWindow();
+    const frame = createFakeFrame();
+
+    const bridge = createFrameBridge({
+        allowedChildOrigins: [NEWS_ORIGIN],
+        win,
+    });
+
+    bridge.install();
+    bridge.setFrameElement(frame.element);
+
+    bridge.setAuthPayload({
+        username: "analyst",
+        role: "analyst",
+        ticket: "ticket-1",
+    });
+
+    bridge.sendSession();
+
+    assert.equal(frame.sent.length, 1);
+    assert.equal(frame.sent[0].message.type, MESSAGE_AUTH);
+    assert.deepEqual(frame.sent[0].message.payload, {
+        username: "analyst",
+        role: "analyst",
+        ticket: "ticket-1",
+    });
+});
+
+test("nothing is sent while a service is still waiting for its ticket", () => {
+    const { win } = createFakeWindow();
+    const frame = createFakeFrame();
+
+    const bridge = createFrameBridge({
+        allowedChildOrigins: [NEWS_ORIGIN],
+        win,
+    });
+
+    bridge.install();
+    bridge.setFrameElement(frame.element);
+
+    bridge.setAuthPayload(null);
+
+    assert.equal(bridge.sendSession(), false);
+    assert.equal(frame.sent.length, 0);
+});
+
+test("the session is not sent once a payload was set to nothing", () => {
+    const { win } = createFakeWindow();
+    const frame = createFakeFrame();
+
+    const bridge = createFrameBridge({
+        allowedChildOrigins: [NEWS_ORIGIN],
+        win,
+    });
+
+    bridge.install();
+    bridge.setFrameElement(frame.element);
+
+    bridge.setSession(SESSION);
+    bridge.setAuthPayload(null);
+
+    assert.equal(bridge.sendSession(), false);
+    assert.equal(frame.sent.length, 0);
+});
+
+test("the hub can ask the embedded application for another screen", () => {
+    const { win } = createFakeWindow();
+    const frame = createFakeFrame();
+
+    const bridge = createFrameBridge({
+        allowedChildOrigins: [NEWS_ORIGIN],
+        win,
+    });
+
+    bridge.install();
+    bridge.setFrameElement(frame.element);
+
+    assert.equal(bridge.navigate("/trends"), true);
+    assert.equal(frame.sent[0].message.type, MESSAGE_NAVIGATE);
+    assert.deepEqual(frame.sent[0].message.payload, { path: "/trends" });
+});
+
+test("the rail follows the screen the embedded application moved to", () => {
+    const { win } = createFakeWindow();
+    const frame = createFakeFrame();
+
+    const seen = [];
+
+    const bridge = createFrameBridge({
+        allowedChildOrigins: [NEWS_ORIGIN],
+        win,
+        onChildRoute: (payload) => seen.push(payload.path),
+    });
+
+    bridge.install();
+    bridge.setFrameElement(frame.element);
+
+    win.dispatchMessage({
+        source: frame.frameWindow,
+        origin: NEWS_ORIGIN,
+        data: { type: MESSAGE_ROUTE, payload: { path: "/compare" } },
+    });
+
+    assert.deepEqual(seen, ["/compare"]);
+});
+
+test("the route handler can be replaced", () => {
+    const { win } = createFakeWindow();
+    const frame = createFakeFrame();
+
+    const seen = [];
+
+    const bridge = createFrameBridge({
+        allowedChildOrigins: [NEWS_ORIGIN],
+        win,
+    });
+
+    bridge.install();
+    bridge.setFrameElement(frame.element);
+
+    bridge.setRouteHandler((payload) => seen.push(payload.path));
+
+    win.dispatchMessage({
+        source: frame.frameWindow,
+        origin: NEWS_ORIGIN,
+        data: { type: MESSAGE_ROUTE, payload: { path: "/reports" } },
+    });
+
+    assert.deepEqual(seen, ["/reports"]);
 });
