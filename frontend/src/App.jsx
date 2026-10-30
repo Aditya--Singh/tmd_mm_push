@@ -71,6 +71,11 @@ function App() {
     setCurrentPage(1);
   };
 
+  // The dashboard itself is for everybody who is signed in. The role
+  // decides which parts of it are offered: the summary, the application
+  // insights and the pipeline control belong to the administrator.
+  const isAdmin = user?.role === "admin";
+
   const totalPages = Math.ceil(totalNews / pageSize);
 
   const startArticle = totalNews === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -342,7 +347,7 @@ function App() {
 
       <main className="dashboard">
 
-        {user.role === "admin" && (
+        {isAdmin && (
           <div className="admin-tabs">
             <button
               type="button"
@@ -384,7 +389,7 @@ function App() {
           </div>
         )}
 
-        {user.role === "admin" &&
+        {isAdmin &&
           adminTab === "backend-summary" && (
 
             <>
@@ -460,9 +465,7 @@ function App() {
           )}
 
 
-        {(user.role === "user" ||
-          (user.role === "admin" &&
-            adminTab === "latest-news")) && (
+        {(!isAdmin || adminTab === "latest-news") && (
             <section ref={newsSectionRef} className="panel news-panel">
               <div className="section-header">
                 <div>
@@ -524,7 +527,7 @@ function App() {
             </section>
           )}
 
-        {user.role === "admin" &&
+        {isAdmin &&
           adminTab === "application-insights" && (
             <ApplicationInsights />
           )}

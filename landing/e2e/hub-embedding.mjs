@@ -80,6 +80,14 @@ check("signed-in user is shown", userName === USERNAME, userName);
 const cardCount = await page.locator(".app-card").count();
 check("all four intelligence services are listed", cardCount === 4, `${cardCount}`);
 
+check(
+    "Peer Benchmarking is no longer marked as planned",
+    !(await page
+        .locator(".app-card", { hasText: "Peer Benchmarking" })
+        .locator(".app-badge")
+        .count()),
+);
+
 const headerButtons = await page.locator(".header-actions button").allInnerTexts();
 
 check(

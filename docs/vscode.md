@@ -92,7 +92,8 @@ extension offers **Debug Test** on the backend suite.
 | `Test: landing page` | Hub frame bridge (`node --test`). |
 | `Test: benchmarking` | The hand-off and navigation tests of Peer Benchmarking (`pytest`). |
 | `Test: hub with Peer Benchmarking` | The browser test of the benchmarking service. It needs the platform running. |
-| `Test: all` | All five, in parallel. |
+| `Test: news feed for every role` | The browser test that every role can read the news. It needs the platform running. |
+| `Test: all` | All six, in parallel. |
 
 `Check: lint and build` lints and builds the news frontend. The same
 commands work in `landing/`.

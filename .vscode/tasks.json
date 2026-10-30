@@ -243,6 +243,17 @@
             "problemMatcher": []
         },
         {
+            "label": "Test: news feed for every role",
+            "detail": "Browser test: the news feed is shown to every role that can sign in",
+            "type": "shell",
+            "command": "node news-roles.mjs",
+            "options": {
+                "cwd": "${workspaceFolder}/landing/e2e"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
             "label": "Test: hub with Peer Benchmarking",
             "detail": "Browser test: one sign-in opens the benchmarking app in the workspace",
             "type": "shell",
@@ -263,7 +274,8 @@
                 "Test: backend",
                 "Test: news frontend",
                 "Test: landing page",
-                "Test: benchmarking"
+                "Test: benchmarking",
+                "Test: news feed for every role"
             ],
             "problemMatcher": []
         },

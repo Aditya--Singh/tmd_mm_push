@@ -269,6 +269,7 @@ cd landing && node --test
 # The browser tests, with the platform running
 cd landing/e2e && node hub-embedding.mjs
 cd landing/e2e && node benchmarking.mjs
+cd landing/e2e && node news-roles.mjs
 ```
 
 ---
