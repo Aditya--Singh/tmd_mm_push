@@ -97,7 +97,7 @@ def needs_a_secret(content: str, key: str) -> bool:
     return value == PLACEHOLDERS.get(key, value) or not value
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Prepare the environment files of the platform.",
     )
@@ -106,7 +106,7 @@ def main() -> int:
         action="store_true",
         help="Replace the shared secret even when one is already set.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     if not BACKEND_EXAMPLE.exists() or not BENCH_EXAMPLE.exists():
         print("The example environment files are missing.", file=sys.stderr)
@@ -150,6 +150,15 @@ def main() -> int:
         "'self' http://localhost:5174 http://127.0.0.1:5174",
     )
 
+    # The hub signs people in, so the app has to accept a sign-in ticket
+    # for the staff roles as well. Its own password sign-in is untouched:
+    # this only says who the hub may vouch for.
+    bench = set_value(bench, "HANDOFF_ALLOW_STAFF", "true")
+    bench = set_value(bench, "HANDOFF_AUTO_CREATE", "true")
+    bench = set_value(bench, "HANDOFF_SYNC_ROLE", "true")
+    bench = set_value(bench, "DASHBOARD_URL", "http://localhost:5174/")
+    bench = set_value(bench, "DASHBOARD_NAME", "Executive Intelligence Hub")
+
     write(BACKEND_ENV, backend)
     write(BENCH_ENV, bench)
 
@@ -159,6 +168,8 @@ def main() -> int:
     print("  benchmarking/.env")
     print("")
     print("The two servers now share one secret, so one sign-in opens both.")
+    print("Peer Benchmarking accepts the hub for every role: analyst,")
+    print("approver, general manager and administrator.")
 
     return 0
 
