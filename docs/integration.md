@@ -124,6 +124,40 @@ Feedback is collected by the landing page and posted to
 signed-in user is taken from the token, so the request body only
 carries the ratings.
 
+## 3.4 Theme
+
+Both applications use one palette, so the embedded service and the hub
+read as a single product:
+
+| Token | Value | Use |
+|---|---|---|
+| `--primary` | `#A6192E` | Primary actions, selected states |
+| `--primary-deep` | `#4E0C18` | The header band |
+| `--primary-50` | `#FBF0F2` | Selected service background |
+| `--accent` | `#F2B600` | The rule under the header, the marker on the selected service |
+| `--text` | `#1B2130` | Body text |
+| `--muted` | `#6E788A` | Secondary text |
+| `--border` | `#E2E5EB` | Panel and rail borders |
+| `--background` | `#F3F4F7` | The page behind the panels |
+
+Typography is Segoe UI Variable, falling back to Segoe UI and the system
+stack. Panels are flat, with a one pixel border and a soft shadow, and
+corners are 10px, or 14px for the larger surfaces.
+
+## 3.5 Collapsible service rail
+
+The service rail can be collapsed to an icon column so that the
+workspace gets the room. The control sits at the top of the rail, and
+the choice is remembered in `localStorage` under
+`bankHubSidebarCollapsed`.
+
+When collapsed, the rail is 80px wide, the descriptions are hidden and
+each service shows its icon above its name. The selected service keeps
+its gold marker.
+
+On narrow screens the rail becomes a horizontal strip instead, with the
+same items.
+
 ## 4. Signing out
 
 Signing out is propagated in both directions, so the two shells never

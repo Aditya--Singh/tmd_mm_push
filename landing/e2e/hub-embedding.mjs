@@ -105,6 +105,74 @@ check(
         USERNAME.charAt(0).toUpperCase(),
 );
 
+// ------------------------------------------------------------------
+// The service rail can be collapsed to the left
+// ------------------------------------------------------------------
+
+const expandedWidth = await page
+    .locator(".sidebar")
+    .evaluate((element) => element.getBoundingClientRect().width);
+
+check(
+    "the service rail starts expanded",
+    expandedWidth > 200,
+    `${Math.round(expandedWidth)}px`,
+);
+
+await page.locator(".sidebar-toggle").click();
+await page.waitForTimeout(500);
+
+const collapsedWidth = await page
+    .locator(".sidebar")
+    .evaluate((element) => element.getBoundingClientRect().width);
+
+check(
+    "the service rail collapses towards the left edge",
+    collapsedWidth < expandedWidth,
+    `${Math.round(expandedWidth)}px -> ${Math.round(collapsedWidth)}px`,
+);
+
+check(
+    "the collapsed rail keeps the service names",
+    (await page.locator(".app-card .app-name").count()) === 4,
+);
+
+check(
+    "the collapsed rail hides the service descriptions",
+    !(await page.locator(".app-card .app-desc").first().isVisible()),
+);
+
+check(
+    "the collapse toggle reports the state",
+    (await page.locator(".sidebar-toggle").getAttribute("aria-expanded")) ===
+        "false",
+);
+
+// The choice is remembered.
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForSelector(".header-avatar", { timeout: 20000 });
+
+const widthAfterReload = await page
+    .locator(".sidebar")
+    .evaluate((element) => element.getBoundingClientRect().width);
+
+check(
+    "the collapsed state is remembered",
+    Math.abs(widthAfterReload - collapsedWidth) < 2,
+    `${Math.round(widthAfterReload)}px`,
+);
+
+await page.locator(".sidebar-toggle").click();
+await page.waitForTimeout(500);
+
+check(
+    "the rail expands again",
+    (await page
+        .locator(".sidebar")
+        .evaluate((element) => element.getBoundingClientRect().width)) >
+        200,
+);
+
 const plannedBadge = await page
     .locator(".app-card", { hasText: "SQL Genie" })
     .locator(".app-badge")

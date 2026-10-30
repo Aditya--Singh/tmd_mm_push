@@ -3,13 +3,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "./styles/landing.css";
 
 import { me } from "./api/auth";
-import AppCard from "./components/AppCard";
 import FeedbackModal from "./components/FeedbackModal";
+import Sidebar from "./components/Sidebar";
 import Workspace from "./components/Workspace";
 import Login from "./pages/Login";
 import { envList } from "./config/env";
 import { submitFeedback } from "./api/feedback";
 import { createFrameBridge } from "./session/frameBridge";
+import {
+    readSidebarCollapsed,
+    writeSidebarCollapsed,
+} from "./session/sidebar";
 import {
     clearHubSession,
     readHubSession,
@@ -36,6 +40,10 @@ function App() {
     const [pendingLogout, setPendingLogout] = useState(false);
 
     const [showFeedback, setShowFeedback] = useState(false);
+
+    const [isCollapsed, setIsCollapsed] = useState(() =>
+        readSidebarCollapsed(window.localStorage),
+    );
 
     const clearSession = useCallback(() => {
         clearHubSession(window.localStorage);
@@ -133,6 +141,14 @@ function App() {
         return () => {
             cancelled = true;
         };
+    }, []);
+
+    const handleToggleSidebar = useCallback(() => {
+        setIsCollapsed((previous) => {
+            writeSidebarCollapsed(!previous, window.localStorage);
+
+            return !previous;
+        });
     }, []);
 
     const handleLogin = (user) => {
@@ -233,32 +249,20 @@ function App() {
                 </div>
             </header>
 
-            <div className="container">
-                <aside className="sidebar">
-                    <div className="sidebar-panel">
-                        <div className="sidebar-title">
-                            Intelligence Services
-                        </div>
-
-                        <div className="app-list">
-                            {services.map((service) => (
-                                <AppCard
-                                    key={service.id}
-                                    service={service}
-                                    isActive={service.id === activeServiceId}
-                                    onSelect={(selected) =>
-                                        setActiveServiceId(
-                                            selected.id ===
-                                                activeServiceId
-                                                ? null
-                                                : selected.id,
-                                        )
-                                    }
-                                />
-                            ))}
-                        </div>
-                    </div>
-                </aside>
+            <div className={`container${isCollapsed ? " collapsed" : ""}`}>
+                <Sidebar
+                    services={services}
+                    activeServiceId={activeServiceId}
+                    isCollapsed={isCollapsed}
+                    onToggle={handleToggleSidebar}
+                    onSelect={(selected) =>
+                        setActiveServiceId(
+                            selected.id === activeServiceId
+                                ? null
+                                : selected.id,
+                        )
+                    }
+                />
 
                 <main className="main">
                     <Workspace

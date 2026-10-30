@@ -137,14 +137,18 @@ function Workspace({ bridge, service, session }) {
 
     return (
         <section id="workspace" className="workspace">
-            {!service && <WelcomePanel />}
+            {!service && (
+                <div className="workspace-body">
+                    <WelcomePanel />
+                </div>
+            )}
 
             {service && !isLive && (
-                <>
+                <div className="workspace-body">
                     <h2>{service.name}</h2>
 
                     <PlannedPanel service={service} />
-                </>
+                </div>
             )}
 
             {service && isLive && (

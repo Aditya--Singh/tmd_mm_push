@@ -145,8 +145,13 @@ token. The session is carried into the frame over `postMessage` with an
 origin allowlist, or read directly from shared storage when both are
 served from one origin.
 
-`docs/integration.md` describes the message contract, the configuration
-and the deployment layout in full.
+They also share one visual language. The hub is a grid of a header band,
+a collapsible service rail and the workspace, and the dashboard uses the
+same palette, typography and panel treatment, so the two read as one
+product.
+
+`docs/integration.md` describes the message contract, the theme, the
+configuration and the deployment layout in full.
 
 ## 6. Current News Prioritization
 
