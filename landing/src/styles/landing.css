@@ -46,7 +46,7 @@
   --shadow: 0 1px 2px rgba(27, 33, 48, 0.06), 0 2px 8px rgba(27, 33, 48, 0.04);
   --shadow-md: 0 8px 28px rgba(27, 33, 48, 0.14);
 
-  --sidebar-width: 264px;
+  --sidebar-width: 296px;
   --sidebar-width-collapsed: 80px;
   --header-height: 60px;
 }
@@ -508,10 +508,17 @@ button {
 
   font-weight: 600;
   font-size: 13.5px;
+  line-height: 1.25;
 
-  white-space: nowrap;
+  /* A long name wraps rather than being cut short. */
   overflow: hidden;
-  text-overflow: ellipsis;
+
+  overflow-wrap: anywhere;
+  hyphens: auto;
+
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .app-badge {
@@ -520,13 +527,13 @@ button {
   background: var(--primary-100);
   color: var(--primary-dark);
 
-  padding: 1px 7px;
+  padding: 1px 6px;
   border-radius: 999px;
 
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
 }
 
 .app-desc {
