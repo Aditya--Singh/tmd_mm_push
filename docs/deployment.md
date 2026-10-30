@@ -97,9 +97,10 @@ The eventual deployment should address:
 The intended production arrangement serves everything from one origin:
 
 ```text
-https://newsintel.pnbbank.in/          landing page
-https://newsintel.pnbbank.in/news/     news dashboard
-https://newsintel.pnbbank.in/api/      FastAPI
+https://newsintel.pnbbank.in/              landing page
+https://newsintel.pnbbank.in/news/         news dashboard
+https://newsintel.pnbbank.in/benchmarking/ peer benchmarking
+https://newsintel.pnbbank.in/api/          FastAPI
 ```
 
 The news dashboard must be built with a base path so that its assets
@@ -112,6 +113,30 @@ VITE_BASE_PATH=/news/ npm run build
 
 Serving both applications from one origin lets the dashboard adopt the
 session from shared storage directly.
+
+Peer Benchmarking keeps its own server, its own database and its own
+sessions, so it is proxied to the application on port 8077 rather than
+being built into a static bundle. Two settings on that server decide
+whether the hub may frame it:
+
+```ini
+# benchmarking/.env
+FRAME_ANCESTORS='self' https://newsintel.pnbbank.in
+EMBED_PARENT_ORIGINS=https://newsintel.pnbbank.in
+```
+
+The hub must be told where the benchmarking app is:
+
+```ini
+# backend/.env
+KPI_APP_URL=http://127.0.0.1:8077
+KPI_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in benchmarking/.env>
+```
+
+An `http://` application inside an `https://` page is refused by the
+browser, so Peer Benchmarking needs HTTPS as well when the hub is served
+over HTTPS. `docs/INSTALL-LINUX.md` in `benchmarking/` has the nginx
+example.
 
 ## 8. Containerization — Planned
 

@@ -47,7 +47,7 @@
   --shadow-md: 0 8px 28px rgba(27, 33, 48, 0.14);
 
   --sidebar-width: 296px;
-  --sidebar-width-collapsed: 80px;
+  --sidebar-width-collapsed: 112px;
   --header-height: 60px;
 }
 
@@ -513,8 +513,7 @@ button {
   /* A long name wraps rather than being cut short. */
   overflow: hidden;
 
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  overflow-wrap: break-word;
 
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -626,6 +625,10 @@ button {
 .app-section-name {
   min-width: 0;
 
+  /* The name takes the room that is left, so that a long name wraps
+     at a word rather than being cut short. */
+  flex: 1;
+
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -656,7 +659,9 @@ button {
 .container.collapsed .app-name {
   width: 100%;
 
-  font-size: 10.5px;
+  /* Small enough that every service name fits on two lines, whatever
+     font the machine has. */
+  font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.01em;
   line-height: 1.25;
@@ -664,11 +669,13 @@ button {
   white-space: normal;
   overflow: hidden;
 
-  overflow-wrap: anywhere;
+  /* A word is only broken when it cannot fit at all, and then it is
+     broken with a hyphen, so that the name stays readable. */
+  overflow-wrap: break-word;
   hyphens: auto;
 
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
 }
 
@@ -695,7 +702,8 @@ button {
 
 .container.collapsed .app-section-name {
   white-space: normal;
-  overflow-wrap: anywhere;
+
+  overflow-wrap: break-word;
   hyphens: auto;
 
   display: -webkit-box;

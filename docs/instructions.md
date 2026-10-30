@@ -169,23 +169,30 @@ Open the URL shown by Vite, normally similar to:
 http://localhost:5173/
 ```
 
-## 12. Backend + Frontend Ports
+## 12. The Ports
 
-Run all three services:
+Run all four services:
 
 ```text
 Terminal 1
-FastAPI
+FastAPI (the backend of the hub)
 http://127.0.0.1:8000
 
 Terminal 2
+FastAPI (Peer Benchmarking)
+http://localhost:8077
+
+Terminal 3
 React/Vite (news dashboard)
 http://localhost:5173
 
-Terminal 3
+Terminal 4
 React/Vite (landing page hub)
 http://localhost:5174
 ```
+
+`setup.sh` and `setup.ps1` install all of them, and `run.sh` and
+`run.ps1` start them. See [SETUP.md](SETUP.md).
 
 The current Axios client is:
 

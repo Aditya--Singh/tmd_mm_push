@@ -183,9 +183,11 @@ workspace gets the room. The control sits at the top of the rail, and
 the choice is remembered in `localStorage` under
 `bankHubSidebarCollapsed`.
 
-When collapsed, the rail is 80px wide, the descriptions are hidden and
+When collapsed, the rail is 112px wide, the descriptions are hidden and
 each service shows its icon above its name. The selected service keeps
-its gold marker.
+its gold marker. The width is chosen so that every service name and
+every screen name still fits on two lines, whatever font the machine
+has.
 
 On narrow screens the rail becomes a horizontal strip instead, with the
 same items.
@@ -281,10 +283,10 @@ The hub cannot simply remove the frame: a message that is still in
 flight is discarded together with the frame, and the frame would keep
 its session. The sign-out is therefore confirmed:
 
-1. The hub sends `newsint:logout` and repeats it until the frame
+1. The hub sends `hubint:logout` and repeats it until the frame
    answers, because a frame that is still starting up has not attached
    its message listener yet and would not receive the first request.
-2. The frame clears its session and answers with `newsint:logout-ack`.
+2. The frame clears its session and answers with `hubint:logout-ack`.
 3. Only then does the hub clear its own session and remove the frame.
 
 If the frame never answers, the hub clears the session anyway after a
@@ -292,7 +294,7 @@ short delay, so signing out can never get stuck.
 
 ### 4.2 Why a sign-out cannot be undone by a late handshake
 
-The frame answers every `newsint:ready` with the session. A handshake
+The frame answers every `hubint:ready` with the session. A handshake
 that was already in flight could therefore arrive after a sign-out and
 revive the session.
 
