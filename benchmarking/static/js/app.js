@@ -38,6 +38,10 @@ state.embed = params.get('embed') === '1' || params.get('embedded') === '1' || i
 let settleBridgeAuth = () => {};
 const bridgeAuth = new Promise((resolve) => { settleBridgeAuth = resolve; });
 
+// The ticket that was last handed to us. A sign-in ticket works once, and the hub may send
+// the same one twice: once when the frame loads and once when the frame asks for a session.
+let usedTicket = null;
+
 // --------------------------------------------------------------------------- navigation manifest
 async function loadNav() {
   try {
@@ -58,12 +62,29 @@ function installBridge() {
   bridge = createBridgeClient({
     allowedParentOrigins: NAV.parentOrigins || [],
     onAuth: async (payload) => {
-      if (!payload || !payload.ticket) return;
+      const ticket = payload?.ticket;
+
+      if (!ticket) return;
+
+      // The same ticket may arrive twice. It works once, so the second
+      // one is ignored rather than spent a second time.
+      if (ticket === usedTicket) return;
+
+      usedTicket = ticket;
+
       try {
-        await exchangeTicket(payload.ticket);
+        await exchangeTicket(ticket);
         await start();
         settleBridgeAuth(true);
       } catch (e) {
+        // A ticket that was already used is not a failure of the
+        // sign-in: the session may already be there.
+        if (state.token) {
+          await start().catch(() => {});
+          settleBridgeAuth(true);
+          return;
+        }
+
         showLogin(e.message || 'The sign-in could not be completed.');
         settleBridgeAuth(false);
       }
@@ -96,13 +117,23 @@ async function boot() {
 
   // Inside the hub the sign-in comes from the hub, over the frame bridge.
   if (state.embed) {
+    // A session from an earlier visit is worth keeping.
+    loadToken();
+
     installBridge();
     const answered = await Promise.race([
       bridgeAuth,
-      new Promise((resolve) => setTimeout(() => resolve(false), 2000)),
+      new Promise((resolve) => setTimeout(() => resolve(false), 8000)),
     ]);
     if (answered) return;
-    // The hub did not answer, so fall back to a session this browser already holds.
+
+    // The hub did not answer, so fall back to a session this browser
+    // already holds. Without one there is nothing to ask for.
+    if (!loadToken()) {
+      showLogin('Your session has ended.');
+      settleBridgeAuth(false);
+      return;
+    }
   }
 
   if (params.get('ticket')) {
@@ -121,7 +152,14 @@ async function boot() {
     }
   }
   if (params.get('token')) { setToken(params.get('token')); cleanUrl(); }
-  else loadToken();
+  else if (!state.embed) loadToken();
+
+  if (state.embed && !state.token) {
+    // Nothing to fall back on.
+    showLogin();
+    return;
+  }
+
   try {
     state.user = await api('/api/auth/me', { noAuthRedirect: true });
     await start();
