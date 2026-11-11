@@ -96,6 +96,9 @@ app/
 └── utils/
 
 run_scraper.py
+seed_users.py
+seed/
+└── users.csv            the account sheet: names, passwords, the two roles
 pyproject.toml
 uv.lock
 
@@ -160,8 +163,36 @@ docs/               # its own installation and integration guides
              │                      ▲
              │  one users table,    │ a single-use sign-in
              │  one role per        │ ticket, server to server
+             │  application         │
              └──────────────────────┘
 ```
+
+## The roles
+
+A person holds one role in each application, and the two are kept apart because the
+applications do different work. Both are held once, in the `users` table of the backend:
+
+| Column | The role in | May be |
+|---|---|---|
+| `role_news` | the News Feed | `admin`, `user` |
+| `role_bench` | Peer Benchmarking | `admin`, `maker`, `checker`, `viewer`, `user` |
+
+Each application is given the role that belongs to it, server side, so a browser can never
+choose its own role. The News Feed shows its summary, its insights and its pipeline control
+to an `admin` only; Peer Benchmarking decides for itself what a `maker`, a `checker`, a
+`viewer` or a `user` may do there.
+
+The accounts, their passwords and their two roles are held in `backend/seed/users.csv`,
+which is the account sheet of the platform. The password in the sheet is the password of the
+account; it is hashed before it is stored, so the database only ever holds the hash.
+
+| Account | Password | News Feed | Peer Benchmarking |
+|---|---|---|---|
+| `admin` | `admin@tmd26` | Administrator | Administrator |
+| `analyst` | `Pnb@12345` | Reader | Analyst (Maker) |
+| `approver` | `Pnb@12345` | Reader | Approver (Checker) |
+| `gm` | `Pnb@12345` | Reader | Top Management (Viewer) |
+| `aditya`, `hemant`, `nikhil`, `deepak`, `vijay`, `vikas`, `pankaj` | `<name>@news26` | Reader | Reader |
 
 ---
 
@@ -463,7 +494,8 @@ Completed
 - Landing page hub with single sign-on into the embedded dashboard
 - Peer benchmarking of PNB against SBI, BoB, Canara Bank and Union Bank
 - One sign-in across the hub, the news dashboard and Peer Benchmarking
-- Four roles across the platform: administrator, analyst, approver and general manager
+- One role per application, held in the users table: `role_news` for the News Feed and
+  `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
 
 In Progress
