@@ -49,9 +49,10 @@ def client():
 
     db.add(
         User(
-            username="Admin",
-            password_hash=hash_password("Admin@news26"),
-            role="admin",
+            username="admin",
+            password_hash=hash_password("admin@tmd26"),
+            role_news="admin",
+            role_bench="admin",
             is_active=1,
             created_at=datetime.now(timezone.utc),
         )
@@ -59,9 +60,10 @@ def client():
 
     db.add(
         User(
-            username="Viewer",
-            password_hash=hash_password("Viewer@news26"),
-            role="user",
+            username="viewer",
+            password_hash=hash_password("viewer@news26"),
+            role_news="user",
+            role_bench="viewer",
             is_active=1,
             created_at=datetime.now(timezone.utc),
         )
@@ -69,9 +71,10 @@ def client():
 
     db.add(
         User(
-            username="Disabled",
-            password_hash=hash_password("Disabled@news26"),
-            role="user",
+            username="disabled",
+            password_hash=hash_password("disabled@news26"),
+            role_news="user",
+            role_bench="user",
             is_active=0,
             created_at=datetime.now(timezone.utc),
         )
@@ -98,15 +101,16 @@ def client():
 def test_login_returns_a_token_for_valid_credentials(client):
     response = client.post(
         "/api/auth/login",
-        json={"username": "Admin", "password": "Admin@news26"},
+        json={"username": "admin", "password": "admin@tmd26"},
     )
 
     assert response.status_code == 200
 
     body = response.json()
 
-    assert body["username"] == "Admin"
-    assert body["role"] == "admin"
+    assert body["username"] == "admin"
+    assert body["role_news"] == "admin"
+    assert body["role_bench"] == "admin"
     assert body["token_type"] == "bearer"
     assert body["access_token"]
 
@@ -114,7 +118,7 @@ def test_login_returns_a_token_for_valid_credentials(client):
 def test_login_rejects_a_wrong_password(client):
     response = client.post(
         "/api/auth/login",
-        json={"username": "Admin", "password": "wrong"},
+        json={"username": "admin", "password": "wrong"},
     )
 
     assert response.status_code == 401
@@ -123,7 +127,7 @@ def test_login_rejects_a_wrong_password(client):
 def test_login_rejects_an_unknown_user(client):
     response = client.post(
         "/api/auth/login",
-        json={"username": "Nobody", "password": "Admin@news26"},
+        json={"username": "nobody", "password": "admin@tmd26"},
     )
 
     assert response.status_code == 401
@@ -132,7 +136,7 @@ def test_login_rejects_an_unknown_user(client):
 def test_login_rejects_an_inactive_user(client):
     response = client.post(
         "/api/auth/login",
-        json={"username": "Disabled", "password": "Disabled@news26"},
+        json={"username": "disabled", "password": "disabled@news26"},
     )
 
     assert response.status_code == 401
@@ -141,7 +145,7 @@ def test_login_rejects_an_inactive_user(client):
 def test_me_returns_the_signed_in_user(client):
     token = client.post(
         "/api/auth/login",
-        json={"username": "Admin", "password": "Admin@news26"},
+        json={"username": "admin", "password": "admin@tmd26"},
     ).json()["access_token"]
 
     response = client.get(
@@ -153,8 +157,9 @@ def test_me_returns_the_signed_in_user(client):
 
     body = response.json()
 
-    assert body["username"] == "Admin"
-    assert body["role"] == "admin"
+    assert body["username"] == "admin"
+    assert body["role_news"] == "admin"
+    assert body["role_bench"] == "admin"
     assert isinstance(body["id"], int)
 
 
@@ -213,7 +218,7 @@ def test_every_setting_used_by_the_application_exists(client):
         assert hasattr(Settings(), name), f"Settings.{name} is missing"
 
 
-def login(client, username="Admin", password="Admin@news26"):
+def login(client, username="admin", password="admin@tmd26"):
     response = client.post(
         "/api/auth/login",
         json={"username": username, "password": password},
@@ -254,7 +259,7 @@ def test_feedback_still_accepts_the_user_fields(client):
         "/api/feedback",
         headers={"Authorization": f"Bearer {token}"},
         json={
-            "username": "Admin",
+            "username": "admin",
             "role": "admin",
             "relevance": 4,
             "accuracy": 4,

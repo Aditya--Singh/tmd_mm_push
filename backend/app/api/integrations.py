@@ -21,7 +21,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import get_current_user
-from app.auth.roles import benchmarking_role, role_label
+from app.auth.roles import bench_role_label
 from app.config.settings import get_settings
 from app.models.user import User
 
@@ -96,13 +96,13 @@ def create_ticket(
     """
     Ask Peer Benchmarking for a sign-in ticket for the person who signed in here.
 
-    The role is read from this platform's own user table and mapped to the role Peer
-    Benchmarking uses. A browser can never choose the role: it is taken from the signed-in
-    person, not from the request.
+    The role is the `role_bench` column of this platform's own user table, and it is handed
+    over unchanged: Peer Benchmarking uses the same names. A browser can never choose the
+    role: it is taken from the signed-in person, not from the request.
     """
     secret = _require_secret()
 
-    role = benchmarking_role(current_user.role)
+    role = current_user.role_bench
 
     payload = {
         "username": current_user.username,
@@ -154,7 +154,7 @@ def create_ticket(
     return TicketResponse(
         ticket=data["ticket"],
         role=data.get("role", role),
-        roleLabel=role_label(current_user.role),
+        roleLabel=bench_role_label(current_user.role_bench),
         expiresIn=int(data.get("expires_in", 120)),
         tab=data.get("path", "").rsplit("#/", 1)[-1] or "overview",
     )

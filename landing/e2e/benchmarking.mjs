@@ -6,8 +6,18 @@ import { chromium } from 'playwright';
 
 const HUB = process.env.HUB_URL || 'http://127.0.0.1:5174/';
 const USER = process.env.E2E_USER || 'analyst';
-const PASS = process.env.E2E_PASS || 'Analyst@news26';
+const PASS = process.env.E2E_PASS || 'Pnb@12345';
 const EXPECTED_ROLE = process.env.E2E_ROLE || 'maker';
+
+//: The role_bench column of the account sheet, and the name the benchmarking
+//: app shows for it.
+const ROLE_LABELS = {
+    admin: 'administrator',
+    maker: 'maker',
+    checker: 'checker',
+    viewer: 'viewer',
+    user: 'reader',
+};
 
 // CHROME_BIN lets a machine without the default browser build point at
 // its own copy of Chromium.
@@ -60,10 +70,26 @@ const who = await appFrame.evaluate(() => {
     const btn = document.querySelector('.user-btn');
     return btn ? btn.textContent : '';
 });
+const expectedLabel = ROLE_LABELS[EXPECTED_ROLE] || EXPECTED_ROLE;
+
 check(
     'the benchmarking app shows the role it was signed in with',
-    who.toLowerCase().includes(EXPECTED_ROLE),
-    who,
+    who.toLowerCase().includes(expectedLabel),
+    who + ' (expected ' + expectedLabel + ')',
+);
+
+// The hub must know the same role, and must say which application it is
+// the role of.
+const tooltip = await page.locator('.logout-btn').getAttribute('title');
+check(
+    'the hub names the benchmarking role of the person',
+    (tooltip || '').toLowerCase().includes(expectedLabel),
+    tooltip,
+);
+check(
+    'the hub names the news role of the person as well',
+    (tooltip || '').includes('News Feed:'),
+    tooltip,
 );
 
 // The hub's rail must offer the screens of the benchmarking app.

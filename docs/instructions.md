@@ -399,7 +399,7 @@ npm run dev
 ```
 
 Then open <http://localhost:5174> and sign in with a seeded account, for
-example `Admin` / `Admin@news26`.
+example `admin` / `admin@tmd26`.
 
 Select **News Feed** in the sidebar to open the dashboard inside the
 workspace. It is already signed in: the landing page passes the session

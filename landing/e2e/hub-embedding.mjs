@@ -1,8 +1,8 @@
 import { chromium } from "playwright";
 
 const HUB_URL = process.env.HUB_URL || "http://localhost:5174/";
-const USERNAME = process.env.E2E_USERNAME || "Admin";
-const PASSWORD = process.env.E2E_PASSWORD || "Admin@news26";
+const USERNAME = process.env.E2E_USERNAME || "admin";
+const PASSWORD = process.env.E2E_PASSWORD || "admin@tmd26";
 const FRAME_MATCH = process.env.E2E_FRAME_MATCH || "5173";
 
 const results = [];

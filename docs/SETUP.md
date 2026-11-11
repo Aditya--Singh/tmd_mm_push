@@ -13,7 +13,7 @@ them.
 Peer Benchmarking keeps its own database, its own sessions and its own
 audit trail. The hub does not take that over: it signs the person in and
 hands the benchmarking app a single-use ticket, so the same person is
-signed in on both sides with the same role.
+signed in on both sides with the role they hold in each of them.
 
 ---
 
@@ -142,20 +142,38 @@ npm run dev -- --host 127.0.0.1 --port 5174
 
 ## 4. Signing in
 
-The demo accounts are created by the setup. The password of each one is
-its name followed by `@news26`.
+The demo accounts are created by the setup, from the account sheet in
+`backend/seed/users.csv`. That file holds the same content as the
+`users` and `refer` worksheets of the account sheet: the name of the
+account, the password in plain text, the role in the News Feed and the
+role in Peer Benchmarking.
 
-| Account | Password | Role | What it can do |
-|---|---|---|---|
-| `Admin` | `Admin@news26` | Administrator | Everything, including the user list in Peer Benchmarking |
-| `analyst` | `Analyst@news26` | Analyst | Collects the figures, runs the pipeline, drafts the reports |
-| `approver` | `Approver@news26` | Approver | Checks and approves the figures and the reports |
-| `gm` | `Gm@news26` | General Manager | Reads the approved figures, asks Myra |
-| `Aditya`, `Hemant`, `Nikhil`, `Deepak`, `Vijay`, `Vikas`, `Pankaj` | `<Name>@news26` | Reader | Reads the news; the same read-only view of the figures |
+The password in the sheet is the password of the account. It is hashed
+before it is stored, so the database only ever holds the hash.
 
-The role is held **once**, in the `users` table of the backend, and
-travels with the sign-in. Peer Benchmarking is told which role the
-person holds, so the two applications never disagree.
+| Account | Password | News Feed | Peer Benchmarking | What it can do |
+|---|---|---|---|---|
+| `admin` | `admin@tmd26` | Administrator | Administrator | Everything, including the summary, the pipeline control and the user list in Peer Benchmarking |
+| `analyst` | `Pnb@12345` | Reader | Analyst (Maker) | Collects the figures, runs the pipeline, drafts the reports |
+| `approver` | `Pnb@12345` | Reader | Approver (Checker) | Checks and approves the figures and the reports |
+| `gm` | `Pnb@12345` | Reader | Top Management (Viewer) | Reads the approved figures, asks Myra |
+| `aditya`, `hemant`, `nikhil`, `deepak`, `vijay`, `vikas`, `pankaj` | `<name>@news26` | Reader | Reader | Reads the news, and the same read-only view of the figures |
+
+A person holds **one role in each application**, and the two are kept
+apart: `role_news` for the News Feed and `role_bench` for Peer
+Benchmarking. Both are held once, in the `users` table of the backend,
+and each application is given the one that belongs to it.
+
+The name of an account is matched without regard to case, so `Admin`
+and `admin` open the same account.
+
+To change a password or a role, change the sheet and run the seed
+again:
+
+```bash
+cd backend
+uv run python seed_users.py
+```
 
 ---
 

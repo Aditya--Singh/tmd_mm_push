@@ -39,7 +39,9 @@ function App() {
   const [authStatus, setAuthStatus] = useState("resolving");
   const [summary, setSummary] = useState(null);
   const [news, setNews] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // The administrator's screen is what the application waits for. A reader
+  // has no dashboard to wait for, so the news appears at once.
+  const [dashboardLoading, setDashboardLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [adminTab, setAdminTab] = useState("backend-summary");
@@ -74,7 +76,8 @@ function App() {
   // The dashboard itself is for everybody who is signed in. The role
   // decides which parts of it are offered: the summary, the application
   // insights and the pipeline control belong to the administrator.
-  const isAdmin = user?.role === "admin";
+  // The role is the `role_news` column of the user table.
+  const isAdmin = user?.roleNews === "admin";
 
   const totalPages = Math.ceil(totalNews / pageSize);
 
@@ -200,16 +203,16 @@ function App() {
           setError("Unable to load dashboard data.");
         }
       } finally {
-        setLoading(false);
+        setDashboardLoading(false);
       }
     };
 
-    // The dashboard is only rendered for a signed-in user, so there is
-    // nothing to load until a session exists.
-    if (user?.accessToken) {
+    // The summary is the administrator's screen, so it is only fetched for
+    // the role that is allowed to see it.
+    if (user?.accessToken && isAdmin) {
       loadDashboard();
     }
-  }, [user]);
+  }, [user, isAdmin]);
 
   useEffect(() => {
     const loadNews = async () => {
@@ -259,6 +262,10 @@ function App() {
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
+
+  // Only the administrator waits for the summary; a reader is shown the
+  // news at once.
+  const loading = isAdmin && dashboardLoading;
 
   if (loading) {
     return <div className="loading">Loading Bank News Intelligence...</div>;
@@ -539,7 +546,7 @@ function App() {
             try {
               await submitFeedback({
                 username: user.username,
-                role: user.role,
+                role: user.roleNews,
                 ...feedback,
               });
 

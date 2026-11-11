@@ -20,7 +20,7 @@ import {
     readHubSession,
     writeHubSession,
 } from "./session/hubSession";
-import { servicesForRole, SESSION_MODE } from "./services";
+import { servicesForRoles, SESSION_MODE } from "./services";
 
 /**
  * Origins an embedded application may be served from when they are not
@@ -135,8 +135,10 @@ function App() {
 
                 setSession({
                     username: user.username,
-                    role: user.role,
-                    roleLabel: user.role_label ?? stored.roleLabel,
+                    roleNews: user.role_news,
+                    roleBench: user.role_bench,
+                    roleNewsLabel: user.role_news_label ?? stored.roleNewsLabel,
+                    roleBenchLabel: user.role_bench_label ?? stored.roleBenchLabel,
                     accessToken: stored.accessToken,
                 });
 
@@ -197,8 +199,17 @@ function App() {
         setPendingLogout(true);
     }, [bridge, clearSession]);
 
+    // Who may open which service is decided by the role the person holds in
+    // that service: the News Feed by `role_news`, Peer Benchmarking by
+    // `role_bench`.
     const services = useMemo(
-        () => (session ? servicesForRole(session.role) : []),
+        () =>
+            session
+                ? servicesForRoles({
+                      news: session.roleNews,
+                      bench: session.roleBench,
+                  })
+                : [],
         [session],
     );
 
@@ -275,16 +286,20 @@ function App() {
                 return null;
             }
 
+            // Peer Benchmarking keeps its own sessions and decides what
+            // the role may do there, so it is given the benchmarking role.
             return {
                 username: session.username,
-                role: session.role,
+                roleBench: session.roleBench,
                 ticket: benchmark.ticket,
             };
         }
 
+        // The News Feed shares this platform's token, and decides what the
+        // news role may do there.
         return {
             username: session.username,
-            role: session.role,
+            roleNews: session.roleNews,
             accessToken: session.accessToken,
         };
     }, [session, activeService, benchmark.ticket]);
@@ -306,11 +321,12 @@ function App() {
         return <Login onLogin={handleLogin} />;
     }
 
-    const roleLabel =
-        session.roleLabel ??
-        (session.role === "admin"
-            ? "Administrator"
-            : session.role.charAt(0).toUpperCase() + session.role.slice(1));
+    // A person holds one role in each application, and the button says which
+    // is which.
+    const roleLabel = [
+        `News Feed: ${session.roleNewsLabel ?? session.roleNews}`,
+        `Peer Benchmarking: ${session.roleBenchLabel ?? session.roleBench}`,
+    ].join(" · ");
 
     return (
         <div className="hub">

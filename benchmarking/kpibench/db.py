@@ -45,7 +45,7 @@ class User(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     username: Mapped[str] = mapped_column(String(64), unique=True)
     full_name: Mapped[str] = mapped_column(String(128))
-    role: Mapped[str] = mapped_column(String(16))  # admin | maker | checker | viewer
+    role: Mapped[str] = mapped_column(String(16))  # admin | maker | checker | viewer | user
     password_hash: Mapped[str] = mapped_column(String(256))
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     failed_attempts: Mapped[int] = mapped_column(Integer, default=0)

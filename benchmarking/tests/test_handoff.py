@@ -44,7 +44,12 @@ def client():
 def handoff(client, **body):
     return client.post(
         "/api/auth/handoff",
-        json={"username": "analyst", "tab": "overview", "embed": True, **body},
+        json={
+            "username": body.pop("username", "analyst"),
+            "tab": "overview",
+            "embed": True,
+            **body,
+        },
         headers={"X-Handoff-Secret": "s" * 48},
     )
 
@@ -141,3 +146,51 @@ def test_a_staff_role_is_refused_when_staff_may_not_use_the_handoff(client):
         assert response.status_code == 403
     finally:
         config.settings.HANDOFF_ALLOW_STAFF = True
+
+
+def test_a_reader_is_handed_over_even_when_staff_may_not_use_the_handoff(client):
+    """
+    The `role_bench` column of the account sheet holds `user` for the people
+    who are in the platform for the news only. That role carries no work
+    here, so it is handed over without any further setting.
+    """
+    from kpibench import config
+
+    config.settings.HANDOFF_ALLOW_STAFF = False
+
+    try:
+        # An account that is not a member of staff here, so the hand-off is
+        # not refused for the account it finds.
+        response = handoff(client, username="aditya", role="user")
+
+        assert response.status_code == 200
+
+        assert response.json()["role"] == "user"
+    finally:
+        config.settings.HANDOFF_ALLOW_STAFF = True
+
+
+def test_a_reader_may_read_but_may_not_work(client):
+    ticket = handoff(client, username="aditya", role="user").json()["ticket"]
+
+    response = client.post("/api/auth/exchange", json={"ticket": ticket})
+
+    assert response.status_code == 200
+
+    user = response.json()["user"]
+
+    assert user["role"] == "user"
+    assert user["role_label"] == "Reader"
+
+    # Reading is allowed, working is not.
+    assert "view" in user["permissions"]
+    assert "run" not in user["permissions"]
+    assert "approve" not in user["permissions"]
+    assert "admin" not in user["permissions"]
+
+
+def test_the_reader_role_is_known_to_the_application(client):
+    from kpibench.security import ROLES
+
+    assert "user" in ROLES
+    assert ROLES["user"]["label"] == "Reader"

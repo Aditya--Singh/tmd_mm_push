@@ -4,7 +4,7 @@
     python -m kpibench.cli discover                 # lists the PDF links the Source Scout can see on each bank site
     python -m kpibench.cli collect [--offline] [--banks PNB,SBI] [--quarters 20] [--no-llm]
     python -m kpibench.cli reset-password <user> [--password NEW]
-    python -m kpibench.cli add-user <user> <admin|maker|checker|viewer> --name "Full Name" [--password NEW]
+    python -m kpibench.cli add-user <user> <admin|maker|checker|viewer|user> --name "Full Name" [--password NEW]
     python -m kpibench.cli token <user>             # prints a session token (for embedding in the dashboard)
     python -m kpibench.cli link gm --tab trends     # prints a one-time sign-in link for a viewer (hand-off test)
     python -m kpibench.cli netcheck                 # explains why pip cannot download libraries
@@ -277,7 +277,7 @@ def cmd_link(args) -> int:
         u = s.execute(select(User).where(User.username == args.user)).scalar_one_or_none()
         if not u:
             raise SystemExit("No such user (create it with add-user ... viewer)")
-        if u.role != "viewer":
+        if u.role not in ("viewer", "user"):
             raise SystemExit("Links are for viewer accounts; analysts, approvers and admins sign in with their password")
         username, role = u.username, u.role
     host = args.host

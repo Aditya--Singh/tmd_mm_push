@@ -65,7 +65,7 @@ function createFakeWindow({ origin = "https://news.example", embedded = true } =
 
 function authEvent(win, origin = HUB_ORIGIN, payload = {
     username: "Admin",
-    role: "admin",
+    roleNews: "admin",
     accessToken: "token-1",
 }) {
     return {
@@ -112,7 +112,7 @@ test("a session from an allow-listed parent is accepted and stored", () => {
 
     assert.deepEqual(readSession(storage), {
         username: "Admin",
-        role: "admin",
+        roleNews: "admin",
         accessToken: "token-1",
     });
 });
@@ -366,14 +366,14 @@ test("a different session is accepted after a sign-out", () => {
     win.dispatchMessage(
         authEvent(win, HUB_ORIGIN, {
             username: "Viewer",
-            role: "user",
+            roleNews: "user",
             accessToken: "token-2",
         }),
     );
 
     assert.deepEqual(readSession(storage), {
         username: "Viewer",
-        role: "user",
+        roleNews: "user",
         accessToken: "token-2",
     });
 });

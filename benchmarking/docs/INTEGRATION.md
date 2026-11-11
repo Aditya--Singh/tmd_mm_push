@@ -77,6 +77,7 @@ Body:
 | `full_name` | no | shown in the app's top bar; used when the account is first created |
 | `tab` | no | `overview` (default), `trends`, `compare` or `reports` |
 | `embed` | no | `true` hides the app's own header and menu (for option C) |
+| `role` | no | the role the person holds here: `admin`, `maker`, `checker`, `viewer` or `user`. The hub sends the `role_bench` column of its own users table. Leave empty to keep the role held here. |
 
 Success, HTTP 200:
 ```json
@@ -277,7 +278,7 @@ sequenceDiagram
     participant H as Hub
     participant P as Peer Benchmarking
     U->>H: signs in
-    H->>H: reads the role from its own users table
+    H->>H: reads role_bench from its own users table
     H->>P: POST /api/auth/handoff (X-Handoff-Secret, username, role)
     P-->>H: a single-use ticket
     H->>P: hubint:auth { ticket } over postMessage
@@ -304,17 +305,22 @@ you, and keeps the secret in step with the backend's.
 `http://localhost:5174` and `http://127.0.0.1:5174` are different origins, and only the one the
 browser used will be accepted.
 
-### The four roles
+### The role in this application
 
-The hub holds the role of every person, once, in its own users table. It tells this app which role
-the person has, and this app gives them that role:
+The hub holds the roles of every person, once, in its own users table. A person holds one role in
+each application, and this app is given the one that belongs to it: the `role_bench` column. The
+names are this app's own, so nothing is translated:
 
-| Role on the platform | Role here | May do |
-|---|---|---|
-| `admin` | `admin` | Everything, including the list of users |
-| `analyst` | `maker` | Collect the figures, run the pipeline, draft reports |
-| `approver` | `checker` | Check and approve the figures and the reports |
-| `gm` | `viewer` | Read the approved figures, ask Myra |
+| Role held here | May do |
+|---|---|
+| `admin` | Everything, including the list of users |
+| `maker` | Collect the figures, run the pipeline, draft reports |
+| `checker` | Check and approve the figures and the reports |
+| `viewer` | Read the approved figures, ask Myra |
+| `user` | Read the approved figures and nothing else |
+
+`user` is for the people who are in the platform for the news only. It carries no work, so it is
+handed over without this app needing to be configured for staff sign-ins.
 
 With `HANDOFF_SYNC_ROLE=true` a role that changes in the hub is applied here on the next sign-in,
 and an `auth.handoff.role_changed` entry is written to the audit trail. The four-eyes rule is

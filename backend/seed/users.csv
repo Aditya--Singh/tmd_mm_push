@@ -1,0 +1,12 @@
+username,password,role_news,role_bench,is_active
+admin,admin@tmd26,admin,admin,1
+aditya,aditya@news26,user,user,1
+hemant,hemant@news26,user,user,1
+nikhil,nikhil@news26,user,user,1
+deepak,deepak@news26,user,user,1
+vijay,vijay@news26,user,user,1
+vikas,vikas@news26,user,user,1
+pankaj,pankaj@news26,user,user,1
+analyst,Pnb@12345,user,maker,1
+approver,Pnb@12345,user,checker,1
+gm,Pnb@12345,user,viewer,1

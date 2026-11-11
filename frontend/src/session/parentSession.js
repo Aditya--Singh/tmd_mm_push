@@ -9,7 +9,7 @@
  * handed over explicitly over postMessage instead:
  *
  *   child -> parent : { type: "hubint:ready" }
- *   parent -> child : { type: "hubint:auth", payload: { username, role, accessToken } }
+ *   parent -> child : { type: "hubint:auth", payload: { username, roleNews, accessToken } }
  *   parent -> child : { type: "hubint:logout" }
  *   child -> parent : { type: "hubint:logout" }
  *

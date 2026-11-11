@@ -14,7 +14,7 @@
 - Priority-based news ordering
 - React/Vite frontend
 - Executive dashboard KPIs and charts
-- JWT authentication with admin and user roles
+- JWT authentication with a role per application: `role_news` and `role_bench`
 - Landing page hub that hosts the intelligence services
 - Single sign-on from the landing page into the embedded dashboard
 - News cards with AI analysis

@@ -6,14 +6,14 @@
  * origins, the session is handed to the frame explicitly:
  *
  *   child -> parent : { type: "hubint:ready" }
- *   parent -> child : { type: "hubint:auth", payload: { username, role, accessToken } }
+ *   parent -> child : { type: "hubint:auth", payload: { username, roleNews, accessToken } }
  *   parent -> child : { type: "hubint:logout" }
  *   child -> parent : { type: "hubint:logout" }
  *
  * The payload depends on the service. The news application shares this
- * platform's token and takes { username, role, accessToken }. Peer
+ * platform's token and takes { username, roleNews, accessToken }. Peer
  * Benchmarking keeps its own sessions, so it is handed a single-use
- * sign-in ticket instead: { username, role, ticket }.
+ * sign-in ticket instead: { username, roleBench, ticket }.
  *
  * The landing page can also drive the frame:
  *
@@ -301,7 +301,7 @@ export function createFrameBridge(options = {}) {
 
                 authPayload = {
                     username: session.username,
-                    role: session.role,
+                    roleNews: session.roleNews,
                     accessToken: session.accessToken,
                 };
             }

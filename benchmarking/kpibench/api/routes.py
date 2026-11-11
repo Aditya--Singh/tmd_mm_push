@@ -28,7 +28,7 @@ from ..llm import llm
 from ..observability import bus, log
 from ..periods import current_reporting_quarter, from_key
 from ..scraper.registry import load_registry
-from ..security import (PASSWORD_POLICY, ROLES, CurrentUser, authenticate, consume_ticket, current_user, hash_password,
+from ..security import (PASSWORD_POLICY, READ_ONLY_ROLES, ROLES, CurrentUser, authenticate, consume_ticket, current_user, hash_password,
                         make_ticket, make_token, require, verify_password)
 from ..services import benchmark as bm
 from ..services import publish
@@ -99,10 +99,10 @@ class HandoffIn(BaseModel):
     full_name: str | None = Field(None, max_length=120)
     tab: str = Field("overview", pattern=r"^(overview|trends|compare|reports)$")
     embed: bool = False
-    # The role the dashboard holds for this user. The Executive Intelligence Hub sends the role
-    # it read from its own user table, so that one sign-in carries the same job description
-    # into this app. Leave empty to keep the role this app already holds.
-    role: str | None = Field(None, pattern=r"^(admin|maker|checker|viewer)$")
+    # The role the dashboard holds for this user. The Executive Intelligence Hub sends the
+    # role_bench column of its own user table, so that one sign-in carries the same job
+    # description into this app. Leave empty to keep the role this app already holds.
+    role: str | None = Field(None, pattern=r"^(admin|maker|checker|viewer|user)$")
 
 
 @router.post("/auth/handoff")
@@ -122,7 +122,7 @@ def handoff(body: HandoffIn, request: Request):
         audit("dashboard", "auth.handoff.refused", "user", body.username, {"reason": "bad secret"}, ip)
         raise HTTPException(401, "Invalid hand-off secret")
     # A dashboard that states a staff role needs the app to allow staff sign-ins.
-    if body.role and body.role != "viewer" and not settings.HANDOFF_ALLOW_STAFF:
+    if body.role and body.role not in READ_ONLY_ROLES and not settings.HANDOFF_ALLOW_STAFF:
         audit("dashboard", "auth.handoff.refused", "user", body.username, {"reason": "staff role requested"}, ip)
         raise HTTPException(403, "Analyst, approver and administrator accounts sign in with their own password")
     created = False
@@ -140,7 +140,7 @@ def handoff(body: HandoffIn, request: Request):
             created = True
         if not u.active:
             raise HTTPException(403, "User is disabled")
-        if u.role != "viewer" and not settings.HANDOFF_ALLOW_STAFF:
+        if u.role not in READ_ONLY_ROLES and not settings.HANDOFF_ALLOW_STAFF:
             audit("dashboard", "auth.handoff.refused", "user", body.username, {"reason": "staff account"}, ip)
             raise HTTPException(403, "Analyst, approver and administrator accounts sign in with their own password")
         # The dashboard is authoritative only when it is configured to be.

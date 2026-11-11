@@ -76,9 +76,9 @@ Start the platform with:
 
 Then open http://localhost:5174 and sign in with, for example:
 
-    Admin     / Admin@news26       administrator
-    analyst   / Analyst@news26     analyst, collects the figures
-    approver  / Approver@news26    approver, checks the figures
-    gm        / Gm@news26          general manager, reads them
+    admin     / admin@tmd26        administrator in both applications
+    analyst   / Pnb@12345          analyst, collects the figures
+    approver  / Pnb@12345          approver, checks the figures
+    gm        / Pnb@12345          general manager, reads them
 
 DONE

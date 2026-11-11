@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import app.models
 from app.config.settings import get_settings
 from app.database.database import Base, engine
+from app.database.migrate import migrate
 
 
 settings = get_settings()
@@ -34,6 +35,10 @@ app.include_router(feedback_router)
 app.include_router(auth_router)
 app.include_router(pipeline_router)
 app.include_router(integrations_router)
+
+# A database that was made before the roles were split is brought up to the
+# current shape first, and only then are the missing tables created.
+migrate(engine)
 
 Base.metadata.create_all(bind=engine)
 

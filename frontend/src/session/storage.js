@@ -5,6 +5,10 @@
  * existing axios interceptor in `src/api/client.js` can attach it to every
  * request without further changes.
  *
+ * The session holds the role the person holds in this application, which is
+ * the `role_news` column of the `users` table. The role they hold in Peer
+ * Benchmarking is not carried here: that application keeps its own sessions.
+ *
  * Two keys are in play:
  *
  *   bankNewsUser    - the session used by this application.
@@ -36,7 +40,7 @@ export function normaliseSession(session) {
 
     const username = session.username;
 
-    const role = session.role;
+    const roleNews = session.roleNews ?? session.role_news;
 
     if (typeof accessToken !== "string" || !accessToken) {
         return null;
@@ -46,11 +50,11 @@ export function normaliseSession(session) {
         return null;
     }
 
-    if (typeof role !== "string" || !role) {
+    if (typeof roleNews !== "string" || !roleNews) {
         return null;
     }
 
-    return { username, role, accessToken };
+    return { username, roleNews, accessToken };
 }
 
 function safeGet(storage, key) {

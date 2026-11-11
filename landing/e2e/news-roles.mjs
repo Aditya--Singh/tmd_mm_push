@@ -4,12 +4,14 @@ import { chromium } from 'playwright';
 
 const HUB_URL = process.env.HUB_URL || 'http://localhost:5174/';
 
+//: The role_news column of the account sheet, and whether the news
+//: application offers its administrator's screens for it.
 const ROLES = [
-    { username: 'analyst', password: 'Analyst@news26' },
-    { username: 'approver', password: 'Approver@news26' },
-    { username: 'gm', password: 'Gm@news26' },
-    { username: 'Aditya', password: 'Aditya@news26' },
-    { username: 'Admin', password: 'Admin@news26' },
+    { username: 'analyst', password: 'Pnb@12345', isAdmin: false },
+    { username: 'approver', password: 'Pnb@12345', isAdmin: false },
+    { username: 'gm', password: 'Pnb@12345', isAdmin: false },
+    { username: 'aditya', password: 'aditya@news26', isAdmin: false },
+    { username: 'admin', password: 'admin@tmd26', isAdmin: true },
 ];
 
 const results = [];
@@ -61,6 +63,15 @@ for (const role of ROLES) {
     }
 
     check(`the news feed is shown to ${role.username}`, shown === 'Latest News', shown);
+
+    // The screens of the administrator follow the role_news column.
+    const adminTabs = await frame.locator('.admin-tab').allInnerTexts();
+
+    check(
+        `the news feed offers its administrator's screens to ${role.username} only when the role says so`,
+        role.isAdmin ? adminTabs.length > 0 : adminTabs.length === 0,
+        JSON.stringify(adminTabs),
+    );
 
     await context.close();
 }

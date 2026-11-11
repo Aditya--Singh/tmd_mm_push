@@ -33,7 +33,7 @@ repository:
 ```
 
 Then open <http://localhost:5174> and sign in there. Choosing **Peer Benchmarking** opens this
-application in the workspace, already signed in, with the same role. See
+application in the workspace, already signed in, with the role the person holds here. See
 [../docs/SETUP.md](../docs/SETUP.md).
 
 **On its own** - in a terminal inside this folder:
@@ -54,6 +54,10 @@ Then open the printed address (default port **8077**) and sign in.
 | `approver` | Approver (checker) | approve / reject / correct values, approve reports, view, chat |
 | `gm` | Top Management (viewer) | view approved data, chat |
 | `admin` | Administrator | everything, plus the user list |
+| `user` | Reader | view approved data and nothing else; for the people who are in the platform for the news only |
+
+The role of a person who signs in through the Executive Intelligence Hub is the `role_bench`
+column of the hub's own users table, so the hub and this application never disagree.
 
 The starter password for all four is set by `DEFAULT_PASSWORD` in `.env` (default `Pnb@12345`). Change every
 password after the first sign-in (top-right menu, Change password). Nobody can approve values or reports they
@@ -69,7 +73,7 @@ Run these inside the folder with the private Python environment active
 | `python -m kpibench.cli selftest` | checks extraction accuracy and the whole pipeline in a temporary folder |
 | `python -m kpibench.cli discover` | lists the PDF links the Source Scout can see on each bank site |
 | `python -m kpibench.cli collect` | runs data collection from the terminal (`--offline` = inbox only, `--no-llm` = rules only) |
-| `python -m kpibench.cli add-user <id> viewer --name "Full Name"` | adds a user (roles: admin, maker, checker, viewer) |
+| `python -m kpibench.cli add-user <id> viewer --name "Full Name"` | adds a user (roles: admin, maker, checker, viewer, user) |
 | `python -m kpibench.cli reset-password <id>` | resets a password and unlocks the account |
 | `python -m kpibench.cli link <viewer-id> --tab trends` | prints a one-time sign-in link (tests the dashboard hand-off) |
 | `python -m kpibench.cli verify-audit` | checks the audit hash chain |

@@ -25,7 +25,8 @@ def create_feedback(
 ):
     record = ApplicationFeedback(
         username=current_user.username,
-        role=current_user.role,
+        role=current_user.role_news,
+        role_bench=current_user.role_bench,
         relevance=feedback.relevance,
         accuracy=feedback.accuracy,
         usefulness=feedback.usefulness,

@@ -33,7 +33,7 @@ function Login({ onLogin }) {
 
             onLogin({
                 username: data.username,
-                role: data.role,
+                roleNews: data.role_news,
                 accessToken: data.access_token,
             });
         } catch (error) {

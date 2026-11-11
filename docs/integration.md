@@ -80,8 +80,8 @@ The session is handed over explicitly instead:
 
 ```text
 child -> parent : { type: "hubint:ready" }
-parent -> child : { type: "hubint:auth", payload: { username, role, accessToken } }
-parent -> child : { type: "hubint:auth", payload: { username, role, ticket } }
+parent -> child : { type: "hubint:auth", payload: { username, roleNews, accessToken } }
+parent -> child : { type: "hubint:auth", payload: { username, roleBench, ticket } }
 parent -> child : { type: "hubint:navigate", payload: { path } }
 parent -> child : { type: "hubint:logout" }
 child -> parent : { type: "hubint:logout-ack" }
@@ -207,7 +207,7 @@ browser          hub backend      benchmarking backend
    |---------------->|                    |
    |                 | POST /api/auth/handoff
    |                 |  X-Handoff-Secret  |
-   |                 |  {username, role}  |
+   |                 | {username, role_bench} |
    |                 |------------------->|
    |                 |     one-use       |
    |                 |     ticket        |
@@ -227,28 +227,47 @@ The ticket is single use and lives for 120 seconds. It never appears in
 a URL, and the shared secret never reaches a browser: it is only ever
 used between the two servers.
 
-### The four roles
+### One role per application
 
-The role is held once, in the `users` table of the backend, and travels
-with the sign-in. The hub translates it into the role Peer Benchmarking
-uses, server side, so a browser can never choose its own role.
+A person holds one role in each application, and the two are kept
+apart, because the applications do different work. Both are held once,
+in the `users` table of the backend:
 
-| Role on the platform | Role in Peer Benchmarking | May do |
+| Column | The role in | May be |
 |---|---|---|
-| `admin` | `admin` | Everything, including the list of users |
-| `analyst` | `maker` | Collect the figures, run the pipeline, draft reports |
-| `approver` | `checker` | Check and approve the figures and the reports |
-| `gm` | `viewer` | Read the approved figures, ask Myra |
-| `user` | `viewer` | The same read-only view |
+| `role_news` | the News Feed | `admin`, `user` |
+| `role_bench` | Peer Benchmarking | `admin`, `maker`, `checker`, `viewer`, `user` |
 
-A role the platform does not know about is treated as the read-only
-view, so an unexpected value in the user table can never grant more than
-reading.
+Each application is given the one that belongs to it, server side, so a
+browser can never choose its own role.
+
+**The News Feed** reads `role_news`. An `admin` may open the summary,
+the application insights and the pipeline control; a `user` reads the
+news feed and nothing else.
+
+**Peer Benchmarking** reads `role_bench`, in its own words, with no
+translation: `admin` for everything, including the list of users;
+`maker` to collect the figures, run the pipeline and draft the reports;
+`checker` to check and approve the figures and the reports; `viewer` to
+read the approved figures and ask Myra; and `user`, which reads the
+approved figures and nothing else.
+
+The `user` role in Peer Benchmarking is for the people who are in the
+platform for the news only. It carries no work, so it is handed over
+without the application needing to be configured for staff sign-ins.
+
+A role that is not known is treated as the read-only view, so an
+unexpected value in the user table can never grant more than reading.
 
 With `HANDOFF_SYNC_ROLE=true` the benchmarking app adopts the role the
 hub states, and writes an `auth.handoff.role_changed` entry to its audit
 trail. That is what keeps the two applications from disagreeing about
 what somebody may do.
+
+The accounts, their passwords and their two roles are held in
+`backend/seed/users.csv`, which is the account sheet of the platform.
+The password in the sheet is the password of the account; it is hashed
+before it is stored, and the database only ever holds the hash.
 
 ### One rail, not two
 
@@ -326,7 +345,7 @@ cd landing      && npm run dev                # http://localhost:5174
 ```
 
 Open <http://localhost:5174> and sign in with a seeded account, for
-example `Admin` / `Admin@news26`.
+example `admin` / `admin@tmd26`.
 
 The news application is still reachable on its own at
 <http://localhost:5173>, where it signs in separately. Peer Benchmarking

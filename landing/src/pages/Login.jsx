@@ -28,8 +28,10 @@ function Login({ onLogin }) {
 
             onLogin({
                 username: data.username,
-                role: data.role,
-                roleLabel: data.role_label,
+                roleNews: data.role_news,
+                roleBench: data.role_bench,
+                roleNewsLabel: data.role_news_label,
+                roleBenchLabel: data.role_bench_label,
                 accessToken: data.access_token,
             });
         } catch (err) {

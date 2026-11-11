@@ -5,6 +5,9 @@
  * `bankHubSession` so that it is distinct from the news application's own
  * `bankNewsUser` key while still being readable by it when both are served
  * from the same origin.
+ *
+ * A person holds one role in each application, so the session carries both:
+ * `roleNews` for the News Feed and `roleBench` for Peer Benchmarking.
  */
 
 export const HUB_SESSION_STORAGE_KEY = "bankHubSession";
@@ -18,11 +21,16 @@ export function normaliseSession(session) {
 
     const username = session.username;
 
-    const role = session.role;
+    const roleNews = session.roleNews ?? session.role_news;
 
-    // The name of the role, for the interface. It is optional, because
-    // the role itself is what matters.
-    const roleLabel = session.roleLabel ?? session.role_label ?? null;
+    const roleBench = session.roleBench ?? session.role_bench;
+
+    // The name of each role, for the interface. They are optional, because
+    // the roles themselves are what matters.
+    const roleNewsLabel = session.roleNewsLabel ?? session.role_news_label ?? null;
+
+    const roleBenchLabel =
+        session.roleBenchLabel ?? session.role_bench_label ?? null;
 
     if (typeof accessToken !== "string" || !accessToken) {
         return null;
@@ -32,11 +40,22 @@ export function normaliseSession(session) {
         return null;
     }
 
-    if (typeof role !== "string" || !role) {
+    if (typeof roleNews !== "string" || !roleNews) {
         return null;
     }
 
-    return { username, role, accessToken, roleLabel };
+    if (typeof roleBench !== "string" || !roleBench) {
+        return null;
+    }
+
+    return {
+        username,
+        accessToken,
+        roleNews,
+        roleBench,
+        roleNewsLabel,
+        roleBenchLabel,
+    };
 }
 
 function safeGet(storage, key) {

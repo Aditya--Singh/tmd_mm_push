@@ -36,7 +36,7 @@ one at a time:
 | `Setup: news frontend dependencies` | Installs the packages in `frontend/`. |
 | `Setup: landing page dependencies` | Installs the packages in `landing/`. |
 | `Setup: settings files` | Writes `backend/.env` and `benchmarking/.env`, including the secret the two servers share. |
-| `Setup: seed demo users` | Creates the demo accounts, for example `Admin` / `Admin@news26`. |
+| `Setup: seed demo users` | Creates the demo accounts, for example `admin` / `admin@tmd26`. |
 
 ## 3. Running the platform
 
@@ -53,7 +53,7 @@ Four terminals open side by side:
 | API documentation | <http://127.0.0.1:8000/docs> | |
 
 Open <http://localhost:5174> and sign in with a seeded account, for
-example `Admin` / `Admin@news26`. Select **News Feed** in the sidebar
+example `admin` / `admin@tmd26`. Select **News Feed** in the sidebar
 and the dashboard opens inside the workspace, already signed in. Select
 **Peer Benchmarking** and the benchmarking app opens there, already
 signed in, with its own screens listed underneath it in the rail.

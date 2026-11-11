@@ -6,7 +6,7 @@ collects news from Indian business publications and summarises it with a
 local language model, and Peer Benchmarking, which compares PNB with its
 peers quarter by quarter from the banks' own published figures.
 
-One sign-in opens all of them, with the same role.
+One sign-in opens all of them, with the role the person holds in each.
 
 ---
 
@@ -193,7 +193,7 @@ On Windows:
 The setup script installs everything, writes `backend/.env` and
 `benchmarking/.env` with the secret the two servers share, and creates
 the demo accounts. Then open <http://localhost:5174> and sign in with
-`Admin` / `Admin@news26`.
+`admin` / `admin@tmd26`.
 
 **[docs/SETUP.md](docs/SETUP.md) has the full instructions for both
 operating systems**, including what to do when a package will not
@@ -360,9 +360,9 @@ npm run dev
 ```
 
 Open <http://localhost:5174> and sign in with a seeded account, for
-example `Admin` / `Admin@news26`. The news dashboard and Peer
-Benchmarking both open inside the workspace, already signed in, with the
-same role.
+example `admin` / `admin@tmd26`. The news dashboard and Peer
+Benchmarking both open inside the workspace, already signed in, each with
+the role the person holds in it.
 
 Seed the users once with:
 
@@ -459,7 +459,7 @@ Completed
 - Pagination
 - Duplicate detection
 - IST timezone support
-- JWT authentication with admin and user roles
+- JWT authentication with a role per application: `role_news` and `role_bench`
 - Landing page hub with single sign-on into the embedded dashboard
 - Peer benchmarking of PNB against SBI, BoB, Canara Bank and Union Bank
 - One sign-in across the hub, the news dashboard and Peer Benchmarking

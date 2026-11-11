@@ -57,8 +57,8 @@ function createFakeFrame(src = `${NEWS_ORIGIN}/`) {
 }
 
 const SESSION = {
-    username: "Admin",
-    role: "admin",
+    username: "admin",
+    roleNews: "admin",
     accessToken: "token-1",
 };
 
@@ -271,15 +271,15 @@ test("the session handed to the frame follows the one that was set", () => {
     bridge.sendSession();
 
     bridge.setSession({
-        username: "Viewer",
-        role: "user",
+        username: "viewer",
+        roleNews: "user",
         accessToken: "token-2",
     });
     bridge.sendSession();
 
     assert.equal(frame.sent.length, 2);
-    assert.equal(frame.sent[0].message.payload.username, "Admin");
-    assert.equal(frame.sent[1].message.payload.username, "Viewer");
+    assert.equal(frame.sent[0].message.payload.username, "admin");
+    assert.equal(frame.sent[1].message.payload.username, "viewer");
     assert.equal(frame.sent[1].message.payload.accessToken, "token-2");
 });
 
@@ -328,8 +328,8 @@ test("a new session is handed over again after a sign-out", () => {
     bridge.notifyChildLogout();
 
     bridge.setSession({
-        username: "Viewer",
-        role: "user",
+        username: "viewer",
+        roleNews: "user",
         accessToken: "token-2",
     });
 
@@ -399,7 +399,7 @@ test("a service that takes a ticket is given the ticket, not the token", () => {
 
     bridge.setAuthPayload({
         username: "analyst",
-        role: "analyst",
+        roleBench: "maker",
         ticket: "ticket-1",
     });
 
@@ -409,7 +409,7 @@ test("a service that takes a ticket is given the ticket, not the token", () => {
     assert.equal(frame.sent[0].message.type, MESSAGE_AUTH);
     assert.deepEqual(frame.sent[0].message.payload, {
         username: "analyst",
-        role: "analyst",
+        roleBench: "maker",
         ticket: "ticket-1",
     });
 });

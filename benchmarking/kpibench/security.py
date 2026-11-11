@@ -21,7 +21,14 @@ ROLES = {
     "maker": {"label": "Analyst (Maker)", "can": {"view", "run", "report", "chat"}},
     "checker": {"label": "Approver (Checker)", "can": {"view", "approve", "report", "chat"}},
     "viewer": {"label": "Top Management (Viewer)", "can": {"view", "chat"}},
+    # A reader who has no part in the work of this app. The Executive Intelligence Hub
+    # hands this role over for people who are in the platform for the news only.
+    "user": {"label": "Reader", "can": {"view", "chat"}},
 }
+
+#: The roles that carry no work of their own. These may be handed over by the dashboard
+#: without this app being configured to accept staff sign-ins.
+READ_ONLY_ROLES = ("viewer", "user")
 
 
 # ----------------------------------------------------------------------------- secret key

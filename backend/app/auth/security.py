@@ -28,7 +28,8 @@ def verify_password(
 
 def create_access_token(
     username: str,
-    role: str,
+    role_news: str,
+    role_bench: str,
 ) -> str:
     expires_at = datetime.now(timezone.utc) + timedelta(
         minutes=settings.jwt_expiration_minutes
@@ -36,7 +37,8 @@ def create_access_token(
 
     payload = {
         "sub": username,
-        "role": role,
+        "role_news": role_news,
+        "role_bench": role_bench,
         "exp": expires_at,
     }
 
