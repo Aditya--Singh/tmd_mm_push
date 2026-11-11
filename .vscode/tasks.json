@@ -53,7 +53,7 @@
         },
         {
             "label": "Setup: seed demo users",
-            "detail": "Create the demo accounts, for example Admin / Admin@news26",
+            "detail": "Create the demo accounts, for example admin / admin@tmd26",
             "type": "shell",
             "command": "uv run python seed_users.py",
             "options": {

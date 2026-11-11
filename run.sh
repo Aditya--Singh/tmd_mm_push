@@ -62,7 +62,7 @@ The platform is starting.
     Peer Benchmarking   http://localhost:8077
     Backend and its API http://127.0.0.1:8000/docs
 
-Sign in at http://localhost:5174 with Admin / Admin@news26
+Sign in at http://localhost:5174 with admin / admin@tmd26
 
 DONE
 
