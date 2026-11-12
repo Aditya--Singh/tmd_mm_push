@@ -14,7 +14,8 @@ export default defineConfig([
       reactRefresh.configs.vite,
     ],
     languageOptions: {
-      globals: globals.browser,
+      // __API_PROXY_TARGET__ is put in place by the build.
+      globals: { ...globals.browser, __API_PROXY_TARGET__: 'readonly' },
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },

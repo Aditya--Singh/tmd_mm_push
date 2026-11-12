@@ -74,6 +74,10 @@ Start the platform with:
 
     ./run.sh
 
+Check that everything is in place at any time:
+
+    python scripts/doctor.py
+
 Then open http://localhost:5174 and sign in with, for example:
 
     admin     / admin@tmd26        administrator in both applications

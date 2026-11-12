@@ -2,12 +2,14 @@ import { useState } from "react";
 
 import pnbLogo from "../assets/pnb_logo.png";
 import { login } from "../api/auth";
+import { describeLoginFailure } from "../api/loginError";
 
 
 function Login({ onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [hint, setHint] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
 
@@ -39,13 +41,10 @@ function Login({ onLogin }) {
         } catch (error) {
             console.error("Login failed:", error);
 
-            if (error.response?.status === 401) {
-                setError("Invalid username or password.");
-            } else {
-                setError(
-                    "Unable to connect to the authentication service.",
-                );
-            }
+            const failure = describeLoginFailure(error);
+
+            setError(failure.message);
+            setHint(failure.detail);
         } finally {
             setIsLoading(false);
         }
@@ -136,7 +135,9 @@ function Login({ onLogin }) {
 
                     {error && (
                         <div className="login-error">
-                            {error}
+                            <strong>{error}</strong>
+
+                            {hint && <span>{hint}</span>}
                         </div>
                     )}
 

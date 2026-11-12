@@ -288,6 +288,17 @@
                 "cwd": "${workspaceFolder}/frontend"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "Doctor: check the platform",
+            "detail": "Check that the settings, the accounts and the four services are in place",
+            "type": "shell",
+            "command": "python scripts/doctor.py",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": []
         }
     ]
 }

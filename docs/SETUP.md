@@ -318,6 +318,14 @@ cd landing/e2e && node news-roles.mjs
 
 ## 9. When something does not work
 
+Before anything else, let the platform check itself:
+
+```bash
+python scripts/doctor.py
+```
+
+It says what is missing and the command that fixes it.
+
 ### "Peer Benchmarking is not connected yet"
 
 The two servers do not share a secret. Run `python scripts/make_env.py`
@@ -327,6 +335,25 @@ and restart the backend.
 
 The benchmarking app is not running, or `KPI_APP_URL` points somewhere
 else. Check <http://localhost:8077/healthz>.
+
+### "Unable to connect to the authentication service"
+
+The sign-in never reached the backend. The page says which of the two it is:
+
+| What the page says | What to do |
+|---|---|
+| **The backend is not answering** | The backend is not running, or it is not on port 8000. Start it: `cd backend && uv run python -m uvicorn app.main:app --port 8000` |
+| **The browser could not reach the authentication service** | The request was blocked or the address is wrong. Check `VITE_API_BASE_URL` in `landing/.env`, and that this address is listed in `CORS_ORIGINS` in `backend/.env` |
+
+To have the whole platform checked at once:
+
+```bash
+python scripts/doctor.py
+```
+
+It looks at the settings files, the shared secret, the accounts, the
+environments and the four running services, and says what is missing
+and the command that fixes it.
 
 ### The workspace shows "Your session has ended"
 

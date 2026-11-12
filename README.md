@@ -230,6 +230,15 @@ the demo accounts. Then open <http://localhost:5174> and sign in with
 operating systems**, including what to do when a package will not
 download and how to fix a port that is already in use.
 
+To check that everything is in place, at any time:
+
+```bash
+python scripts/doctor.py
+```
+
+It looks at the settings, the accounts and the four services, and says
+what is missing and the command that fixes it.
+
 ## The step by step way
 
 ### Install uv

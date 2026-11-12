@@ -1,0 +1,268 @@
+"""Check that the platform is set up and running.
+
+    python scripts/doctor.py
+
+It answers one question: why does the sign-in not go through? Every part of the platform
+is looked at, and what is wrong is said plainly, with the command that fixes it.
+"""
+
+from __future__ import annotations
+
+import argparse
+import socket
+import sqlite3
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parent.parent
+
+BACKEND_ENV = ROOT / "backend" / ".env"
+BENCH_ENV = ROOT / "benchmarking" / ".env"
+BACKEND_DB = ROOT / "backend" / "news.db"
+
+OK = "ok"
+WRONG = "wrong"
+
+
+def read_env(path: Path) -> dict[str, str]:
+    """
+    The values of an environment file.
+
+    The first value of a name is the one that counts, which is how the applications read
+    their settings. A file that names the same setting twice is ambiguous, so the later
+    value is ignored here as well.
+    """
+    values: dict[str, str] = {}
+
+    if not path.exists():
+        return values
+
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+
+        name, _, value = stripped.partition("=")
+
+        name = name.strip()
+
+        if name in values:
+            continue
+
+        values[name] = value.strip().strip('"').strip("'")
+
+    return values
+
+
+def port_is_open(port: int, host: str = "127.0.0.1") -> bool:
+    """Whether something is listening on a port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1.5)
+
+        try:
+            return sock.connect_ex((host, port)) == 0
+        except OSError:
+            return False
+
+
+def the_backend_answers(url: str = "http://127.0.0.1:8000/health") -> bool:
+    """Whether the backend of the hub answers."""
+    try:
+        with urllib.request.urlopen(url, timeout=2.5) as response:
+            return response.status == 200
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+class Report:
+    """What was found, and what to do about it."""
+
+    def __init__(self) -> None:
+        self.lines: list[tuple[str, str, str]] = []
+        self.problems = 0
+
+    def add(self, state: str, what: str, how: str = "") -> None:
+        self.lines.append((state, what, how))
+
+        if state != OK:
+            self.problems += 1
+
+    def print(self) -> None:
+        mark = {OK: "ok     ", WRONG: "PROBLEM"}
+
+        for state, what, how in self.lines:
+            print(f"  [{mark.get(state, state)}] {what}")
+
+            if how:
+                print(f"            {how}")
+
+        print("")
+
+        if self.problems:
+            print(
+                f"{self.problems} thing(s) to sort out. "
+                "The sign-in will not go through until they are."
+            )
+        else:
+            print("Everything is in place. The sign-in should work.")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Check that the platform is set up and running.",
+    )
+    parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="only check the settings and the accounts, not the running services",
+    )
+    args = parser.parse_args(argv)
+
+    report = Report()
+
+    print("")
+    print("The Executive Intelligence Hub")
+    print("")
+
+    # ------------------------------------------------------------ the files
+    backend = read_env(BACKEND_ENV)
+    bench = read_env(BENCH_ENV)
+
+    if not backend:
+        report.add(
+            WRONG,
+            "backend/.env is missing",
+            "Run ./setup.sh (or .\\setup.ps1 on Windows) to write it.",
+        )
+    else:
+        report.add(OK, "backend/.env is there")
+
+    if not bench:
+        report.add(
+            WRONG,
+            "benchmarking/.env is missing",
+            "Run ./setup.sh (or .\\setup.ps1 on Windows) to write it.",
+        )
+    else:
+        report.add(OK, "benchmarking/.env is there")
+
+    if backend and not backend.get("JWT_SECRET_KEY", "").strip():
+        report.add(
+            WRONG,
+            "the backend has no JWT_SECRET_KEY",
+            "It will not start without one. Run ./setup.sh again.",
+        )
+
+    shared_backend = backend.get("KPI_HANDOFF_SECRET", "").strip()
+    shared_bench = bench.get("HANDOFF_SECRET", "").strip()
+
+    if backend and bench:
+        if shared_backend and shared_bench and shared_backend == shared_bench:
+            report.add(OK, "the two servers share the same secret")
+        else:
+            report.add(
+                WRONG,
+                "the two servers do not share the same secret",
+                "Run ./setup.sh again, or put the same value in KPI_HANDOFF_SECRET "
+                "(backend/.env) and HANDOFF_SECRET (benchmarking/.env).",
+            )
+
+    # ---------------------------------------------------------- the accounts
+    if BACKEND_DB.exists():
+        try:
+            connection = sqlite3.connect(BACKEND_DB)
+
+            accounts = connection.execute(
+                "select count(*) from users"
+            ).fetchone()[0]
+
+            connection.close()
+        except sqlite3.Error:
+            accounts = 0
+
+        if accounts:
+            report.add(OK, f"the database holds {accounts} accounts")
+        else:
+            report.add(
+                WRONG,
+                "the database holds no accounts",
+                "Run: cd backend && uv run python seed_users.py",
+            )
+    else:
+        report.add(
+            WRONG,
+            "the news database does not exist yet",
+            "Run: cd backend && uv run python seed_users.py",
+        )
+
+    # ------------------------------------------------------- the environments
+    for name, path in (
+        ("the backend", ROOT / "backend" / ".venv"),
+        ("Peer Benchmarking", ROOT / "benchmarking" / ".venv"),
+    ):
+        if path.exists():
+            report.add(OK, f"the environment of {name} is there")
+        else:
+            report.add(
+                WRONG,
+                f"the environment of {name} is missing",
+                "Run ./setup.sh (or .\\setup.ps1 on Windows).",
+            )
+
+    for name, path in (
+        ("the landing page", ROOT / "landing" / "node_modules"),
+        ("the news application", ROOT / "frontend" / "node_modules"),
+    ):
+        if path.exists():
+            report.add(OK, f"the libraries of {name} are there")
+        else:
+            report.add(
+                WRONG,
+                f"the libraries of {name} are missing",
+                "Run: npm install in that folder.",
+            )
+
+    # ------------------------------------------------------ the running services
+    if not args.quick:
+        if the_backend_answers():
+            report.add(OK, "the backend of the hub is answering on port 8000")
+        elif port_is_open(8000):
+            report.add(
+                WRONG,
+                "something is on port 8000, but it is not the backend",
+                "Stop it, or point the landing page at it with VITE_API_BASE_URL.",
+            )
+        else:
+            report.add(
+                WRONG,
+                "the backend of the hub is not running",
+                "Start it: cd backend && uv run python -m uvicorn app.main:app --port 8000",
+            )
+
+        for port, what, folder in (
+            (5174, "the landing page", "landing"),
+            (5173, "the news application", "frontend"),
+            (8077, "Peer Benchmarking", "benchmarking"),
+        ):
+            if port_is_open(port):
+                report.add(OK, f"{what} is listening on port {port}")
+            else:
+                report.add(
+                    WRONG,
+                    f"{what} is not running on port {port}",
+                    f"Start it: cd {folder} && npm run dev"
+                    if folder != "benchmarking"
+                    else "Start it: cd benchmarking && .venv/bin/python -m kpibench.main",
+                )
+
+    report.print()
+
+    return 1 if report.problems else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

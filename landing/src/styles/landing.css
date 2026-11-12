@@ -1052,14 +1052,25 @@ button {
 }
 
 .login-error {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   background: var(--danger-bg);
   border: 1px solid #f3c1bd;
   border-radius: var(--radius-sm);
-
   padding: 11px 14px;
-
   color: var(--danger);
   font-size: 13px;
+}
+
+.login-error strong {
+  font-weight: 700;
+}
+
+.login-error span {
+  color: #7a3a34;
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .login-button {

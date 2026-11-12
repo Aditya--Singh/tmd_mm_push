@@ -2,11 +2,14 @@ import { useState } from "react";
 
 import pnbLogo from "../assets/pnb_logo.png";
 import { login } from "../api/auth";
+import { describeLoginFailure } from "../api/loginError";
+import { apiProxyTarget, env } from "../config/env";
 
 function Login({ onLogin }) {
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [hint, setHint] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
     const handleSubmit = async (event) => {
@@ -37,13 +40,14 @@ function Login({ onLogin }) {
         } catch (err) {
             console.error("Login failed:", err);
 
-            if (err.response?.status === 401) {
-                setError("Invalid username or password.");
-            } else {
-                setError(
-                    "Unable to connect to the authentication service.",
-                );
-            }
+            const failure = describeLoginFailure(err, {
+                baseUrl: env.VITE_API_BASE_URL,
+                origin: window.location.origin,
+                proxyTarget: apiProxyTarget,
+            });
+
+            setError(failure.message);
+            setHint(failure.detail);
         } finally {
             setIsLoading(false);
         }
@@ -110,7 +114,13 @@ function Login({ onLogin }) {
                         />
                     </div>
 
-                    {error && <div className="login-error">{error}</div>}
+                    {error && (
+                        <div className="login-error">
+                            <strong>{error}</strong>
+
+                            {hint && <span>{hint}</span>}
+                        </div>
+                    )}
 
                     <button
                         type="submit"

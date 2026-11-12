@@ -29,7 +29,27 @@ Start-Process -FilePath "powershell" `
     -ArgumentList "-NoExit", "-Command", "Set-Location '$root\backend'; .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000" `
     -WorkingDirectory $root -WindowStyle Minimized
 
-Start-Sleep -Seconds 2
+# The landing page cannot sign anybody in without the backend, so wait for it and
+# say plainly when it does not come up.
+$backendUp = $false
+for ($attempt = 0; $attempt -lt 30; $attempt++) {
+    try {
+        $health = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/health' -TimeoutSec 2 -UseBasicParsing
+        if ($health.StatusCode -eq 200) { $backendUp = $true; break }
+    } catch { }
+    Start-Sleep -Seconds 1
+}
+
+if ($backendUp) {
+    Write-Host 'The backend is up.' -ForegroundColor Green
+} else {
+    Write-Host ''
+    Write-Host 'The backend of the hub did not start, so signing in will not work.' -ForegroundColor Red
+    Write-Host 'It is started by the window above; the reason is in that window.'
+    Write-Host 'The usual causes are a missing settings file (run .\setup.ps1) or the'
+    Write-Host 'port 8000 already being taken.'
+    exit 1
+}
 
 # Peer Benchmarking.
 Start-Process -FilePath "powershell" `

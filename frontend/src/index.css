@@ -1349,6 +1349,10 @@ button {
    --------------------------------------------------------- */
 
 .login-error {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
   padding: 10px 12px;
 
   border-left: 3px solid var(--danger);
@@ -1362,6 +1366,16 @@ button {
   font-size: 13px;
 
   line-height: 1.4;
+}
+
+.login-error strong {
+  font-weight: 700;
+}
+
+.login-error span {
+  color: #8a3a34;
+
+  font-size: 12px;
 }
 
 /* ---------------------------------------------------------

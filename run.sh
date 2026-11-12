@@ -44,8 +44,33 @@ if [ ! -d backend/.venv ] || [ ! -d benchmarking/.venv ]; then
   exit 1
 fi
 
+# Wait for the backend to answer, so that a sign-in that cannot go through is
+# never a mystery.
+wait_for_the_backend() {
+  local attempt
+  for attempt in $(seq 1 30); do
+    if curl -fsS --max-time 2 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+      echo "The backend is up."
+      return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
 start backend bash -c "cd backend && .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
 sleep 2
+
+# The landing page cannot sign anybody in without the backend, so wait for it and
+# say plainly when it does not come up.
+if ! wait_for_the_backend; then
+  echo ""
+  echo "The backend of the hub did not start, so signing in will not work."
+  echo "It is started by the line above; the reason is in that window."
+  echo "The usual causes are a missing settings file (run ./setup.sh) or the"
+  echo "port 8000 already being taken."
+  exit 1
+fi
 
 start benchmarking bash -c "cd benchmarking && .venv/bin/python -m kpibench.main"
 sleep 2
