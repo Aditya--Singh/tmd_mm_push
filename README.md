@@ -237,7 +237,8 @@ python scripts/doctor.py
 ```
 
 It looks at the settings, the accounts and the four services, and says
-what is missing and the command that fixes it.
+what is missing and the command that fixes it. What the backend said the
+last time it ran is kept in `backend/logs/backend.log`.
 
 ## The step by step way
 

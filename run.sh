@@ -8,7 +8,13 @@
 #
 # On Windows use run.ps1 in PowerShell instead.
 set -euo pipefail
+ROOT="$(pwd)"
 cd "$(dirname "$0")"
+
+# How long the backend is given to answer before it is called a failure. A first
+# start on a new machine is slow: every file of the environment is read for the
+# first time, and the antivirus reads them as well.
+BACKEND_WAIT_SECONDS=90
 
 BACKEND_PID=""
 BENCH_PID=""
@@ -30,7 +36,6 @@ start() {  # start <name> <command...>
   echo "Starting $name"
   "$@" &
   local pid=$!
-  echo "$pid" > "/tmp/platform-$name.pid"
   case "$name" in
     backend)   BACKEND_PID="$pid" ;;
     benchmarking) BENCH_PID="$pid" ;;
@@ -44,21 +49,36 @@ if [ ! -d backend/.venv ] || [ ! -d benchmarking/.venv ]; then
   exit 1
 fi
 
+# Whether something is listening on a port.
+port_is_open() {  # port_is_open <port>
+  (echo > "/dev/tcp/127.0.0.1/$1") >/dev/null 2>&1
+}
+
+# Everything the backend says is kept, and shown here if it does not come up.
+LOG_DIR="$ROOT/backend/logs"
+mkdir -p "$LOG_DIR"
+BACKEND_LOG="$LOG_DIR/backend.log"
+rm -f "$BACKEND_LOG"
+
 # Wait for the backend to answer, so that a sign-in that cannot go through is
 # never a mystery.
 wait_for_the_backend() {
   local attempt
-  for attempt in $(seq 1 30); do
+  for attempt in $(seq 1 "$BACKEND_WAIT_SECONDS"); do
     if curl -fsS --max-time 2 http://127.0.0.1:8000/health >/dev/null 2>&1; then
       echo "The backend is up."
       return 0
+    fi
+    # Stop waiting as soon as the backend is gone: it will not come back.
+    if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+      return 1
     fi
     sleep 1
   done
   return 1
 }
 
-start backend bash -c "cd backend && .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+start backend bash -c "cd '$ROOT/backend' && exec .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > '$BACKEND_LOG' 2>&1"
 sleep 2
 
 # The landing page cannot sign anybody in without the backend, so wait for it and
@@ -66,9 +86,29 @@ sleep 2
 if ! wait_for_the_backend; then
   echo ""
   echo "The backend of the hub did not start, so signing in will not work."
-  echo "It is started by the line above; the reason is in that window."
-  echo "The usual causes are a missing settings file (run ./setup.sh) or the"
-  echo "port 8000 already being taken."
+  echo ""
+
+  if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
+    echo "It stopped with an error. This is what it said:"
+  elif port_is_open 8000; then
+    echo "Something is on port 8000, but it is not the backend."
+    echo "Stop it, and then start the platform again."
+  else
+    echo "It is still starting after ${BACKEND_WAIT_SECONDS} seconds, so it is slow on this machine."
+    echo "Start it by hand to watch it go:"
+    echo "    cd backend"
+    echo "    .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+  fi
+
+  echo ""
+
+  if [ -f "$BACKEND_LOG" ]; then
+    tail -n 25 "$BACKEND_LOG" | sed 's/^/    /'
+  fi
+
+  echo ""
+  echo "The whole record is in backend/logs/backend.log"
+  echo "To have the whole platform checked: python scripts/doctor.py"
   exit 1
 fi
 

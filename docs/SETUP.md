@@ -355,6 +355,30 @@ It looks at the settings files, the shared secret, the accounts, the
 environments and the four running services, and says what is missing
 and the command that fixes it.
 
+### "The backend of the hub did not start"
+
+`run.sh` and `run.ps1` wait for the backend before they say the platform
+is starting. When it does not come up, they show what the backend said,
+so the reason is never left in a window that is out of the way:
+
+```
+It stopped with an error. This is what it said:
+
+    Value error, JWT_SECRET_KEY is not set.
+    ...
+```
+
+The whole record is kept in `backend/logs/backend.log`.
+
+The two usual causes are:
+
+| What the backend said | What to do |
+|---|---|
+| `JWT_SECRET_KEY is not set` | The settings file is missing. Run `./setup.sh` (Windows: `.\setup.ps1`) |
+| `address already in use` | Another copy of the backend is running. Stop it, or change `PORT` and `KPI_APP_URL` together |
+| `No module named uvicorn` | The setup did not finish. Run `./setup.sh` again |
+| It is still starting, with nothing said | The first start on a new machine is slow. Wait, or start the backend by hand to watch it: `cd backend && .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000` |
+
 ### The workspace shows "Your session has ended"
 
 The hub could not sign the app in. The usual cause is a mismatch

@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 BACKEND_ENV = ROOT / "backend" / ".env"
 BENCH_ENV = ROOT / "benchmarking" / ".env"
 BACKEND_DB = ROOT / "backend" / "news.db"
+BACKEND_LOG = ROOT / "backend" / "logs" / "backend.log"
 
 OK = "ok"
 WRONG = "wrong"
@@ -78,6 +79,29 @@ def the_backend_answers(url: str = "http://127.0.0.1:8000/health") -> bool:
         return False
 
 
+def the_last_words_of_the_backend(lines: int = 12) -> str:
+    """
+    The end of what the backend said the last time it ran.
+
+    The start scripts keep this record, and it is the only place the real reason
+    of a failure is written down.
+    """
+    if not BACKEND_LOG.exists():
+        return ""
+
+    try:
+        text = BACKEND_LOG.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+
+    said = [line for line in text.splitlines() if line.strip()]
+
+    if not said:
+        return ""
+
+    return "\n".join(said[-lines:])
+
+
 class Report:
     """What was found, and what to do about it."""
 
@@ -98,7 +122,8 @@ class Report:
             print(f"  [{mark.get(state, state)}] {what}")
 
             if how:
-                print(f"            {how}")
+                for line in how.splitlines():
+                    print(f"            {line}")
 
         print("")
 
@@ -237,11 +262,16 @@ def main(argv: list[str] | None = None) -> int:
                 "Stop it, or point the landing page at it with VITE_API_BASE_URL.",
             )
         else:
-            report.add(
-                WRONG,
-                "the backend of the hub is not running",
-                "Start it: cd backend && uv run python -m uvicorn app.main:app --port 8000",
+            said = the_last_words_of_the_backend()
+
+            how = (
+                "Start it: cd backend && uv run python -m uvicorn app.main:app --port 8000"
             )
+
+            if said:
+                how += "\nThis is what it said the last time it ran:\n" + said
+
+            report.add(WRONG, "the backend of the hub is not running", how)
 
         for port, what, folder in (
             (5174, "the landing page", "landing"),

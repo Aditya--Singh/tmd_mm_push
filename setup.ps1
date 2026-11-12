@@ -25,9 +25,10 @@ $Python = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 
 Say "1/6  Checking what is installed"
 & $Python --version
-& $Python -c "import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)"
+# The backend asks for Python 3.11 or newer, so that is what is checked here.
+& $Python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
 if ($LASTEXITCODE -ne 0) {
-    Note "Python 3.10 or newer is needed."
+    Note "Python 3.11 or newer is needed."
     exit 1
 }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
@@ -60,16 +61,29 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Say "4/6  The two web applications"
-Push-Location frontend; npm install; Pop-Location
-Push-Location landing; npm install; Pop-Location
+Push-Location frontend; npm install; $newsFailed = $LASTEXITCODE -ne 0; Pop-Location
+Push-Location landing; npm install; $landingFailed = $LASTEXITCODE -ne 0; Pop-Location
+if ($newsFailed -or $landingFailed) {
+    Note "The libraries could not be downloaded. Behind a proxy, set `$env:HTTPS_PROXY first."
+    exit 1
+}
 
 Say "5/6  The settings files"
 & $Python scripts/make_env.py
+if ($LASTEXITCODE -ne 0) {
+    Note "The settings files could not be written. The text above says why."
+    exit 1
+}
 
 Say "6/6  The demo accounts"
 Push-Location backend
 & .\.venv\Scripts\python.exe seed_users.py
+$accountsFailed = $LASTEXITCODE -ne 0
 Pop-Location
+if ($accountsFailed) {
+    Note "The accounts could not be written. The text above says why."
+    exit 1
+}
 
 Write-Host @"
 
