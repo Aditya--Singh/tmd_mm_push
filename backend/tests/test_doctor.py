@@ -7,8 +7,10 @@ what the backend said the last time it ran, because that is the only place the
 real reason of a failure is written down.
 """
 
+import importlib.machinery
 import importlib.util
 import sqlite3
+import sys
 from pathlib import Path
 
 import pytest
@@ -86,6 +88,40 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
     assert "the two servers share the same secret" in said
     assert "the database holds 1 accounts" in said
     assert "Everything is in place" in said
+
+
+def test_the_doctor_says_when_the_backend_cannot_import_its_libraries(
+    doctor, tmp_path, monkeypatch, capsys
+):
+    """
+    A machine that refuses a compiled file of a library.
+
+    The library then cannot be imported at all, and the backend stops before it has
+    said anything, so the doctor has to be able to see it.
+    """
+    # An environment of its own, whose python is the one running the test.
+    environment = tmp_path / "backend" / ".venv" / "bin"
+    environment.mkdir(parents=True)
+
+    (environment / "python").symlink_to(sys.executable)
+
+    # SQLAlchemy, whose compiled part cannot be loaded.
+    library = tmp_path / "site" / "sqlalchemy"
+    library.mkdir(parents=True)
+
+    (library / "_part.py").write_text("value = 1\n", encoding="utf-8")
+    (library / f"_part{importlib.machinery.EXTENSION_SUFFIXES[0]}").write_bytes(
+        b"blocked by policy"
+    )
+    (library / "__init__.py").write_text("from . import _part\n", encoding="utf-8")
+
+    monkeypatch.setenv("PYTHONPATH", str(tmp_path / "site"))
+
+    can_import, said = doctor.the_backend_can_import_its_libraries()
+
+    assert can_import is False
+    assert "sqlalchemy" in said
+    assert "ImportError" in said
 
 
 def test_the_doctor_shows_what_the_backend_said(doctor, tmp_path, capsys):

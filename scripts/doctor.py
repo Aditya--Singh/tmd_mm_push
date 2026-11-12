@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import socket
 import sqlite3
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -100,6 +101,44 @@ def the_last_words_of_the_backend(lines: int = 12) -> str:
         return ""
 
     return "\n".join(said[-lines:])
+
+
+def the_python_of(folder: Path) -> Path | None:
+    """The python of an environment, or nothing when the environment is not there."""
+    for name in (Path("bin") / "python", Path("Scripts") / "python.exe"):
+        candidate = folder / name
+
+        if candidate.exists():
+            return candidate
+
+    return None
+
+
+def the_backend_can_import_its_libraries() -> tuple[bool, str]:
+    """
+    Whether the backend's own environment can import SQLAlchemy.
+
+    A machine with an application control policy can refuse a compiled file of a
+    library, and the library then cannot be imported at all. That stops the backend
+    before it has said anything, so it is worth looking for.
+    """
+    python = the_python_of(ROOT / "backend" / ".venv")
+
+    if python is None:
+        return True, ""
+
+    result = subprocess.run(
+        [str(python), "-c", "import sqlalchemy"],
+        capture_output=True,
+        text=True,
+    )
+
+    if result.returncode == 0:
+        return True, ""
+
+    said = [line for line in result.stderr.splitlines() if line.strip()]
+
+    return False, "\n".join(said[-6:])
 
 
 class Report:
@@ -253,6 +292,22 @@ def main(argv: list[str] | None = None) -> int:
 
     # ------------------------------------------------------ the running services
     if not args.quick:
+        can_import, said = the_backend_can_import_its_libraries()
+
+        if can_import:
+            report.add(OK, "the backend can import its libraries")
+        else:
+            report.add(
+                WRONG,
+                "the backend cannot import SQLAlchemy",
+                "The machine is refusing a compiled file of the library. This is what "
+                "it says:\n"
+                + said
+                + "\nStart the backend and it will set the file aside and use the "
+                "plain Python part instead: cd backend && .venv/bin/python -m uvicorn "
+                "app.main:app --port 8000",
+            )
+
         if the_backend_answers():
             report.add(OK, "the backend of the hub is answering on port 8000")
         elif port_is_open(8000):

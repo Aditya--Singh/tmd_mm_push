@@ -332,7 +332,7 @@ requires-dist = [
     { name = "python-dotenv" },
     { name = "python-jose" },
     { name = "requests" },
-    { name = "sqlalchemy" },
+    { name = "sqlalchemy", specifier = ">=2.0.51,<2.1" },
     { name = "uvicorn", extras = ["standard"] },
 ]
 

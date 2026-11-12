@@ -11,7 +11,11 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
-    "sqlalchemy",
+    # Kept inside the 2.0 series on purpose. From 2.1 SQLAlchemy imports its compiled
+    # part directly, and a machine with an application control policy that refuses that
+    # file cannot import SQLAlchemy at all. The plain Python parts are used there
+    # instead, which is what app/blocked_extensions.py arranges.
+    "sqlalchemy>=2.0.51,<2.1",
     "pydantic>=2.0",
     "python-dotenv",
     "requests",

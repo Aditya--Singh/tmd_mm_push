@@ -379,6 +379,41 @@ The two usual causes are:
 | `No module named uvicorn` | The setup did not finish. Run `./setup.sh` again |
 | It is still starting, with nothing said | The first start on a new machine is slow. Wait, or start the backend by hand to watch it: `cd backend && .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000` |
 
+### "An Application Control policy has blocked this file"
+
+The machine has a rule — AppLocker, WDAC, Smart App Control, or an
+antivirus that works the same way — that refuses to load some compiled
+files. SQLAlchemy is written partly in C, and from version 2.1 it
+imports that part directly, so a refused file stops the whole library
+from being imported, and the backend with it.
+
+The platform arranges for itself. Every library of that kind also
+ships a version written in plain Python, which does the same work a
+little more slowly. When the backend starts, the compiled files that
+the machine refuses are set aside, and the plain Python parts are used
+instead. It says so in the record:
+
+```
+The machine would not load sqlalchemy.sql._cache_key_cy, so the plain
+Python version of it is used instead.
+```
+
+To do it by hand, or to see what was set aside:
+
+```bash
+cd backend
+.venv/bin/python -c "from app.blocked_extensions import make_work; print(make_work())"
+```
+
+And to check whether it is needed at all:
+
+```bash
+python scripts/doctor.py
+```
+
+The setup keeps SQLAlchemy inside the 2.0 series, where the compiled
+part is optional, so a new installation does not need this at all.
+
 ### The workspace shows "Your session has ended"
 
 The hub could not sign the app in. The usual cause is a mismatch

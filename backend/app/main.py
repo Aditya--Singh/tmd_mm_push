@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+# The repair has to happen before SQLAlchemy is imported anywhere else, so it is
+# imported first. It does nothing on a machine that loads compiled parts as usual.
+from app import blocked_extensions  # noqa: F401
+
 import app.models
 from app.config.settings import get_settings
 from app.database.database import Base, engine

@@ -240,6 +240,11 @@ It looks at the settings, the accounts and the four services, and says
 what is missing and the command that fixes it. What the backend said the
 last time it ran is kept in `backend/logs/backend.log`.
 
+A machine with an application control policy (AppLocker, WDAC, Smart App
+Control) can refuse the compiled parts of a library. The platform uses
+the plain Python parts of those libraries instead, and says so in the
+record.
+
 ## The step by step way
 
 ### Install uv
