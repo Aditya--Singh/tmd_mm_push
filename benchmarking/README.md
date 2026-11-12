@@ -63,6 +63,27 @@ The starter password for all four is set by `DEFAULT_PASSWORD` in `.env` (defaul
 password after the first sign-in (top-right menu, Change password). Nobody can approve values or reports they
 produced themselves (four-eyes rule).
 
+## Which model is used
+
+The app writes its reports with the model named in `OLLAMA_MODEL`. The default is `auto`, which
+means the best model that is actually installed on this machine is used: the newest family first,
+the larger model within it, and a model for embeddings is never chosen. A model that is named but
+not pulled is replaced by the best one that is there, and the reason is shown in the interface.
+
+To see what is installed and what the app will use:
+
+```bash
+python -m kpibench.cli models
+```
+
+To pin a model, name it in `.env`:
+
+```text
+OLLAMA_MODEL=qwen3:8b
+```
+
+To refuse to use anything else, set `OLLAMA_STRICT_MODEL=true`.
+
 ## Everyday commands
 
 Run these inside the folder with the private Python environment active
@@ -76,6 +97,7 @@ Run these inside the folder with the private Python environment active
 | `python -m kpibench.cli add-user <id> viewer --name "Full Name"` | adds a user (roles: admin, maker, checker, viewer, user) |
 | `python -m kpibench.cli reset-password <id>` | resets a password and unlocks the account |
 | `python -m kpibench.cli link <viewer-id> --tab trends` | prints a one-time sign-in link (tests the dashboard hand-off) |
+| `python -m kpibench.cli models` | lists the models on the local server and which one the app uses |
 | `python -m kpibench.cli verify-audit` | checks the audit hash chain |
 | `python -m kpibench.cli netcheck` | explains why libraries cannot be downloaded (proxy, mirror) |
 
@@ -96,5 +118,5 @@ Run these inside the folder with the private Python environment active
 
 - Python 3.10 or newer (3.12 recommended)
 - About 1 GB of disk for libraries and five years of PDFs
-- Optional: [Ollama](https://ollama.com) with `qwen2.5:14b` and `nomic-embed-text` for AI wording and semantic search.
+- Optional: [Ollama](https://ollama.com) with any recent model, such as `qwen3:8b`, and `nomic-embed-text` for AI wording and semantic search.
   Without it the app runs in template mode; extraction, approval, benchmarking and reports work the same.

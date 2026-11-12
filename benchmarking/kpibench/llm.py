@@ -3,7 +3,15 @@
 Data never leaves the machine: remote endpoints are refused unless ALLOW_REMOTE_LLM=true.
 Every call is recorded (purpose, model, prompt version, latency, sizes) for observability and
 model-risk governance. If no LLM is reachable the app keeps working in deterministic template mode.
+
+Which model is used
+-------------------
+`OLLAMA_MODEL` names the model to use. It may also be `auto`, which means the best model that
+is actually installed on the server is used. A model that is named but not pulled is replaced
+by the best one that is there, unless `OLLAMA_STRICT_MODEL=true` says otherwise, and the
+reason is always reported so that it can be shown in the interface.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -20,21 +28,189 @@ from .security import is_local_url, redact_pii
 PROMPTS: dict[str, str] = {}  # purpose -> template (filled by modules); version = sha1 prefix
 
 
+#: The families of model this app prefers, best first. A machine usually holds one or two
+#: families, and the newest one of them is usually the one that was meant.
+PREFERRED_FAMILIES: tuple[str, ...] = (
+    "qwen3",
+    "qwen2.5",
+    "qwen2",
+    "llama3.3",
+    "llama3.2",
+    "llama3.1",
+    "llama3",
+    "mistral-nemo",
+    "mistral",
+    "gemma3",
+    "gemma2",
+    "phi4",
+    "command-r",
+    "deepseek-r1",
+)
+
+#: Words that mark a model as one for embeddings rather than one for text.
+EMBEDDING_WORDS: tuple[str, ...] = (
+    "embed",
+    "bge",
+    "gte-",
+    "e5-",
+    "minilm",
+    "mxbai",
+)
+
+
 def prompt_version(template: str) -> str:
     return "p-" + hashlib.sha1(template.encode()).hexdigest()[:10]
+
+
+def model_family(name: str) -> str:
+    """The family of a model: `qwen3:8b` belongs to `qwen3`."""
+    return str(name or "").split(":")[0].strip().lower()
+
+
+def model_size_b(name: str) -> float:
+    """The size of a model in billions of parameters, as far as the name says."""
+    tag = str(name or "").split(":")[1] if ":" in str(name or "") else ""
+
+    match = re.search(r"(\d+(?:\.\d+)?)\s*b\b", tag)
+
+    if not match:
+        return 0.0
+
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return 0.0
+
+
+def is_embedding_model(name: str) -> bool:
+    """Whether a model is one for embeddings rather than one for text."""
+    lowered = str(name or "").lower()
+
+    return any(word in lowered for word in EMBEDDING_WORDS)
+
+
+def score_model(name: str) -> float:
+    """
+    How good a model is, in the order this app prefers.
+
+    The family comes first: the newest family that is installed is the one that was meant.
+    Within a family the larger model wins.
+    """
+    family = model_family(name)
+
+    rank = (
+        PREFERRED_FAMILIES.index(family)
+        if family in PREFERRED_FAMILIES
+        else len(PREFERRED_FAMILIES)
+    )
+
+    size = min(model_size_b(name), 999.0)
+
+    # A named tag is better than the rolling `:latest` of the same model.
+    specific = 0.0 if str(name).endswith(":latest") else 5.0
+
+    return (len(PREFERRED_FAMILIES) - rank) * 10000.0 + size * 10.0 + specific
+
+
+def pick_best_model(names: list[str]) -> str | None:
+    """The best model of those installed on the server, or None if there is none."""
+    candidates = [
+        name
+        for name in (names or [])
+        if name and not is_embedding_model(name)
+    ]
+
+    if not candidates:
+        return None
+
+    return max(candidates, key=score_model)
 
 
 class LLM:
     def __init__(self) -> None:
         self.provider = settings.LLM_PROVIDER.lower()
         self._status_cache: tuple[float, dict] | None = None
+        self._resolved_model: str | None = None
 
     @property
     def model(self) -> str:
-        return settings.OLLAMA_MODEL if self.provider == "ollama" else settings.OPENAI_COMPAT_MODEL
+        if self.provider != "ollama":
+            return settings.OPENAI_COMPAT_MODEL
+
+        if self._resolved_model:
+            return self._resolved_model
+
+        return (settings.OLLAMA_MODEL or "").strip() or "auto"
 
     def _base(self) -> str:
         return settings.OLLAMA_URL if self.provider == "ollama" else settings.OPENAI_COMPAT_URL
+
+    def _pulled(self) -> list[str] | None:
+        """The models the server has, or None if it cannot be reached."""
+        try:
+            response = httpx.get(f"{settings.OLLAMA_URL}/api/tags", timeout=4)
+            response.raise_for_status()
+
+            return [m["name"] for m in response.json().get("models", [])]
+        except Exception:
+            return None
+
+    @staticmethod
+    def _match(names: list[str], wanted: str) -> str | None:
+        """Whether the server holds this model, and under which name."""
+        if wanted in names:
+            return wanted
+
+        if f"{wanted}:latest" in names:
+            return f"{wanted}:latest"
+
+        if ":" in wanted:
+            # A particular tag was asked for; only that tag will do.
+            return None
+
+        matches = [name for name in names if name.split(":")[0] == wanted]
+
+        return matches[0] if matches else None
+
+    def resolve(self, names: list[str]) -> tuple[str | None, str]:
+        """
+        Which model to use, and why.
+
+        The model named in the settings wins whenever it is installed. When it is not, the best
+        model that is installed is used instead, and the reason says so.
+        """
+        configured = (settings.OLLAMA_MODEL or "").strip()
+
+        if configured and configured.lower() != "auto":
+            matched = self._match(names, configured)
+
+            if matched:
+                return matched, f"the model named in OLLAMA_MODEL ({configured})"
+
+            if settings.OLLAMA_STRICT_MODEL:
+                return None, (
+                    f"'{configured}' is not pulled. Run: ollama pull {configured}"
+                )
+
+            best = pick_best_model(names)
+
+            if best:
+                return best, (
+                    f"'{configured}' is not pulled, so '{best}' is used instead. "
+                    f"Run: ollama pull {configured}"
+                )
+
+            return None, (
+                f"'{configured}' is not pulled and no other model is installed. "
+                f"Run: ollama pull {configured}"
+            )
+
+        best = pick_best_model(names)
+
+        if best:
+            return best, f"the best model on this server ({best})"
+
+        return None, "no model is installed. Run: ollama pull qwen3:8b"
 
     def status(self, force: bool = False) -> dict:
         if self._status_cache and not force and time.time() - self._status_cache[0] < 30:
@@ -47,14 +223,31 @@ class LLM:
         else:
             try:
                 if self.provider == "ollama":
-                    r = httpx.get(f"{settings.OLLAMA_URL}/api/tags", timeout=4)
-                    names = [m["name"] for m in r.json().get("models", [])]
-                    st["models"] = names
-                    st["available"] = (self.model in names or f"{self.model}:latest" in names
-                                       or (":" not in self.model and any(n.split(":")[0] == self.model for n in names)))
-                    if not st["available"]:
-                        st["reason"] = f"Model '{self.model}' not pulled. Run: ollama pull {self.model}"
-                    st["embed_available"] = any(n.split(":")[0] == settings.EMBED_MODEL.split(":")[0] for n in names)
+                    names = self._pulled()
+
+                    if names is None:
+                        st["reason"] = (
+                            "LLM server not reachable. Start it with: ollama serve"
+                        )
+                    else:
+                        st["models"] = names
+
+                        resolved, reason = self.resolve(names)
+
+                        if resolved:
+                            self._resolved_model = resolved
+
+                            st["model"] = resolved
+                            st["available"] = True
+                            st["reason"] = reason
+                        else:
+                            st["available"] = False
+                            st["reason"] = reason
+
+                        st["embed_available"] = any(
+                            n.split(":")[0] == settings.EMBED_MODEL.split(":")[0]
+                            for n in names
+                        )
                 else:
                     r = httpx.get(f"{settings.OPENAI_COMPAT_URL}/models", timeout=4)
                     st["models"] = [m["id"] for m in r.json().get("data", [])]

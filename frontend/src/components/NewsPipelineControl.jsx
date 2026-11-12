@@ -1,8 +1,10 @@
 import { useState } from "react";
 
 import { runNewsIngestion } from "../api/admin";
+import { cutoffDate, DEFAULT_DAYS, WINDOWS } from "./pipelineWindow";
 
 function NewsPipelineControl() {
+    const [days, setDays] = useState(DEFAULT_DAYS);
     const [running, setRunning] = useState(false);
     const [message, setMessage] = useState("");
 
@@ -11,7 +13,7 @@ function NewsPipelineControl() {
         setMessage("");
 
         try {
-            const result = await runNewsIngestion();
+            const result = await runNewsIngestion(days);
 
             setMessage(
                 result.message ||
@@ -42,16 +44,48 @@ function NewsPipelineControl() {
                 </div>
             </div>
 
-            <button
-                type="button"
-                className="pipeline-button"
-                onClick={handleRun}
-                disabled={running}
-            >
-                {running
-                    ? "Starting..."
-                    : "Run News Ingestion"}
-            </button>
+            <div className="pipeline-controls">
+                <label
+                    className="pipeline-window"
+                    htmlFor="pipeline-window"
+                >
+                    <span>Store news from</span>
+
+                    <select
+                        id="pipeline-window"
+                        value={days}
+                        onChange={(event) =>
+                            setDays(Number(event.target.value))
+                        }
+                        disabled={running}
+                    >
+                        {WINDOWS.map((window) => (
+                            <option
+                                key={window.days}
+                                value={window.days}
+                            >
+                                {window.label}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+
+                <button
+                    type="button"
+                    className="pipeline-button"
+                    onClick={handleRun}
+                    disabled={running}
+                >
+                    {running
+                        ? "Starting..."
+                        : "Run News Ingestion"}
+                </button>
+            </div>
+
+            <p className="pipeline-note">
+                News published from {cutoffDate(days)} will be
+                stored. Anything older is left out.
+            </p>
 
             {message && (
                 <p className="pipeline-message">

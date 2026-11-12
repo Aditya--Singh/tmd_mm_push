@@ -359,6 +359,144 @@ button {
   margin-top: 20px;
 }
 
+/* =========================================================
+   News pipeline
+   ========================================================= */
+
+.news-pipeline-panel {
+  margin-top: 20px;
+}
+
+.pipeline-controls {
+  display: flex;
+
+  align-items: flex-end;
+
+  gap: 14px;
+
+  flex-wrap: wrap;
+}
+
+.pipeline-window {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 6px;
+}
+
+.pipeline-window span {
+  color: var(--text-secondary);
+
+  font-size: 12px;
+
+  font-weight: 600;
+
+  letter-spacing: 0.02em;
+
+  text-transform: uppercase;
+}
+
+.pipeline-window select {
+  height: 40px;
+
+  min-width: 170px;
+
+  padding: 0 12px;
+
+  border: 1px solid #d2c8b9;
+
+  border-radius: 5px;
+
+  background: #ffffff;
+
+  color: var(--text-primary);
+
+  font-family: inherit;
+
+  font-size: 13px;
+
+  cursor: pointer;
+
+  outline: none;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.pipeline-window select:hover {
+  border-color: #b8aa98;
+}
+
+.pipeline-window select:focus {
+  border-color: var(--pnb-red);
+
+  box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.08);
+}
+
+.pipeline-window select:disabled {
+  background: #f4f2ee;
+
+  cursor: not-allowed;
+}
+
+.pipeline-button {
+  height: 40px;
+
+  padding: 0 22px;
+
+  border: 1px solid var(--pnb-red);
+
+  border-radius: 5px;
+
+  background: var(--pnb-red);
+
+  color: #ffffff;
+
+  font-family: inherit;
+
+  font-size: 13px;
+
+  font-weight: 600;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.pipeline-button:hover:not(:disabled) {
+  background: var(--pnb-dark-red);
+
+  border-color: var(--pnb-dark-red);
+}
+
+.pipeline-button:disabled {
+  background: #c9a2a2;
+
+  border-color: #c9a2a2;
+
+  cursor: not-allowed;
+}
+
+.pipeline-note {
+  margin-top: 14px;
+
+  color: var(--text-secondary);
+
+  font-size: 13px;
+}
+
+.pipeline-message {
+  margin-top: 12px;
+
+  color: var(--pnb-dark-red);
+
+  font-size: 13px;
+
+  font-weight: 600;
+}
+
 .news-list {
   display: flex;
 

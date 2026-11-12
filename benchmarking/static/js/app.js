@@ -282,8 +282,10 @@ function updateLlmPill() {
   const el = $('#llmpill');
   if (!el) return;
   el.className = 'llm-pill ' + (l.available ? 'on' : 'off');
-  el.textContent = l.available ? 'Local LLM ready' : 'Template mode';
-  el.title = l.available ? `${l.provider}: ${l.model} (runs on this server, no data leaves it)` : (l.reason || 'No language model connected; templates are used');
+  el.textContent = l.available ? `Local LLM: ${l.model}` : 'Template mode';
+  el.title = l.available
+    ? `${l.provider}: ${l.model} - ${l.reason || 'runs on this server, no data leaves it'}`
+    : (l.reason || 'No language model connected; templates are used');
   updateMode();
 }
 

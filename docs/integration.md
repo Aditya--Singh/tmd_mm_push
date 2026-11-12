@@ -269,6 +269,22 @@ The accounts, their passwords and their two roles are held in
 The password in the sheet is the password of the account; it is hashed
 before it is stored, and the database only ever holds the hash.
 
+### The language model
+
+Peer Benchmarking writes its reports with a language model on the machine, and the model it
+uses is the one that is actually installed there. `OLLAMA_MODEL` may be `auto`, which is the
+default: the best model that is installed is chosen, the newest family first, the larger model
+within it, and never a model for embeddings. A model that is named but not pulled is replaced
+by the best one that is there, and the reason is shown in the header of the application and
+beside the switch that writes the narrative.
+
+The setup script asks the machine whether a model server is running, and points the app at it
+when there is one. To see what is installed and what will be used:
+
+```bash
+cd benchmarking && .venv/bin/python -m kpibench.cli models
+```
+
 ### One rail, not two
 
 Peer Benchmarking has seven screens. In the hub they are drawn in the
@@ -280,6 +296,20 @@ and the hub reads it through its own backend. Choosing a screen in the
 rail sends `hubint:navigate` to the frame; the app moves to it and
 answers with `hubint:route`, so the rail follows a journey made inside
 the application.
+
+### The news window
+
+The **News Data Pipeline** panel of the News Feed fetches the news and runs the AI analysis
+over it. The window is chosen before the run: the dropdown beside the button says how many
+days back the news may reach, up to 90 days, and the cut-off date it works out is written
+under the button.
+
+The window is carried in the request, so the server decides what is stored and the browser
+cannot ask for more than the limit. The scraper walks the pages of the source until it
+reaches the cut-off, and only the news published inside the window is stored.
+
+`NEWS_CUTOFF_DATE` is the floor: the oldest day the news may ever reach, whatever window is
+asked for. A run may ask for less news, never for more.
 
 ## 4. Signing out
 
@@ -366,6 +396,9 @@ independently usable.
 | `CORS_ORIGINS` | the development origins | Comma-separated list of browser origins allowed to call the API. |
 | `KPI_APP_URL` | `http://127.0.0.1:8077` | Where Peer Benchmarking is listening. |
 | `KPI_HANDOFF_SECRET` | none | The secret the two servers share. The same value as `HANDOFF_SECRET` in the benchmarking app's `.env`. |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Where the language model is. |
+| `OLLAMA_MODEL` | `qwen3:8b` | The model the analysis of the news uses. |
+| `NEWS_CUTOFF_DATE` | `2026-06-20` | The oldest day the news may reach, whatever window is asked for. |
 
 ### Landing page (`landing/.env`)
 
@@ -398,6 +431,9 @@ the origins differ from the defaults.
 | `HANDOFF_SYNC_ROLE` | `false` | When `true`, the role the hub states replaces the role held here. |
 | `FRAME_ANCESTORS` | `'self'` | The sites allowed to show this app in a frame. |
 | `EMBED_PARENT_ORIGINS` | empty | The sites allowed to drive this app. |
+| `LLM_PROVIDER` | `ollama` | `ollama` writes the reports with the local model; `none` writes them from the fixed template. The setup script sets this: `ollama` when a model server is running. |
+| `OLLAMA_MODEL` | `auto` | The model the reports are written with. `auto` means the best model that is installed on this machine. |
+| `OLLAMA_STRICT_MODEL` | `false` | When `true`, no model but the one that is named is used. |
 
 `scripts/make_env.py` writes both files and keeps the two secrets in
 step, so they never have to be copied by hand.

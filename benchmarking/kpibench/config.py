@@ -71,7 +71,12 @@ class Settings:
     # LLM (local only by default -> no data egress)
     LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")  # ollama | openai_compatible | none
     OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:14b")
+    # The model to use. "auto" means the best model that is installed on the server is used,
+    # which is what a machine that has one model should do. Name a model to pin it.
+    OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "auto")
+    # When a model is named but not pulled, the best model that is installed is used instead.
+    # Set this to true to refuse to use anything else.
+    OLLAMA_STRICT_MODEL = _bool("OLLAMA_STRICT_MODEL", False)
     OPENAI_COMPAT_URL = os.getenv("OPENAI_COMPAT_URL", "http://localhost:8001/v1")  # e.g. vLLM
     OPENAI_COMPAT_MODEL = os.getenv("OPENAI_COMPAT_MODEL", "Qwen/Qwen2.5-14B-Instruct")
     EMBED_MODEL = os.getenv("EMBED_MODEL", "nomic-embed-text")

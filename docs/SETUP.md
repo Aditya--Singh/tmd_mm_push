@@ -191,6 +191,25 @@ sign-out, and the rail on the left holds the services.
 
 Signing out of the hub ends the session in every open service as well.
 
+### The news pipeline
+
+The **News Data Pipeline** panel, in the summary of the News Feed, fetches
+the news and runs the AI analysis over it. Before the button there is a
+dropdown that says how far back the news may reach:
+
+| Window | What is fetched |
+|---|---|
+| Today only | The news published today |
+| Last 3, 7, 15, 30, 45, 60 or 90 days | The news published in that many days |
+| Anything longer | Refused: 90 days is the longest window |
+
+The window sets the cut-off date, and the date is written under the
+button so that it is clear what is being fetched. News published before
+the cut-off is neither fetched nor stored.
+
+`NEWS_CUTOFF_DATE` in `backend/.env` is the floor: the oldest day the
+news may ever reach, whatever window is asked for.
+
 ---
 
 ## 6. The settings
@@ -204,6 +223,8 @@ neither is ever sent to a browser.
 |---|---|
 | `JWT_SECRET_KEY` | Signs the access tokens of the hub. Generated for you. |
 | `DATABASE_URL` | The news database. A SQLite file by default. |
+| `OLLAMA_MODEL` | The model the AI analysis of the news uses. `qwen3:8b` by default. |
+| `NEWS_CUTOFF_DATE` | The oldest day the news may reach, whatever window is asked for. |
 | `CORS_ORIGINS` | The browser origins allowed to call the API. |
 | `KPI_APP_URL` | Where Peer Benchmarking is listening. `http://127.0.0.1:8077`. |
 | `KPI_HANDOFF_SECRET` | The secret the two servers share. **The same value as `HANDOFF_SECRET` in `benchmarking/.env`.** |
@@ -220,6 +241,9 @@ neither is ever sent to a browser.
 | `FRAME_ANCESTORS` | The sites allowed to show this app in a frame. |
 | `EMBED_PARENT_ORIGINS` | The sites allowed to drive this app. |
 | `DEFAULT_PASSWORD` | The password of the four starter accounts of the benchmarking app. |
+| `LLM_PROVIDER` | `ollama` uses the local language model; `none` writes the reports from the fixed template. The setup script chooses this: `ollama` when a model server is running. |
+| `OLLAMA_MODEL` | The model the reports are written with. `auto` means the best model that is installed on this machine. Name a model, such as `qwen3:8b`, to pin it. |
+| `OLLAMA_STRICT_MODEL` | `true` refuses to use any model but the one that is named. |
 
 If the two secrets ever fall out of step, run the setup again:
 

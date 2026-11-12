@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from app.scrapers.base import BaseScraper
 from app.scrapers.utils import get
@@ -22,7 +22,17 @@ class PSUConnectScraper(BaseScraper):
         slug = re.sub(r"\s+", "-", slug.strip())
         return f"https://www.psuconnect.in/bank-news/{slug}"
 
-    def fetch_articles(self):
+    def fetch_articles(self, cutoff: datetime | None = None):
+        """
+        The articles of the bank-news category, newest first.
+
+        The pages are walked until a page holds nothing published on or after the
+        cut-off, and only the articles inside the window are returned. Without a
+        cut-off the window is 30 days.
+        """
+
+        if cutoff is None:
+            cutoff = datetime.now(timezone.utc) - timedelta(days=30)
 
         offset = 0
         limit = 16
@@ -59,7 +69,6 @@ class PSUConnectScraper(BaseScraper):
             # pprint.pp(articles_data[0])
             # return []
 
-            cutoff = datetime(2026, 6, 20, tzinfo=timezone.utc)
             page_has_recent = False
 
             for item in articles_data:
@@ -70,10 +79,9 @@ class PSUConnectScraper(BaseScraper):
                 if publish_date >= cutoff:
                     page_has_recent = True
 
-                # if publish_date < datetime(2026, 6, 20, tzinfo=timezone.utc):
-                #     logger.info("Reached cutoff date. Stopping scraper.")
-                #     return articles
-
+                if publish_date < cutoff:
+                    # Older than the window that was asked for.
+                    continue
                 # article = {
                 #     "id": item["id"],
                 #     "headline": item["title"],
@@ -106,7 +114,7 @@ class PSUConnectScraper(BaseScraper):
             # print(article.publish_date)
 
             if not page_has_recent:
-                logger.info("Reached cutoff date.")
+                logger.info(f"Reached the cut-off date ({cutoff.isoformat()}).")
                 break
 
             offset += limit

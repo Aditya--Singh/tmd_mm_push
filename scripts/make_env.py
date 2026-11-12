@@ -5,6 +5,10 @@ signs people in, and Peer Benchmarking, which the hub opens in its
 workspace. This script writes that secret into both environment files,
 so that a person never has to copy it by hand.
 
+It also points Peer Benchmarking at the language model on the machine. Ollama is asked
+whether it is running; if it is, the app is set to use it, and the model is left to be
+chosen from the ones that are installed.
+
 It is safe to run again. Existing values are kept, unless a placeholder
 is still in place.
 """
@@ -15,6 +19,8 @@ import argparse
 import re
 import secrets
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 
@@ -97,6 +103,69 @@ def needs_a_secret(content: str, key: str) -> bool:
     return value == PLACEHOLDERS.get(key, value) or not value
 
 
+def ollama_is_running(url: str) -> bool:
+    """Whether the language model server answers."""
+    try:
+        with urllib.request.urlopen(
+            f"{url.rstrip('/')}/api/tags", timeout=2.5
+        ) as response:
+            return response.status == 200
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+def set_up_the_language_model(bench: str) -> tuple[str, str]:
+    """
+    Point Peer Benchmarking at the language model on this machine.
+
+    A model server that is running is used, and the model is left to be chosen from the
+    ones that are installed. A model server that is not running leaves the app in template
+    mode, which still works.
+    """
+    provider = (get_value(bench, "LLM_PROVIDER") or "").strip().lower()
+    url = (get_value(bench, "OLLAMA_URL") or "http://localhost:11434").strip()
+
+    # The model to use: "auto" means the best one that is installed.
+    model = (get_value(bench, "OLLAMA_MODEL") or "").strip()
+
+    if not model:
+        bench = set_value(bench, "OLLAMA_MODEL", "auto")
+        model = "auto"
+
+    running = ollama_is_running(url)
+
+    # A provider that was chosen on purpose is left alone.
+    if provider in ("ollama", "openai_compatible"):
+        if provider == "ollama" and not running:
+            return bench, (
+                "Ollama is not running, so Peer Benchmarking writes its reports from the "
+                "fixed template. Start Ollama and run this script again to use a model."
+            )
+
+        if provider == "ollama":
+            return bench, (
+                f"Ollama is running, so Peer Benchmarking will write its reports with it "
+                f"({model})."
+            )
+
+        return bench, ""
+
+    if running:
+        bench = set_value(bench, "LLM_PROVIDER", "ollama")
+
+        return bench, (
+            f"Ollama is running, so Peer Benchmarking will write its reports with it "
+            f"({model})."
+        )
+
+    bench = set_value(bench, "LLM_PROVIDER", "none")
+
+    return bench, (
+        "Ollama is not running, so Peer Benchmarking writes its reports from the fixed "
+        "template. Start Ollama and run this script again to use a model."
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Prepare the environment files of the platform.",
@@ -159,6 +228,9 @@ def main(argv: list[str] | None = None) -> int:
     bench = set_value(bench, "DASHBOARD_URL", "http://localhost:5174/")
     bench = set_value(bench, "DASHBOARD_NAME", "Executive Intelligence Hub")
 
+    # The language model on this machine.
+    bench, message = set_up_the_language_model(bench)
+
     write(BACKEND_ENV, backend)
     write(BENCH_ENV, bench)
 
@@ -170,6 +242,10 @@ def main(argv: list[str] | None = None) -> int:
     print("The two servers now share one secret, so one sign-in opens both.")
     print("Peer Benchmarking accepts the hub for every role: analyst,")
     print("approver, general manager and administrator.")
+
+    if message:
+        print("")
+        print(message)
 
     return 0
 

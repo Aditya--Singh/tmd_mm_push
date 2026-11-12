@@ -254,6 +254,40 @@ if (childFrame) {
     );
 }
 
+// ------------------------------------------------------------------
+// 5. The news pipeline asks how far back the news may reach
+// ------------------------------------------------------------------
+
+// The administrator of the News Feed holds the pipeline control.
+await frame.locator(".admin-tabs").first().waitFor({ timeout: 25000 });
+
+const windows = (
+    await frame.locator(".pipeline-window select option").allInnerTexts()
+).map((label) => label.trim());
+
+check(
+    "the news pipeline offers a window of days, up to ninety",
+    windows.length > 0 &&
+        windows.includes("Last 90 days") &&
+        windows.includes("Last 30 days"),
+    windows.join(", "),
+);
+
+const noteBefore = (
+    await frame.locator(".pipeline-note").innerText()
+).trim();
+
+await frame.locator(".pipeline-window select").selectOption("90");
+await page.waitForTimeout(400);
+
+const noteAfter = (await frame.locator(".pipeline-note").innerText()).trim();
+
+check(
+    "choosing a window changes the date the news is stored from",
+    noteBefore !== noteAfter && noteAfter.includes("stored"),
+    `${noteBefore} -> ${noteAfter}`,
+);
+
 // The frame must be able to call the API with the transferred token.
 const newsCalls = apiResponses.filter((entry) =>
     entry.url.includes("/api/news"),

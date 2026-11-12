@@ -26,7 +26,9 @@ export async function renderReports(root) {
             ${Object.entries(state.meta.report_types).map(([k, t], i) => `<label class="rtype"><input type="radio" name="rtype" value="${k}" ${i === 0 ? 'checked' : ''}><span><b>${esc(t.replace(' - Peer Benchmarking', ''))}</b><small>${esc(DESCR[k] || '')}</small></span></label>`).join('')}
           </fieldset>
           <label class="check"><input type="checkbox" name="llm" ${state.llm?.available ? 'checked' : 'disabled'}> Write the narrative with the local language model
-            <small>${state.llm?.available ? esc(state.llm.model) + ' on this server' : 'Not connected: a fixed template is used instead (same facts, plainer wording)'}</small></label>
+            <small>${state.llm?.available
+              ? esc(state.llm.model) + ' on this server' + (state.llm.reason ? ' - ' + esc(state.llm.reason) : '')
+              : 'Not connected: a fixed template is used instead (same facts, plainer wording). ' + esc(state.llm?.reason || '')}</small></label>
           <p class="muted small">Quarter: <b>${esc(state.quarters.find(q => q.key === state.quarterKey)?.label || 'latest')}</b> (change it at the top of the page).${state.provisional ? ' <b>Includes unapproved values</b>, so this report cannot be signed off.' : ''}</p>
           <button class="btn btn-primary" type="submit">${icon('play', 14)} Generate report</button>
         </form>

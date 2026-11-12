@@ -82,13 +82,27 @@ Say '4/5  Local language model (optional but recommended)'
 if ($env:SKIP_MODELS -eq '1') {
     Write-Host 'Skipped (SKIP_MODELS=1).'
 } elseif (Get-Command ollama -ErrorAction SilentlyContinue) {
-    $model = Get-EnvValue 'OLLAMA_MODEL' 'qwen2.5:14b'
+    $model = Get-EnvValue 'OLLAMA_MODEL' 'auto'
     $emb = Get-EnvValue 'EMBED_MODEL' 'nomic-embed-text'
-    Write-Host "Downloading $model and $emb with Ollama (several GB the first time)..."
-    ollama pull $model
-    $ok1 = $LASTEXITCODE
-    ollama pull $emb
-    if ($ok1 -ne 0 -or $LASTEXITCODE -ne 0) { Write-Host 'Model download failed - the app still works in template mode.' }
+    if ($model -eq 'auto') {
+        # The app uses the best model that is installed. There is nothing to download
+        # unless the machine has no model at all yet.
+        $installed = ollama list 2>$null | Select-Object -Skip 1 | Where-Object { $_.Trim() -ne '' }
+        if ($installed) {
+            Write-Host 'Models already installed - the app will use the best of them.'
+            & $Py -m kpibench.cli models
+        } else {
+            Write-Host 'No model is installed yet. Downloading qwen3:8b (several GB the first time)...'
+            ollama pull qwen3:8b
+            if ($LASTEXITCODE -ne 0) { Write-Host 'Model download failed - the app still works in template mode.' }
+        }
+    } else {
+        Write-Host "Downloading $model and $emb with Ollama (several GB the first time)..."
+        ollama pull $model
+        $ok1 = $LASTEXITCODE
+        ollama pull $emb
+        if ($ok1 -ne 0 -or $LASTEXITCODE -ne 0) { Write-Host 'Model download failed - the app still works in template mode.' }
+    }
 } else {
     Write-Host 'Ollama is not installed. The app will work in template mode (no AI wording).'
     Write-Host 'To add it later: install from https://ollama.com/download/windows, then run setup.bat again.'

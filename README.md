@@ -334,6 +334,7 @@ OLLAMA_MODEL=qwen3:8b
 
 TIMEZONE=Asia/Kolkata
 
+# The oldest day the news may reach, whatever window is asked for
 NEWS_CUTOFF_DATE=2026-06-20
 
 JWT_SECRET_KEY=<generated>
@@ -342,6 +343,16 @@ KPI_APP_URL=http://127.0.0.1:8077
 
 KPI_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in benchmarking/.env>
 ```
+
+The news pipeline is told how far back the news may reach when it is
+started, from the dropdown beside the button in the News Feed. The
+window may be as long as 90 days, and the date it starts at is shown
+under the button.
+
+Peer Benchmarking chooses its model by itself: `OLLAMA_MODEL=auto`, the
+default, means the best model that is installed on the machine is used.
+`python -m kpibench.cli models` from the `benchmarking` folder says what
+is installed and what will be used.
 
 The frontend applications read their own `.env` files, which are optional
 in development because sensible defaults are built in. See

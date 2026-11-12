@@ -9,6 +9,7 @@
     python -m kpibench.cli link gm --tab trends     # prints a one-time sign-in link for a viewer (hand-off test)
     python -m kpibench.cli netcheck                 # explains why pip cannot download libraries
     python -m kpibench.cli verify-audit
+    python -m kpibench.cli models                    # lists the local models and which one is used
 """
 from __future__ import annotations
 
@@ -304,6 +305,44 @@ def cmd_verify_audit(args) -> int:
     return 0 if r["ok"] else 1
 
 
+def cmd_models(args) -> int:
+    """List the models on the local server and say which one the app will use."""
+    from .llm import llm, pick_best_model, score_model
+
+    st = llm.status(force=True)
+
+    print("Language model server")
+    print(f"  provider : {st['provider']}  ({settings_label()})")
+
+    models = st.get("models") or []
+
+    if not models:
+        print(f"  server   : {st.get('reason', 'no models')}")
+        return 1
+
+    print(f"  installed: {len(models)}")
+    for name in sorted(models, key=score_model, reverse=True):
+        mark = " <- used" if name == st.get("model") else ""
+        print(f"    {name}{mark}")
+
+    print("")
+    print(f"  model    : {st.get('model')}")
+    print(f"  reason   : {st.get('reason')}")
+
+    if not st.get("available"):
+        print("")
+        print("  The app will write its reports from the fixed template until a model is reachable.")
+        return 1
+
+    return 0
+
+
+def settings_label() -> str:
+    from .config import settings
+
+    return f"{settings.OLLAMA_URL} - {settings.OLLAMA_MODEL}"
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="python -m kpibench.cli", description="PNB KPI Benchmarking tools")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -327,6 +366,8 @@ def main(argv=None) -> int:
     s = sub.add_parser("token"); s.add_argument("user")
     s.set_defaults(fn=cmd_token)
     sub.add_parser("verify-audit").set_defaults(fn=cmd_verify_audit)
+    s = sub.add_parser("models", help="list the models on the local server and which one is used")
+    s.set_defaults(fn=cmd_models)
     s = sub.add_parser("link", help="print a one-time sign-in link for a viewer (tests the dashboard hand-off)")
     s.add_argument("user"); s.add_argument("--tab", default="overview", choices=["overview", "trends", "compare", "reports"])
     s.add_argument("--host"); s.add_argument("--port", type=int)
