@@ -22,6 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 BACKEND_ENV = ROOT / "backend" / ".env"
 BENCH_ENV = ROOT / "benchmarking" / ".env"
+SENTINEL_ENV = ROOT / "sentinel" / ".env"
 BACKEND_DB = ROOT / "backend" / "news.db"
 BACKEND_LOG = ROOT / "backend" / "logs" / "backend.log"
 
@@ -214,6 +215,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         report.add(OK, "benchmarking/.env is there")
 
+    sentinel = read_env(SENTINEL_ENV)
+
+    if not sentinel:
+        report.add(
+            WRONG,
+            "sentinel/.env is missing",
+            "Run ./setup.sh (or .\\setup.ps1 on Windows) to write it.",
+        )
+    else:
+        report.add(OK, "sentinel/.env is there")
+
     if backend and not backend.get("JWT_SECRET_KEY", "").strip():
         report.add(
             WRONG,
@@ -233,6 +245,20 @@ def main(argv: list[str] | None = None) -> int:
                 "the two servers do not share the same secret",
                 "Run ./setup.sh again, or put the same value in KPI_HANDOFF_SECRET "
                 "(backend/.env) and HANDOFF_SECRET (benchmarking/.env).",
+            )
+
+    shared_sentinel = backend.get("SENTINEL_HANDOFF_SECRET", "").strip()
+    shared_summarizer = sentinel.get("HANDOFF_SECRET", "").strip()
+
+    if backend and sentinel:
+        if shared_sentinel and shared_summarizer and shared_sentinel == shared_summarizer:
+            report.add(OK, "the hub and the Data Summarizer share the same secret")
+        else:
+            report.add(
+                WRONG,
+                "the hub and the Data Summarizer do not share the same secret",
+                "Run ./setup.sh again, or put the same value in SENTINEL_HANDOFF_SECRET "
+                "(backend/.env) and HANDOFF_SECRET (sentinel/.env).",
             )
 
     # ---------------------------------------------------------- the accounts
@@ -267,6 +293,7 @@ def main(argv: list[str] | None = None) -> int:
     for name, path in (
         ("the backend", ROOT / "backend" / ".venv"),
         ("Peer Benchmarking", ROOT / "benchmarking" / ".venv"),
+        ("the Data Summarizer", ROOT / "sentinel" / ".venv"),
     ):
         if path.exists():
             report.add(OK, f"the environment of {name} is there")
@@ -332,6 +359,7 @@ def main(argv: list[str] | None = None) -> int:
             (5174, "the landing page", "landing"),
             (5173, "the news application", "frontend"),
             (8077, "Peer Benchmarking", "benchmarking"),
+            (8090, "the Data Summarizer", "sentinel"),
         ):
             if port_is_open(port):
                 report.add(OK, f"{what} is listening on port {port}")
@@ -339,9 +367,14 @@ def main(argv: list[str] | None = None) -> int:
                 report.add(
                     WRONG,
                     f"{what} is not running on port {port}",
-                    f"Start it: cd {folder} && npm run dev"
-                    if folder != "benchmarking"
-                    else "Start it: cd benchmarking && .venv/bin/python -m kpibench.main",
+                    "Start it: cd %s && %s"
+                    % (
+                        folder,
+                        {
+                            "benchmarking": ".venv/bin/python -m kpibench.main",
+                            "sentinel": "cd backend && ../.venv/bin/python -m uvicorn app.main:app --port 8090",
+                        }.get(folder, "npm run dev"),
+                    ),
                 )
 
     report.print()

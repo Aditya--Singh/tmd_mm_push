@@ -3,7 +3,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import "./styles/landing.css";
 
 import { me } from "./api/auth";
-import { fetchManifest, requestTicket } from "./api/benchmarking";
+import {
+    fetchManifest as fetchBenchmarkManifest,
+    requestTicket as requestBenchmarkTicket,
+} from "./api/benchmarking";
+import {
+    fetchManifest as fetchSummarizerManifest,
+    requestTicket as requestSummarizerTicket,
+} from "./api/summarizer";
 import FeedbackModal from "./components/FeedbackModal";
 import Sidebar from "./components/Sidebar";
 import Workspace from "./components/Workspace";
@@ -34,7 +41,30 @@ const DEFAULT_CHILD_ORIGINS = [
     "http://localhost:8077",
     "http://127.0.0.1:8077",
     "http://newsintel.pnbbank.in:8077",
+    "http://localhost:8090",
+    "http://127.0.0.1:8090",
+    "http://newsintel.pnbbank.in:8090",
 ];
+
+/**
+ * The services that keep their own sessions.
+ *
+ * For each of them the hub asks for two things when the service is opened: the
+ * list of screens, and a single-use sign-in ticket for the person who signed in
+ * here. The ticket is spent once, so a new one is asked for every time.
+ */
+const TICKET_SERVICES = {
+    benchmark: {
+        label: "Peer Benchmarking",
+        manifest: fetchBenchmarkManifest,
+        ticket: requestBenchmarkTicket,
+    },
+    summarizer: {
+        label: "Data Summarizer",
+        manifest: fetchSummarizerManifest,
+        ticket: requestSummarizerTicket,
+    },
+};
 
 function App() {
     const [session, setSession] = useState(null);
@@ -50,9 +80,10 @@ function App() {
     const [sections, setSections] = useState({});
     const [activeSectionId, setActiveSectionId] = useState(null);
 
-    // The single-use sign-in ticket for Peer Benchmarking. It is spent
-    // once, so a new one is asked for every time the service is opened.
-    const [benchmark, setBenchmark] = useState({ ticket: null, notice: "" });
+    // The single-use sign-in ticket of each service that keeps its own
+    // sessions, keyed by the service. A ticket is spent once, so a new one is
+    // asked for every time the service is opened.
+    const [tickets, setTickets] = useState({});
 
     const [isCollapsed, setIsCollapsed] = useState(() =>
         readSidebarCollapsed(window.localStorage),
@@ -65,7 +96,7 @@ function App() {
         setAuthStatus("anonymous");
         setActiveServiceId(null);
         setPendingLogout(false);
-        setBenchmark({ ticket: null, notice: "" });
+        setTickets({});
     }, []);
 
     // The embedded application confirms that it has cleared its session.
@@ -218,11 +249,13 @@ function App() {
         [services, activeServiceId],
     );
 
-    // Peer Benchmarking has its own navigation and its own sessions. When
-    // it is opened, the hub asks it for the list of screens and for a
-    // single-use sign-in ticket for the person who signed in here.
+    // A service that keeps its own navigation and its own sessions. When it is
+    // opened, the hub asks it for the list of screens and for a single-use
+    // sign-in ticket for the person who signed in here.
     useEffect(() => {
-        if (activeService?.id !== "benchmark") {
+        const service = TICKET_SERVICES[activeService?.id];
+
+        if (!service) {
             return undefined;
         }
 
@@ -230,7 +263,7 @@ function App() {
 
         const open = async () => {
             try {
-                const manifest = await fetchManifest();
+                const manifest = await service.manifest();
 
                 if (cancelled) {
                     return;
@@ -238,31 +271,42 @@ function App() {
 
                 setSections((previous) => ({
                     ...previous,
-                    benchmark: manifest.sections ?? [],
+                    [activeService.id]: manifest.sections ?? [],
                 }));
 
                 setActiveSectionId(manifest.defaultSection ?? "overview");
 
-                const ticket = await requestTicket();
+                const ticket = await service.ticket();
 
                 if (cancelled) {
                     return;
                 }
 
-                setBenchmark({ ticket: ticket.ticket, notice: "" });
+                setTickets((previous) => ({
+                    ...previous,
+                    [activeService.id]: {
+                        ticket: ticket.ticket,
+                        role: ticket.role,
+                        notice: "",
+                    },
+                }));
             } catch (err) {
                 if (cancelled) {
                     return;
                 }
 
-                console.error("Peer Benchmarking could not be opened:", err);
+                console.error(`${service.label} could not be opened:`, err);
 
-                setBenchmark({
-                    ticket: null,
-                    notice:
-                        err.response?.data?.detail ??
-                        "Peer Benchmarking is not available right now.",
-                });
+                setTickets((previous) => ({
+                    ...previous,
+                    [activeService.id]: {
+                        ticket: null,
+                        role: null,
+                        notice:
+                            err.response?.data?.detail ??
+                            `${service.label} is not available right now.`,
+                    },
+                }));
             }
         };
 
@@ -282,16 +326,28 @@ function App() {
         }
 
         if (activeService.session === SESSION_MODE.TICKET) {
-            if (!benchmark.ticket) {
+            const ticket = tickets[activeService.id];
+
+            if (!ticket?.ticket) {
                 return null;
             }
 
             // Peer Benchmarking keeps its own sessions and decides what
-            // the role may do there, so it is given the benchmarking role.
+            // the benchmarking role may do there, so it is given that role.
+            if (activeService.id === "benchmark") {
+                return {
+                    username: session.username,
+                    roleBench: session.roleBench,
+                    ticket: ticket.ticket,
+                };
+            }
+
+            // The Data Summarizer keeps its own accounts and decides the role
+            // there itself, so it is given only the ticket.
             return {
                 username: session.username,
-                roleBench: session.roleBench,
-                ticket: benchmark.ticket,
+                role: ticket.role,
+                ticket: ticket.ticket,
             };
         }
 
@@ -302,7 +358,7 @@ function App() {
             roleNews: session.roleNews,
             accessToken: session.accessToken,
         };
-    }, [session, activeService, benchmark.ticket]);
+    }, [session, activeService, tickets]);
 
     const activeSection = useMemo(() => {
         const serviceSections = sections?.[activeService?.id] ?? [];
@@ -399,10 +455,16 @@ function App() {
 
                         setActiveServiceId(nextId);
 
-                        // The ticket is spent once, so it is dropped as
-                        // soon as the service is closed.
-                        if (nextId !== "benchmark") {
-                            setBenchmark({ ticket: null, notice: "" });
+                        // A ticket is spent once, so it is dropped as soon
+                        // as its service is closed.
+                        if (nextId !== selected.id) {
+                            setTickets((previous) => {
+                                const next = { ...previous };
+
+                                delete next[selected.id];
+
+                                return next;
+                            });
                         }
                     }}
                     onSelectSection={(section) =>
@@ -418,11 +480,7 @@ function App() {
                         authPayload={authPayload}
                         activeSection={activeSection}
                         onSectionChange={handleChildRoute}
-                        notice={
-                            activeService?.id === "benchmark"
-                                ? benchmark.notice
-                                : ""
-                        }
+                        notice={tickets[activeService?.id]?.notice ?? ""}
                     />
                 </main>
             </div>

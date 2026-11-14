@@ -1,0 +1,26 @@
+# Windows (Docker Desktop) and macOS: same app, normal port mapping instead of host networking.
+#   docker compose -f docker-compose.windows.yml up -d --build
+# The app reaches Ollama on this computer through host.docker.internal.
+# To use the GB10's models instead, set OLLAMA_URL in .env, e.g. OLLAMA_URL=http://10.20.30.40:11434/v1
+name: rbi-sentinel
+services:
+  sentinel:
+    build: .
+    image: pnb-regulatory-sentinel:latest
+    container_name: pnb-sentinel
+    env_file: .env
+    environment:
+      DATA_DIR: /app/backend/data
+      PORT: "8090"
+      LLM_BASE_URL: ${OLLAMA_URL:-http://host.docker.internal:11434/v1}
+      EMBEDDING_BASE_URL: ${OLLAMA_URL:-http://host.docker.internal:11434/v1}
+    ports:
+      - "${PORT:-8090}:8090"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - sentinel-data:/app/backend/data
+    restart: unless-stopped
+
+volumes:
+  sentinel-data:

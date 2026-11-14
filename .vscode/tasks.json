@@ -183,13 +183,14 @@
         },
         {
             "label": "Dev: all services",
-            "detail": "Backend, Peer Benchmarking, news dashboard and landing page, each in its own terminal",
+            "detail": "Backend, Peer Benchmarking, the Data Summarizer, the news dashboard and the landing page, each in its own terminal",
             "type": "shell",
-            "command": "echo 'Starting the backend, Peer Benchmarking, the news dashboard and the landing page.'",
+            "command": "echo 'Starting the backend, Peer Benchmarking, the Data Summarizer, the news dashboard and the landing page.'",
             "dependsOrder": "parallel",
             "dependsOn": [
                 "Run: backend",
                 "Run: benchmarking",
+                "Run: the Data Summarizer",
                 "Run: news frontend",
                 "Run: landing page"
             ],
@@ -275,7 +276,9 @@
                 "Test: news frontend",
                 "Test: landing page",
                 "Test: benchmarking",
-                "Test: news feed for every role"
+                "Test: the Data Summarizer",
+                "Test: news feed for every role",
+                "Test: hub with the Data Summarizer"
             ],
             "problemMatcher": []
         },
@@ -296,6 +299,51 @@
             "command": "python scripts/doctor.py",
             "options": {
                 "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: sentinel dependencies",
+            "detail": "Install the Data Summarizer and build its interface",
+            "type": "shell",
+            "command": "python -m pip install -r backend/requirements-dev.txt",
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel"
+            },
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run: the Data Summarizer",
+            "detail": "Serve the Data Summarizer on port 8090",
+            "type": "shell",
+            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090",
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel/backend"
+            },
+            "isBackground": true,
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: the Data Summarizer",
+            "detail": "Run the tests of the Data Summarizer",
+            "type": "shell",
+            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m pytest -q",
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel/backend"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: hub with the Data Summarizer",
+            "detail": "Open the Data Summarizer in the hub and check the sign-in",
+            "type": "shell",
+            "command": "node summarizer.mjs",
+            "options": {
+                "cwd": "${workspaceFolder}/landing/e2e"
             },
             "group": "test",
             "problemMatcher": []

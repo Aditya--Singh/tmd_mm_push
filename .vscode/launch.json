@@ -40,6 +40,21 @@
             "justMyCode": false
         },
         {
+            "name": "Data Summarizer: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--reload",
+                "--port",
+                "8090"
+            ],
+            "cwd": "${workspaceFolder}/sentinel/backend",
+            "jinja": true,
+            "justMyCode": false
+        },
+        {
             "name": "Peer Benchmarking (Chrome)",
             "type": "chrome",
             "request": "launch",
@@ -78,6 +93,7 @@
                 "configurations": [
                     "Backend: FastAPI",
                     "Benchmarking: FastAPI",
+                    "Data Summarizer: FastAPI",
                     "Landing page (Chrome)"
                 ]
             }

@@ -1,0 +1,19 @@
+# Fixed project name, so the data volume is always 'rbi-sentinel_sentinel-data' whatever the folder is called.
+name: rbi-sentinel
+services:
+  sentinel:
+    build: .
+    image: pnb-regulatory-sentinel:latest
+    container_name: pnb-sentinel
+    env_file: .env
+    environment:
+      DATA_DIR: /app/backend/data
+    # Host networking (Linux / GB10): the app reaches Ollama at http://localhost:11434 with no extra setup,
+    # and is served on the host at http://<machine-ip>:${PORT} (PORT is set in .env, default 8090).
+    network_mode: host
+    volumes:
+      - sentinel-data:/app/backend/data   # database, logs, outbox, model cache
+    restart: unless-stopped
+
+volumes:
+  sentinel-data:

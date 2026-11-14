@@ -66,6 +66,18 @@ class Settings(BaseSettings):
 
     kpi_request_timeout: float = 10.0
 
+    # The Data Summarizer, which the landing page opens in its workspace under that name.
+    #
+    # It is the Regulatory Sentinel application: it reads the circulars and notifications of
+    # the Reserve Bank of India, and writes their summaries. The landing page asks it for a
+    # single-use sign-in ticket on behalf of the person who signed in here, so that the
+    # person keeps one identity across the whole platform.
+    sentinel_app_url: str = "http://127.0.0.1:8090"
+
+    # The same value as HANDOFF_SECRET in the summarizer's .env.
+    # While it is empty, the Data Summarizer workspace stays closed and says why.
+    sentinel_handoff_secret: str = ""
+
     @model_validator(mode="after")
     def validate_secret_key(self):
         if not self.jwt_secret_key.strip():

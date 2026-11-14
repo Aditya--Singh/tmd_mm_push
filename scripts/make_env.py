@@ -1,12 +1,13 @@
 """Create or update the environment files of the platform.
 
-Two servers have to agree on a secret: the backend of the hub, which
-signs people in, and Peer Benchmarking, which the hub opens in its
-workspace. This script writes that secret into both environment files,
-so that a person never has to copy it by hand.
+Servers have to agree on a secret: the backend of the hub, which signs people in, and
+each application the hub opens in its workspace. Peer Benchmarking and the Data
+Summarizer are two such applications, each with a secret of its own, so that one being
+leaked does not open the other. This script writes those secrets into the environment
+files, so that a person never has to copy them by hand.
 
-It also points Peer Benchmarking at the language model on the machine. Ollama is asked
-whether it is running; if it is, the app is set to use it, and the model is left to be
+It also points the applications at the language model on the machine. Ollama is asked
+whether it is running; if it is, they are set to use it, and the model is left to be
 chosen from the ones that are installed.
 
 It is safe to run again. Existing values are kept, unless a placeholder
@@ -30,14 +31,22 @@ BACKEND_ENV = ROOT / "backend" / ".env"
 BACKEND_EXAMPLE = ROOT / "backend" / ".env.example"
 BENCH_ENV = ROOT / "benchmarking" / ".env"
 BENCH_EXAMPLE = ROOT / "benchmarking" / ".env.example"
+SENTINEL_ENV = ROOT / "sentinel" / ".env"
+SENTINEL_EXAMPLE = ROOT / "sentinel" / ".env.example"
 
 #: The value that means "not set yet" in the example files.
 PLACEHOLDERS = {
     "JWT_SECRET_KEY": "change-me-generate-a-random-secret",
     "SECRET_KEY": "",
+    "JWT_SECRET": "replace-with-a-long-random-string",
     "HANDOFF_SECRET": "",
     "KPI_HANDOFF_SECRET": "",
+    "SENTINEL_HANDOFF_SECRET": "",
 }
+
+#: The addresses the hub is served from. The applications that are opened in its
+#: workspace may be framed and driven from these and from nowhere else.
+HUB_ORIGINS = "http://localhost:5174,http://127.0.0.1:5174"
 
 
 def read(path: Path) -> str:
@@ -166,6 +175,39 @@ def set_up_the_language_model(bench: str) -> tuple[str, str]:
     )
 
 
+def set_up_the_summarizer(sentinel: str, ollama_running: bool) -> str:
+    """
+    Point the Data Summarizer at the language model on this machine.
+
+    The model is left to be chosen from the ones that are installed, which is what
+    "auto" means. The embeddings come from the same server, so that nothing has to be
+    downloaded. A machine without a model server still works: the retrieval falls back
+    to a plain method of its own, and the interface says so.
+    """
+    model = (get_value(sentinel, "LLM_MODEL") or "").strip()
+
+    if not model or model.lower() == "gpt-oss:20b":
+        # The model that was named before was the one the machine happened to have.
+        # From now on the best model that is installed is used.
+        sentinel = set_value(sentinel, "LLM_MODEL", "auto")
+        model = "auto"
+
+    if ollama_running:
+        sentinel = set_value(sentinel, "LLM_PROVIDER", "openai_compat")
+        sentinel = set_value(sentinel, "LLM_BASE_URL", "http://localhost:11434/v1")
+        sentinel = set_value(sentinel, "OLLAMA_URL", "http://localhost:11434")
+        sentinel = set_value(sentinel, "EMBEDDING_PROVIDER", "openai_compat")
+        sentinel = set_value(sentinel, "EMBEDDING_BASE_URL", "http://localhost:11434/v1")
+
+        if not get_value(sentinel, "EMBEDDING_MODEL"):
+            sentinel = set_value(sentinel, "EMBEDDING_MODEL", "bge-m3")
+    else:
+        # Nothing is downloaded, so the app is ready to start at once.
+        sentinel = set_value(sentinel, "EMBEDDING_PROVIDER", "hash")
+
+    return sentinel
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Prepare the environment files of the platform.",
@@ -183,6 +225,14 @@ def main(argv: list[str] | None = None) -> int:
 
     backend = read(BACKEND_ENV) or read(BACKEND_EXAMPLE)
     bench = read(BENCH_ENV) or read(BENCH_EXAMPLE)
+
+    # The Data Summarizer is optional: the platform works without it.
+    sentinel = ""
+    sentinel_example = ""
+
+    if SENTINEL_EXAMPLE.exists():
+        sentinel = read(SENTINEL_ENV) or read(SENTINEL_EXAMPLE)
+        sentinel_example = read(SENTINEL_EXAMPLE)
 
     # The backend's own signing key.
     if needs_a_secret(backend, "JWT_SECRET_KEY"):
@@ -231,6 +281,40 @@ def main(argv: list[str] | None = None) -> int:
     # The language model on this machine.
     bench, message = set_up_the_language_model(bench)
 
+    if sentinel:
+        # The summarizer's own signing key.
+        if needs_a_secret(sentinel, "JWT_SECRET"):
+            sentinel = set_value(sentinel, "JWT_SECRET", secrets.token_urlsafe(48))
+            print("Gave the Data Summarizer a new JWT_SECRET.")
+
+        # The secret the hub and the summarizer share. It is a secret of their own,
+        # so that the benchmarking secret stays a secret of its own.
+        summarizer_secret = get_value(sentinel, "HANDOFF_SECRET") or ""
+
+        if args.force_secret or not summarizer_secret or len(summarizer_secret) < 32:
+            summarizer_secret = secrets.token_urlsafe(48)
+            sentinel = set_value(sentinel, "HANDOFF_SECRET", summarizer_secret)
+            print("Gave the hub and the Data Summarizer a new shared secret.")
+
+        backend = set_value(backend, "SENTINEL_HANDOFF_SECRET", summarizer_secret)
+
+        # The hub must be allowed to frame and drive the summarizer, in the places
+        # the hub is served from.
+        sentinel = set_value(sentinel, "EMBED_PARENT_ORIGINS", HUB_ORIGINS)
+        sentinel = set_value(
+            sentinel, "FRAME_ANCESTORS", f"http://localhost:5174 http://127.0.0.1:5174"
+        )
+
+        # The hub signs people in, so the summarizer keeps its own sign-in switched
+        # on and its own accounts: the person who signs in at the hub is signed in
+        # here as well, by a ticket that is spent once.
+        sentinel = set_value(sentinel, "AUTH_ENABLED", "true")
+        sentinel = set_value(sentinel, "CORS_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174")
+
+        sentinel = set_up_the_summarizer(sentinel, ollama_is_running("http://localhost:11434"))
+
+        write(SENTINEL_ENV, sentinel)
+
     write(BACKEND_ENV, backend)
     write(BENCH_ENV, bench)
 
@@ -238,10 +322,19 @@ def main(argv: list[str] | None = None) -> int:
     print("Environment files ready:")
     print("  backend/.env")
     print("  benchmarking/.env")
+
+    if sentinel:
+        print("  sentinel/.env")
+
     print("")
-    print("The two servers now share one secret, so one sign-in opens both.")
+    print("The hub and Peer Benchmarking share one secret, so one sign-in opens both.")
     print("Peer Benchmarking accepts the hub for every role: analyst,")
     print("approver, general manager and administrator.")
+
+    if sentinel:
+        print("")
+        print("The hub and the Data Summarizer share a secret of their own, so one")
+        print("sign-in opens the Data Summarizer as well.")
 
     if message:
         print("")

@@ -18,13 +18,14 @@ BACKEND_WAIT_SECONDS=90
 
 BACKEND_PID=""
 BENCH_PID=""
+SENTINEL_PID=""
 NEWS_PID=""
 LANDING_PID=""
 
 cleanup() {
   echo ""
   echo "Stopping the platform."
-  for pid in "$LANDING_PID" "$NEWS_PID" "$BENCH_PID" "$BACKEND_PID"; do
+  for pid in "$LANDING_PID" "$NEWS_PID" "$SENTINEL_PID" "$BENCH_PID" "$BACKEND_PID"; do
     [ -n "$pid" ] && kill "$pid" 2>/dev/null || true
   done
   wait 2>/dev/null || true
@@ -39,12 +40,13 @@ start() {  # start <name> <command...>
   case "$name" in
     backend)   BACKEND_PID="$pid" ;;
     benchmarking) BENCH_PID="$pid" ;;
+    sentinel)  SENTINEL_PID="$pid" ;;
     news)      NEWS_PID="$pid" ;;
     landing)   LANDING_PID="$pid" ;;
   esac
 }
 
-if [ ! -d backend/.venv ] || [ ! -d benchmarking/.venv ]; then
+if [ ! -d backend/.venv ] || [ ! -d benchmarking/.venv ] || [ ! -d sentinel/.venv ]; then
   echo "Run ./setup.sh first."
   exit 1
 fi
@@ -115,6 +117,10 @@ fi
 start benchmarking bash -c "cd benchmarking && .venv/bin/python -m kpibench.main"
 sleep 2
 
+# The Data Summarizer serves its own interface from the same address as its API.
+start sentinel bash -c "cd '$ROOT/sentinel/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090"
+sleep 2
+
 start news bash -c "cd frontend && npm run dev -- --host 127.0.0.1 --port 5173"
 start landing bash -c "cd landing && npm run dev -- --host 127.0.0.1 --port 5174"
 
@@ -125,6 +131,7 @@ The platform is starting.
     Landing page hub    http://localhost:5174
     News dashboard      http://localhost:5173
     Peer Benchmarking   http://localhost:8077
+    Data Summarizer     http://localhost:8090
     Backend and its API http://127.0.0.1:8000/docs
 
 Sign in at http://localhost:5174 with admin / admin@tmd26

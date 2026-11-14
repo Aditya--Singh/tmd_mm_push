@@ -1,0 +1,35 @@
+# --- Web / API -------------------------------------------------------------
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+pydantic-settings>=2.3
+email-validator>=2.1
+
+# --- Persistence -----------------------------------------------------------
+sqlalchemy>=2.0.30
+# psycopg[binary]>=3.2      # uncomment to use PostgreSQL via DATABASE_URL
+
+# --- Security --------------------------------------------------------------
+pyjwt>=2.8
+bcrypt>=4.1
+
+# --- RBI ingestion ---------------------------------------------------------
+httpx>=0.27
+feedparser>=6.0.11
+beautifulsoup4>=4.12
+lxml>=5.2
+pypdf>=4.2
+
+playwright>=1.48          # headless Chromium for the Master Circular year archive
+
+# --- Retrieval -------------------------------------------------------------
+numpy>=1.26
+rank-bm25>=0.2.2
+fastembed>=0.4            # local ONNX embeddings (BAAI/bge-small-en-v1.5) + optional cross-encoder reranker
+
+# --- LLM providers ---------------------------------------------------------
+openai>=1.40              # any OpenAI-compatible server: Ollama, vLLM, OpenAI, Azure, Bedrock gateway
+anthropic>=0.40
+
+# --- Scheduling ------------------------------------------------------------
+apscheduler>=3.10,<4

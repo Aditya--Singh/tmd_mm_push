@@ -19,6 +19,7 @@ from app.api.feedback import router as feedback_router
 from app.api.auth import router as auth_router
 from app.api.pipeline import router as pipeline_router
 from app.api.integrations import router as integrations_router
+from app.api.integrations import summarizer_router
 
 app = FastAPI(
     title=settings.app_name,
@@ -39,6 +40,7 @@ app.include_router(feedback_router)
 app.include_router(auth_router)
 app.include_router(pipeline_router)
 app.include_router(integrations_router)
+app.include_router(summarizer_router)
 
 # A database that was made before the roles were split is brought up to the
 # current shape first, and only then are the missing tables created.

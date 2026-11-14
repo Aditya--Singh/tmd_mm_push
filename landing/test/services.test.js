@@ -6,6 +6,7 @@ import {
     NEWS_ROLES,
     SERVICE_STATUS,
     SERVICES,
+    SESSION_MODE,
     servicesForRoles,
 } from "../src/services.js";
 
@@ -13,18 +14,36 @@ function serviceOf(id, services) {
     return services.find((service) => service.id === id);
 }
 
-test("the two services that are built are live", () => {
+test("the three services that are built are live", () => {
     const services = servicesForRoles({ news: "user", bench: "user" });
 
     assert.equal(serviceOf("news", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("benchmark", services).status, SERVICE_STATUS.LIVE);
+    assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.LIVE);
 });
 
-test("the two services that are not built yet are marked as planned", () => {
+test("the service that is not built yet is marked as planned", () => {
     const services = servicesForRoles({ news: "user", bench: "user" });
 
     assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.PLANNED);
-    assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.PLANNED);
+});
+
+test("the data summarizer keeps its own sessions", () => {
+    // It has its own accounts, so it is given a ticket of its own rather
+    // than the token of this platform.
+    const summarizer = serviceOf(
+        "summarizer",
+        servicesForRoles({ news: "user", bench: "user" }),
+    );
+
+    assert.equal(summarizer.session, SESSION_MODE.TICKET);
+});
+
+test("the data summarizer is open to everybody who has signed in", () => {
+    // It keeps its own accounts and decides the roles there itself.
+    const services = servicesForRoles({ bench: "user" });
+
+    assert.ok(serviceOf("summarizer", services));
 });
 
 test("the news feed follows the role in the news feed", () => {
@@ -84,7 +103,15 @@ test("every service names the column that decides who may open it", () => {
             continue;
         }
 
-        assert.ok(service.roles, `${service.id} names no role column`);
+        // A service either follows a column of this platform's user table, or it
+        // keeps its own accounts and decides the roles there itself.
+        if (!service.roles) {
+            assert.ok(
+                service.ownAccounts,
+                `${service.id} names no role column and does not keep its own accounts`,
+            );
+            continue;
+        }
 
         for (const column of Object.keys(service.roles)) {
             assert.ok(

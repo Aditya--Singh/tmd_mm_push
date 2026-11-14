@@ -21,7 +21,7 @@ signed in on both sides with the role they hold in each of them.
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Python | 3.10 or newer | `python --version` must work. |
+| Python | 3.11 or newer | `python --version` must work. |
 | Node.js | 20 or newer | `node --version` must work. |
 | A C compiler and the headers of Python | — | Needed by a few packages of Peer Benchmarking (`pdfplumber`, `python-pptx`). On Debian and Ubuntu: `sudo apt install -y build-essential python3-dev`. |
 
@@ -40,14 +40,18 @@ cd top-management-dashboard
 ./setup.sh
 ```
 
-The script does five things. It can be run again at any time.
+The script does seven things. It can be run again at any time.
 
 1. Checks that Python and Node.js are installed.
 2. Creates `backend/.venv` and installs the backend.
 3. Creates `benchmarking/.venv` and installs Peer Benchmarking.
-4. Installs the packages of the two web applications.
-5. Writes `backend/.env` and `benchmarking/.env`, **including the secret
-   the two servers share**, and creates the demo accounts.
+4. Creates `sentinel/.venv` and installs the Data Summarizer.
+5. Installs the packages of the web applications, and builds the
+   interface of the Data Summarizer.
+6. Writes `backend/.env`, `benchmarking/.env` and `sentinel/.env`,
+   **including the secrets the servers share**, and points the two
+   applications at the language model on the machine.
+7. Creates the demo accounts.
 
 Then start everything:
 
@@ -55,12 +59,13 @@ Then start everything:
 ./run.sh
 ```
 
-Four services come up:
+Five services come up:
 
 ```
 Landing page hub    http://localhost:5174
 News dashboard      http://localhost:5173
 Peer Benchmarking   http://localhost:8077
+Data Summarizer     http://localhost:8090
 Backend and its API http://127.0.0.1:8000/docs
 ```
 
@@ -115,7 +120,7 @@ Then start everything:
 .\run.ps1
 ```
 
-Four windows open, one for each service. Close them to stop the
+Five windows open, one for each service. Close them to stop the
 platform.
 
 ### Doing it by hand
@@ -129,11 +134,15 @@ cd backend
 cd benchmarking
 .\.venv\Scripts\python.exe -m kpibench.main
 
-# Window 3 - the news dashboard
+# Window 3 - the Data Summarizer
+cd sentinel\backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090
+
+# Window 4 - the news dashboard
 cd frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 
-# Window 4 - the landing page hub
+# Window 5 - the landing page hub
 cd landing
 npm run dev -- --host 127.0.0.1 --port 5174
 ```
@@ -186,8 +195,9 @@ sign-out, and the rail on the left holds the services.
 | Service | What happens |
 |---|---|
 | **Peer Benchmarking** | Opens in the workspace, already signed in. The rail grows a list of screens underneath it, and choosing one moves the application to it. |
+| **Data Summarizer** | The Regulatory Sentinel application: the circulars and the notifications of the Reserve Bank of India, and their summaries. Opens in the workspace, already signed in, with its own sidebar replaced by a slim tab bar. |
 | **News Feed** | Opens in the workspace, already signed in, with its own header hidden. |
-| **SQL Genie**, **Data Summarizer** | Marked **Planned**. They are part of the platform scope and are not built yet. |
+| **SQL Genie** | Marked **Planned**. It is part of the platform scope and is not built yet. |
 
 Signing out of the hub ends the session in every open service as well.
 
@@ -245,13 +255,31 @@ neither is ever sent to a browser.
 | `OLLAMA_MODEL` | The model the reports are written with. `auto` means the best model that is installed on this machine. Name a model, such as `qwen3:8b`, to pin it. |
 | `OLLAMA_STRICT_MODEL` | `true` refuses to use any model but the one that is named. |
 
-If the two secrets ever fall out of step, run the setup again:
+### `sentinel/.env`
+
+The Data Summarizer, which is the Regulatory Sentinel application.
+
+| Setting | Meaning |
+|---|---|
+| `JWT_SECRET` | Signs the sessions of the summarizer. Generated for you. |
+| `PORT` | The port the summarizer listens on. `8090`. |
+| `AUTH_ENABLED` | `true` keeps the summarizer's own sign-in switched on, so that the person who signs in at the hub is signed in here as well. |
+| `HANDOFF_SECRET` | The secret the hub and the summarizer share. **The same value as `SENTINEL_HANDOFF_SECRET` in `backend/.env`.** |
+| `HANDOFF_ADMIN_USERS` | The hub accounts that are administrators in the summarizer as well. `admin` by default. |
+| `FRAME_ANCESTORS` | The sites allowed to show this app in a frame. |
+| `EMBED_PARENT_ORIGINS` | The sites allowed to drive this app. |
+| `LLM_PROVIDER` | `openai_compat` writes with the language model on the machine; `none` writes the summaries without a model. |
+| `LLM_MODEL` | The model the summaries are written with. `auto` means the best model that is installed on this machine. Name a model, such as `qwen3:8b`, to pin it. |
+| `LLM_STRICT_MODEL` | `true` refuses to use any model but the one that is named. |
+| `EMBEDDING_PROVIDER` | `openai_compat` takes the embeddings from the same model server; `hash` needs nothing at all. |
+
+If the secrets ever fall out of step, run the setup again:
 
 ```bash
 python scripts/make_env.py
 ```
 
-It writes one secret into both files and leaves everything else alone.
+It writes one secret into each pair of files and leaves everything else alone.
 
 ---
 
@@ -423,9 +451,30 @@ from. The hub must be listed exactly as the browser sees it:
 `http://localhost:5174` and `http://127.0.0.1:5174` are different
 origins.
 
+### "The Data Summarizer is not connected yet"
+
+The hub and the summarizer do not share a secret. Run the setup again:
+
+```bash
+python scripts/make_env.py
+```
+
+It writes the same secret into `backend/.env`
+(`SENTINEL_HANDOFF_SECRET`) and `sentinel/.env` (`HANDOFF_SECRET`).
+
+### "The Data Summarizer could not be reached"
+
+The summarizer is not running, or `SENTINEL_APP_URL` in `backend/.env`
+does not point at it. It listens on port 8090:
+
+```bash
+cd sentinel/backend && ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090
+```
+
 ### The app is refused in the frame
 
 `FRAME_ANCESTORS` in `benchmarking/.env` must list the hub's origin.
+For the Data Summarizer it is `FRAME_ANCESTORS` in `sentinel/.env`.
 
 ### "No module named kpibench"
 

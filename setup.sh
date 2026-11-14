@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # One-time setup for the whole platform: the backend of the hub, Peer
-# Benchmarking, the news dashboard and the landing page.
+# Benchmarking, the Data Summarizer, the news dashboard and the landing page.
 #
 # Safe to run again. Open a terminal in the repository folder and run:
 #
@@ -10,15 +10,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-say() { printf '\n\033[1;31m==\033[1m %s\n' "$1"; }
+say() { printf '\n\033[1;31m== %s\033[0m\n' "$1"; }
 note() { printf '   %s\n' "$1"; }
 
 PY="${PYTHON:-python3}"
 
-say "1/6  Checking what is installed"
+say "1/7  Checking what is installed"
 "$PY" --version
-if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 10) else 1)'; then
-  echo "   Python 3.10 or newer is needed. On Ubuntu: sudo apt install -y python3 python3-venv python3-pip"
+if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; then
+  echo "   Python 3.11 or newer is needed. On Ubuntu: sudo apt install -y python3 python3-venv python3-pip"
   exit 1
 fi
 if ! command -v node >/dev/null; then
@@ -28,7 +28,7 @@ fi
 node --version
 npm --version
 
-say "2/6  The backend of the hub"
+say "2/7  The backend of the hub"
 cd backend
 [ -d .venv ] || "$PY" -m venv .venv
 # shellcheck disable=SC1091
@@ -42,7 +42,7 @@ fi
 deactivate
 cd ..
 
-say "3/6  Peer Benchmarking"
+say "3/7  Peer Benchmarking"
 cd benchmarking
 [ -d .venv ] || "$PY" -m venv .venv
 # shellcheck disable=SC1091
@@ -56,14 +56,31 @@ fi
 deactivate
 cd ..
 
-say "4/6  The two web applications"
+say "4/7  The Data Summarizer (Regulatory Sentinel)"
+cd sentinel
+[ -d .venv ] || "$PY" -m venv .venv
+# shellcheck disable=SC1091
+source .venv/bin/activate
+python -m pip install --upgrade pip wheel >/dev/null 2>&1 || true
+if ! python -m pip install -r backend/requirements-dev.txt; then
+  echo "   The packages could not be downloaded. Behind a proxy, set HTTPS_PROXY first."
+  echo "   Behind a private mirror: PIP_INDEX_URL=https://pypi.org/simple ./setup.sh"
+  exit 1
+fi
+deactivate
+cd ..
+
+say "5/7  The three web applications"
 (cd frontend && npm install)
 (cd landing && npm install)
+# The Data Summarizer serves its own interface from the same address as its API,
+# so it is built once here rather than at every start.
+(cd sentinel/frontend && { [ -d node_modules ] || npm install; } && npm run build)
 
-say "5/6  The settings files"
+say "6/7  The settings files"
 "$PY" scripts/make_env.py
 
-say "6/6  The demo accounts"
+say "7/7  The demo accounts"
 (cd backend && .venv/bin/python seed_users.py)
 
 cat <<'DONE'

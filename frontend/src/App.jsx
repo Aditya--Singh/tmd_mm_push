@@ -49,7 +49,7 @@ function App() {
   const [topTopics, setTopTopics] = useState([]);
   const [embedded] = useState(() => isEmbeddedContext());
   const [filters, setFilters] = useState({
-    source: "",
+    // source: "",
     bank: "",
     sentiment: "",
     importance: "",
@@ -64,7 +64,7 @@ function App() {
   };
   const handleClearFilters = () => {
     setFilters({
-      source: "",
+      // source: "",
       bank: "",
       sentiment: "",
       importance: "",
@@ -473,66 +473,66 @@ function App() {
 
 
         {(!isAdmin || adminTab === "latest-news") && (
-            <section ref={newsSectionRef} className="panel news-panel">
-              <div className="section-header">
-                <div>
-                  <h2>Latest News</h2>
-                  <p>AI-prioritized business and banking intelligence</p>
-                </div>
+          <section ref={newsSectionRef} className="panel news-panel">
+            <div className="section-header">
+              <div>
+                <h2>Latest News</h2>
+                <p>AI-prioritized business and banking intelligence</p>
+              </div>
 
-                <span className="news-count">
-                  {news.length} articles
+              <span className="news-count">
+                {news.length} articles
+              </span>
+            </div>
+
+            <NewsFilters
+              filters={filters}
+              onChange={handleFiltersChange}
+              onClear={handleClearFilters}
+            />
+
+            <div className="news-list">
+              {news.map((article) => (
+                <NewsCard
+                  key={article.id}
+                  article={article}
+                />
+              ))}
+            </div>
+
+            <div className="pagination">
+              <div className="pagination-info">
+                Showing {startArticle}–{endArticle} of {totalNews} articles
+              </div>
+
+              <div className="pagination-controls">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setCurrentPage((page) => page - 1)
+                  }
+                >
+                  ← Previous
+                </button>
+
+                <span>
+                  Page {currentPage} of {totalPages || 1}
                 </span>
+
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() =>
+                    setCurrentPage((page) => page + 1)
+                  }
+                >
+                  Next →
+                </button>
               </div>
-
-              <NewsFilters
-                filters={filters}
-                onChange={handleFiltersChange}
-                onClear={handleClearFilters}
-              />
-
-              <div className="news-list">
-                {news.map((article) => (
-                  <NewsCard
-                    key={article.id}
-                    article={article}
-                  />
-                ))}
-              </div>
-
-              <div className="pagination">
-                <div className="pagination-info">
-                  Showing {startArticle}–{endArticle} of {totalNews} articles
-                </div>
-
-                <div className="pagination-controls">
-                  <button
-                    type="button"
-                    disabled={currentPage === 1}
-                    onClick={() =>
-                      setCurrentPage((page) => page - 1)
-                    }
-                  >
-                    ← Previous
-                  </button>
-
-                  <span>
-                    Page {currentPage} of {totalPages || 1}
-                  </span>
-
-                  <button
-                    type="button"
-                    disabled={currentPage >= totalPages}
-                    onClick={() =>
-                      setCurrentPage((page) => page + 1)
-                    }
-                  >
-                    Next →
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
+            </div>
+          </section>
+        )}
 
         {isAdmin &&
           adminTab === "application-insights" && (

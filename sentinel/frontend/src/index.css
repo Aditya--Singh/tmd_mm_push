@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ------------------------------------------------------------------ tokens
+   PNB theme. Brand maroon carries the chrome (sidebar, primary actions, links), brand gold
+   marks only what matters right now (active page, new, verified). A cool rose-grey paper keeps
+   long regulatory text readable. "--maroon" is the danger/high-priority red, kept distinct
+   from the brand maroon so a High-priority circular still stands out against the chrome.
+   To match the bank's brand guide exactly, change --brand and --gold here and in notifier.py. */
+:root {
+  --brand: #8e1b33;
+  --paper: #f6f3f4;
+  --surface: #ffffff;
+  --surface-2: #faf7f8;
+  --line: #e8dfe2;
+  --line-strong: #d4c6cb;
+  --text: #241a1d;
+  --muted: #6b5d62;
+  --faint: #998a90;
+  --ink: #6e1229;
+  --ink-deep: #520c1e;
+  --ink-soft: #f6e9ed;
+  --gold: #f2a900;
+  --gold-text: #8a5b00;
+  --gold-soft: #fff4d6;
+  --maroon: #c0262d;
+  --maroon-soft: #fdecea;
+  --ok: #2e7d4f;
+  --ok-soft: #e6f3ec;
+  --slate: #46607a;
+  --slate-soft: #eaf0f5;
+  --link: #8e1b33;
+  --focus: #f2a900;
+}
+
+.dark {
+  --brand: #f2a3b5;
+  --paper: #150a0e;
+  --surface: #1e1115;
+  --surface-2: #190d11;
+  --line: #3a2329;
+  --line-strong: #4f3038;
+  --text: #f2e8eb;
+  --muted: #c3afb5;
+  --faint: #8f7a80;
+  --ink: #2b0f18;
+  --ink-deep: #1d0910;
+  --ink-soft: #3a1a24;
+  --gold: #f5b82e;
+  --gold-text: #f7c95a;
+  --gold-soft: #33270b;
+  --maroon: #f08a8a;
+  --maroon-soft: #3a1517;
+  --ok: #79c99a;
+  --ok-soft: #12271b;
+  --slate: #9db4cc;
+  --slate-soft: #17222f;
+  --link: #f2a3b5;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-ink: var(--ink);
+  --color-ink-deep: var(--ink-deep);
+  --color-ink-soft: var(--ink-soft);
+  --color-gold: var(--gold);
+  --color-gold-text: var(--gold-text);
+  --color-gold-soft: var(--gold-soft);
+  --color-maroon: var(--maroon);
+  --color-maroon-soft: var(--maroon-soft);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-slate: var(--slate);
+  --color-slate-soft: var(--slate-soft);
+  --color-link: var(--link);
+  --color-brand: var(--brand);
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", "Source Serif 4", Georgia, serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 14.5px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "tnum" 1;
+}
+
+h1, h2, h3 { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.005em; }
+
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+
+::selection { background: var(--gold-soft); }
+
+/* scrollbars that don't shout */
+* { scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+
+@layer components {
+/* ------------------------------------------------------------ components */
+.btn {
+  display: inline-flex; align-items: center; gap: .45rem;
+  height: 34px; padding: 0 .9rem; border-radius: 6px;
+  font-weight: 500; font-size: 13.5px; white-space: nowrap;
+  border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+.btn:hover:not(:disabled) { background: var(--surface-2); border-color: var(--faint); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.btn-primary { background: #8e1b33; border-color: #8e1b33; color: #fff; }
+.dark .btn-primary { background: var(--gold); border-color: var(--gold); color: #1a1406; }
+.btn-primary:hover:not(:disabled) { background: #6e1229; border-color: #6e1229; }
+.dark .btn-primary:hover:not(:disabled) { background: #e2bf52; border-color: #e2bf52; }
+.btn-ghost { border-color: transparent; background: transparent; }
+.btn-ghost:hover:not(:disabled) { background: var(--ink-soft); border-color: transparent; }
+.btn-sm { height: 28px; padding: 0 .6rem; font-size: 12.5px; }
+
+.input, .select, .textarea {
+  width: 100%; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text);
+  border-radius: 6px; padding: 0 .7rem; height: 36px; font-size: 14px;
+}
+.textarea { height: auto; padding: .6rem .7rem; resize: vertical; }
+.input::placeholder, .textarea::placeholder { color: var(--faint); }
+.input:focus, .select:focus, .textarea:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 22%, transparent); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; }
+.label { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.hairline { border-color: var(--line); }
+
+table.data { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.data th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12.5px; padding: .55rem .75rem; border-bottom: 1px solid var(--line); background: var(--surface-2); position: sticky; top: 0; z-index: 1; }
+table.data td { padding: .6rem .75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.data tr.clickable { cursor: pointer; }
+table.data tr.clickable:hover td { background: var(--surface-2); }
+
+/* prose for assistant answers and circular text */
+.prose-reg { font-size: 15px; line-height: 1.68; color: var(--text); }
+.prose-reg p { margin: 0 0 .8em; }
+.prose-reg ul, .prose-reg ol { margin: 0 0 .9em; padding-left: 1.25em; }
+.prose-reg ul { list-style: disc; }
+.prose-reg ol { list-style: decimal; }
+.prose-reg li { margin: .2em 0; }
+.prose-reg h3 { font-size: 1.2rem; margin: .2em 0 .35em; color: var(--text); }
+.prose-reg h4 { font-weight: 600; margin: .8em 0 .3em; }
+.prose-reg strong { font-weight: 600; }
+.prose-reg em { color: var(--muted); }
+.prose-reg a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; text-decoration-color: color-mix(in srgb, var(--link) 40%, transparent); }
+.prose-reg code { font-family: var(--font-mono); font-size: .86em; background: var(--surface-2); padding: .1em .35em; border-radius: 4px; border: 1px solid var(--line); }
+.prose-reg table { border-collapse: collapse; margin: .4em 0 1em; font-size: 13.5px; width: 100%; }
+.prose-reg th, .prose-reg td { border-bottom: 1px solid var(--line); padding: .4rem .5rem; text-align: left; vertical-align: top; }
+.prose-reg th { color: var(--muted); font-weight: 500; }
+.prose-reg blockquote { border-left: 3px solid var(--gold); padding-left: .8em; color: var(--muted); margin: 0 0 .8em; }
+
+.cite-chip {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.35em; height: 1.35em; padding: 0 .3em; margin: 0 .1em;
+  font-size: .7em; font-weight: 600; vertical-align: .35em;
+  border-radius: 999px; background: var(--ink-soft); color: var(--link);
+  border: 1px solid color-mix(in srgb, var(--link) 30%, transparent);
+  text-decoration: none !important; cursor: pointer;
+}
+.cite-chip:hover, .cite-chip[data-active="true"] { background: var(--gold-soft); color: var(--gold-text); border-color: var(--gold); }
+
+.caret::after { content: "▍"; color: var(--gold); animation: blink 1s steps(2) infinite; margin-left: 1px; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* the "initialled" stamp on the routing slip */
+.stamp { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; flex: none; }
+.stamp-done { border: 1.5px solid var(--gold); color: var(--gold-text); background: var(--gold-soft); }
+.stamp-run { border: 1.5px dashed var(--link); color: var(--link); animation: spin 2.4s linear infinite; }
+.stamp-err { border: 1.5px solid var(--maroon); color: var(--maroon); background: var(--maroon-soft); }
+.stamp-wait { border: 1.5px solid var(--line-strong); color: var(--faint); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.json { font-family: var(--font-mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

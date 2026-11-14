@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     One-time setup for the whole platform: the backend of the hub, Peer
-    Benchmarking, the news dashboard and the landing page.
+    Benchmarking, the Data Summarizer, the news dashboard and the landing page.
 
 .DESCRIPTION
     Safe to run again. Open PowerShell in the repository folder and run:
@@ -23,7 +23,7 @@ Set-Location $root
 
 $Python = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 
-Say "1/6  Checking what is installed"
+Say "1/7  Checking what is installed"
 & $Python --version
 # The backend asks for Python 3.11 or newer, so that is what is checked here.
 & $Python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
@@ -38,7 +38,7 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
 node --version
 npm --version
 
-Say "2/6  The backend of the hub"
+Say "2/7  The backend of the hub"
 Push-Location backend
 if (-not (Test-Path .venv)) { & $Python -m venv .venv }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
@@ -49,7 +49,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pop-Location
 
-Say "3/6  Peer Benchmarking"
+Say "3/7  Peer Benchmarking"
 Push-Location benchmarking
 if (-not (Test-Path .venv)) { & $Python -m venv .venv }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
@@ -60,22 +60,41 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pop-Location
 
-Say "4/6  The two web applications"
+Say "4/7  The Data Summarizer (Regulatory Sentinel)"
+Push-Location sentinel
+if (-not (Test-Path .venv)) { & $Python -m venv .venv }
+& .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
+& .\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+if ($LASTEXITCODE -ne 0) {
+    Note "The packages could not be downloaded. Behind a proxy, set `$env:HTTPS_PROXY first."
+    exit 1
+}
+Pop-Location
+
+Say "5/7  The three web applications"
 Push-Location frontend; npm install; $newsFailed = $LASTEXITCODE -ne 0; Pop-Location
 Push-Location landing; npm install; $landingFailed = $LASTEXITCODE -ne 0; Pop-Location
-if ($newsFailed -or $landingFailed) {
-    Note "The libraries could not be downloaded. Behind a proxy, set `$env:HTTPS_PROXY first."
+# The Data Summarizer serves its own interface from the same address as its API,
+# so it is built once here rather than at every start.
+Push-Location sentinel\frontend
+if (-not (Test-Path node_modules)) { npm install }
+npm run build
+$sentinelFailed = $LASTEXITCODE -ne 0
+Pop-Location
+if ($newsFailed -or $landingFailed -or $sentinelFailed) {
+    Note "The libraries could not be downloaded, or the interface could not be built."
+    Note "Behind a proxy, set `$env:HTTPS_PROXY first."
     exit 1
 }
 
-Say "5/6  The settings files"
+Say "6/7  The settings files"
 & $Python scripts/make_env.py
 if ($LASTEXITCODE -ne 0) {
     Note "The settings files could not be written. The text above says why."
     exit 1
 }
 
-Say "6/6  The demo accounts"
+Say "7/7  The demo accounts"
 Push-Location backend
 & .\.venv\Scripts\python.exe seed_users.py
 $accountsFailed = $LASTEXITCODE -ne 0
@@ -95,7 +114,7 @@ Start the platform with:
 
 Check that everything is in place at any time:
 
-    python scripts/doctor.py
+    python scripts\doctor.py
 
 Then open http://localhost:5174 and sign in with, for example:
 

@@ -27,36 +27,36 @@ with its own accounts.
                 |  owns authentication                          |
                 |  hosts the service list                       |
                 +---+----------------------+------------------+
-                    |                      |
-   session handed   | over postMessage      | a sign-in ticket,
-   over a frame     v                      v over a frame
-                +--------------------+  +-----------------------+
-                |  News app          |  |  Peer Benchmarking    |
-                |  (frontend/)       |  |  (benchmarking/)      |
-                |  port 5173         |  |  port 8077            |
-                |                    |  |                       |
-                |  takes the token   |  |  keeps its own        |
-                |                    |  |  database and         |
-                |                    |  |  sessions             |
-                +---------+----------+  +-----------+-----------+
-                          |                         |
-                          v                         |
-                +---------------------------------------+
-                |  FastAPI (backend/)                   |
-                |  port 8000                            |
-                |                                       |
-                |  one users table                      |
-                |  one token issuer                     |
-                |  one role per person                  |
-                +---------------------------------------+
-                          |
-                          | asks for a sign-in ticket,
-                          | server to server
-                          v
-                +---------------------------------------+
-                |  Peer Benchmarking (backend)          |
-                |  its own users, sessions and audit    |
-                +---------------------------------------+
+                    |                      |                      |
+   session handed   | over postMessage      | a sign-in ticket,   | a sign-in ticket,
+   over a frame     v                      v over a frame       v over a frame
+                +--------------------+  +--------------------+ +--------------------+
+                |  News app          |  |  Peer Benchmarking  | |  Data Summarizer   |
+                |  (frontend/)       |  |  (benchmarking/)    | |  (sentinel/)       |
+                |  port 5173         |  |  port 8077          | |  port 8090         |
+                |                    |  |                      | |                    |
+                |  takes the token   |  |  keeps its own      | |  keeps its own     |
+                |                    |  |  database and       | |  database and      |
+                |                    |  |  sessions            | |  sessions           |
+                +---------+----------+  +----------+-----------+ +---------+----------+
+                          |                        |                       |
+                          v                        |                       |
+                +---------------------------------+-----------------------+
+                |  FastAPI (backend/)                                   |
+                |  port 8000                                            |
+                |                                                       |
+                |  one users table                                      |
+                |  one token issuer                                     |
+                |  one role per person                                  |
+                +---------------------------------+-----------------------+
+                          |                       |                       |
+                          | asks for a sign-in ticket,                      |
+                          | server to server                               |
+                          v                       v                       v
+                +--------------------------------+  +---------------------------------------+
+                |  Peer Benchmarking (backend)   |  |  Regulatory Sentinel (backend)        |
+                |  its own users, sessions, audit |  |  its own users, sessions and audit    |
+                +--------------------------------+  +---------------------------------------+
 ```
 
 There is a single identity system. The hub calls the same
@@ -68,6 +68,13 @@ Peer Benchmarking keeps its own database and its own sessions, because
 it has to keep its own audit trail of who approved which figure. It does
 not keep its own sign-in: the hub vouches for the person, and the
 benchmarking app swaps a single-use ticket for a session of its own.
+
+The Data Summarizer is the Regulatory Sentinel application. It reads the
+circulars and the notifications of the Reserve Bank of India and writes
+their summaries. It keeps its own accounts, its own sessions and its own
+audit trail as well, and the hub vouches for the person in the same way.
+Each of the two has a secret of its own with the hub, so that one of
+them being leaked does not open the other.
 
 ## 3. How the session reaches the frame
 
@@ -227,6 +234,29 @@ The ticket is single use and lives for 120 seconds. It never appears in
 a URL, and the shared secret never reaches a browser: it is only ever
 used between the two servers.
 
+## 3.7 The Data Summarizer in the workspace
+
+The Data Summarizer is the Regulatory Sentinel application. It works
+the same way as Peer Benchmarking, with two differences.
+
+**It keeps its own accounts.** The hub states who the person is; the
+summarizer decides what they may do there, from the list of accounts
+that are administrators in it (`HANDOFF_ADMIN_USERS` in
+`sentinel/.env`). A request that tries to state a role is not given
+one, so a browser cannot make itself an administrator.
+
+**It serves its own interface from the same address as its API.** The
+built interface is served by the summarizer itself on port 8090, so
+there is one address to allow in the browser and one to frame.
+
+Its secret with the hub is a secret of its own, so that the two
+applications never share one:
+
+```text
+backend/.env      SENTINEL_HANDOFF_SECRET  the same value as
+sentinel/.env     HANDOFF_SECRET           the one below
+```
+
 ### One role per application
 
 A person holds one role in each application, and the two are kept
@@ -283,6 +313,21 @@ when there is one. To see what is installed and what will be used:
 
 ```bash
 cd benchmarking && .venv/bin/python -m kpibench.cli models
+```
+
+The Data Summarizer works the same way. `LLM_MODEL` may be `auto`, which is the default: the
+best model that is installed on the machine is chosen, by the same rules. A model that is
+named but not installed is replaced by the best one that is there, and the reason is shown
+with the health of the model. `LLM_STRICT_MODEL=true` refuses to use anything else.
+
+The embeddings come from the same server when there is one, so that nothing has to be
+downloaded. A machine without a model server still works: the retrieval falls back to a
+plain method of its own, and the interface says so.
+
+To see which model the summarizer would use:
+
+```bash
+cd sentinel && .venv/bin/python -c "from app.llm.models import resolve; print(resolve())"
 ```
 
 ### One rail, not two

@@ -1,0 +1,20 @@
+# secrets and local settings
+.env
+
+# data written by the app (database, logs, outbox, model cache)
+backend/data/
+/data/
+
+# Python
+.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / build output
+frontend/node_modules/
+frontend/dist/
+
+# backups and mail dumps
+*.tgz
+*.eml

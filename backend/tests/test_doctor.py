@@ -42,10 +42,15 @@ def doctor(monkeypatch, tmp_path):
     monkeypatch.setattr(module, "ROOT", tmp_path)
     monkeypatch.setattr(module, "BACKEND_ENV", tmp_path / "backend" / ".env")
     monkeypatch.setattr(module, "BENCH_ENV", tmp_path / "benchmarking" / ".env")
+    monkeypatch.setattr(module, "SENTINEL_ENV", tmp_path / "sentinel" / ".env")
     monkeypatch.setattr(module, "BACKEND_DB", tmp_path / "backend" / "news.db")
     monkeypatch.setattr(
         module, "BACKEND_LOG", tmp_path / "backend" / "logs" / "backend.log"
     )
+
+    # What is running on this machine must not decide what the doctor says.
+    monkeypatch.setattr(module, "the_backend_answers", lambda *a, **k: False)
+    monkeypatch.setattr(module, "port_is_open", lambda *a, **k: False)
 
     return module
 
@@ -62,12 +67,18 @@ def test_the_doctor_reports_the_settings_that_are_missing(doctor, capsys):
 def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsys):
     (tmp_path / "backend").mkdir()
     (tmp_path / "benchmarking").mkdir()
+    (tmp_path / "sentinel").mkdir()
 
     (tmp_path / "backend" / ".env").write_text(
-        "JWT_SECRET_KEY=one\nKPI_HANDOFF_SECRET=shared\n", encoding="utf-8"
+        "JWT_SECRET_KEY=one\nKPI_HANDOFF_SECRET=shared\n"
+        "SENTINEL_HANDOFF_SECRET=shared-too\n",
+        encoding="utf-8",
     )
     (tmp_path / "benchmarking" / ".env").write_text(
         "HANDOFF_SECRET=shared\n", encoding="utf-8"
+    )
+    (tmp_path / "sentinel" / ".env").write_text(
+        "HANDOFF_SECRET=shared-too\n", encoding="utf-8"
     )
 
     connection = sqlite3.connect(tmp_path / "backend" / "news.db")
@@ -78,6 +89,7 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
 
     (tmp_path / "backend" / ".venv").mkdir()
     (tmp_path / "benchmarking" / ".venv").mkdir()
+    (tmp_path / "sentinel" / ".venv").mkdir()
     (tmp_path / "landing" / "node_modules").mkdir(parents=True)
     (tmp_path / "frontend" / "node_modules").mkdir(parents=True)
 
@@ -86,6 +98,7 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
     said = capsys.readouterr().out
 
     assert "the two servers share the same secret" in said
+    assert "the hub and the Data Summarizer share the same secret" in said
     assert "the database holds 1 accounts" in said
     assert "Everything is in place" in said
 

@@ -25,6 +25,27 @@ const INSIGHTS_DATA = [
         activeUsers: 6,
         sessions: 22,
     },
+    {
+        year: 2026,
+        month: "September",
+        totalUsers: 8,
+        activeUsers: 6,
+        sessions: 24,
+    },
+    {
+        year: 2026,
+        month: "October",
+        totalUsers: 8,
+        activeUsers: 6,
+        sessions: 16,
+    },
+    {
+        year: 2026,
+        month: "November",
+        totalUsers: 8,
+        activeUsers: 6,
+        sessions: 26,
+    },
 ];
 
 

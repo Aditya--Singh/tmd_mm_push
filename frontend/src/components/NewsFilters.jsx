@@ -8,7 +8,7 @@ function NewsFilters({ filters, onChange, onClear }) {
 
     return (
         <div className="news-filters">
-            <select
+            {/* <select
                 value={filters.source}
                 onChange={(event) =>
                     updateFilter("source", event.target.value)
@@ -27,7 +27,7 @@ function NewsFilters({ filters, onChange, onClear }) {
                 <option value="ANI">ANI</option>
                 <option value="BusinessLine">BusinessLine</option>
                 <option value="ET BFSI">ET BFSI</option>
-            </select>
+            </select> */}
 
             <input
                 type="text"

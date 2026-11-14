@@ -23,7 +23,7 @@ $BackendWaitSeconds = 90
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-if (-not (Test-Path backend\.venv) -or -not (Test-Path benchmarking\.venv)) {
+if (-not (Test-Path backend\.venv) -or -not (Test-Path benchmarking\.venv) -or -not (Test-Path sentinel\.venv)) {
     Write-Host "Run .\setup.ps1 first." -ForegroundColor Red
     exit 1
 }
@@ -111,6 +111,13 @@ Start-Process -FilePath "powershell" `
 
 Start-Sleep -Seconds 2
 
+# The Data Summarizer. It serves its own interface from the same address as its API.
+Start-Process -FilePath "powershell" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\sentinel\backend'; ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090" `
+    -WorkingDirectory $root -WindowStyle Minimized
+
+Start-Sleep -Seconds 2
+
 # The news dashboard.
 Start-Process -FilePath "powershell" `
     -ArgumentList "-NoExit", "-Command", "Set-Location '$root\frontend'; npm run dev -- --host 127.0.0.1 --port 5173" `
@@ -128,6 +135,7 @@ The platform is starting.
     Landing page hub    http://localhost:5174
     News dashboard      http://localhost:5173
     Peer Benchmarking   http://localhost:8077
+    Data Summarizer     http://localhost:8090
     Backend and its API http://127.0.0.1:8000/docs
 
 Sign in at http://localhost:5174 with admin / admin@tmd26

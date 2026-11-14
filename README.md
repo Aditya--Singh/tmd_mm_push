@@ -1,10 +1,12 @@
 # 🏦 Top Management Decision Support Platform
 
 An AI-powered banking intelligence platform. A landing page hub owns the
-sign-in and opens three services inside it: the news dashboard, which
+sign-in and opens four services inside it: the news dashboard, which
 collects news from Indian business publications and summarises it with a
-local language model, and Peer Benchmarking, which compares PNB with its
-peers quarter by quarter from the banks' own published figures.
+local language model; Peer Benchmarking, which compares PNB with its
+peers quarter by quarter from the banks' own published figures; and the
+Data Summarizer, which reads the circulars and the notifications of the
+Reserve Bank of India and writes their summaries.
 
 One sign-in opens all of them, with the role the person holds in each.
 
@@ -154,18 +156,22 @@ docs/               # its own installation and integration guides
                                     │ one session
              ┌──────────────────────┼──────────────────────┐
              ▼                      ▼                      ▼
-      News Dashboard        Peer Benchmarking       SQL Genie
-      (frontend/)           (benchmarking/)        (planned)
-             │                      │
-             ▼                      ▼
-        FastAPI               its own FastAPI,
-      (backend/)              its own database
-             │                      ▲
-             │  one users table,    │ a single-use sign-in
-             │  one role per        │ ticket, server to server
-             │  application         │
-             └──────────────────────┘
+      News Dashboard        Peer Benchmarking       Data Summarizer
+      (frontend/)           (benchmarking/)        (sentinel/)
+             │                      │                      │
+             ▼                      ▼                      ▼
+        FastAPI               its own FastAPI,      its own FastAPI,
+      (backend/)              its own database       its own database
+             │                      ▲                      ▲
+             │  one users table,    │ a single-use sign-in │
+             │  one role per        │ ticket, server to    │
+             │  application         │ server               │
+             └──────────────────────┴──────────────────────┘
 ```
+
+The Data Summarizer is the Regulatory Sentinel application, brought in from
+<https://github.com/Aditya--Singh/regulatory-sentinel>. It keeps its own accounts, so
+the hub states who the person is and the application decides what they may do there.
 
 ## The roles
 
@@ -221,10 +227,11 @@ On Windows:
 .\run.ps1
 ```
 
-The setup script installs everything, writes `backend/.env` and
-`benchmarking/.env` with the secret the two servers share, and creates
-the demo accounts. Then open <http://localhost:5174> and sign in with
-`admin` / `admin@tmd26`.
+The setup script installs everything, writes `backend/.env`,
+`benchmarking/.env` and `sentinel/.env` with the secrets the servers
+share, points the applications at the language model on the machine, and
+creates the demo accounts. Then open <http://localhost:5174> and sign in
+with `admin` / `admin@tmd26`.
 
 **[docs/SETUP.md](docs/SETUP.md) has the full instructions for both
 operating systems**, including what to do when a package will not
@@ -236,7 +243,7 @@ To check that everything is in place, at any time:
 python scripts/doctor.py
 ```
 
-It looks at the settings, the accounts and the four services, and says
+It looks at the settings, the accounts and the five services, and says
 what is missing and the command that fixes it. What the backend said the
 last time it ran is kept in `backend/logs/backend.log`.
 
@@ -291,6 +298,16 @@ source .venv/bin/activate       # .venv\Scripts\activate on Windows
 pip install -r requirements.txt
 ```
 
+### Install the Data Summarizer
+
+```bash
+cd sentinel
+python -m venv .venv
+source .venv/bin/activate       # .venv\Scripts\activate on Windows
+pip install -r backend/requirements-dev.txt
+cd frontend && npm install && npm run build && cd ..
+```
+
 ### Install the two web applications
 
 ```bash
@@ -305,8 +322,9 @@ cd ..
 python scripts/make_env.py
 ```
 
-This writes `backend/.env` and `benchmarking/.env`, including the
-secret the two servers share, so that one sign-in opens both.
+This writes `backend/.env`, `benchmarking/.env` and `sentinel/.env`,
+including the secrets the servers share, so that one sign-in opens all
+of them.
 
 ---
 
@@ -357,6 +375,10 @@ JWT_SECRET_KEY=<generated>
 KPI_APP_URL=http://127.0.0.1:8077
 
 KPI_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in benchmarking/.env>
+
+SENTINEL_APP_URL=http://127.0.0.1:8090
+
+SENTINEL_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in sentinel/.env>
 ```
 
 The news pipeline is told how far back the news may reach when it is
@@ -368,6 +390,11 @@ Peer Benchmarking chooses its model by itself: `OLLAMA_MODEL=auto`, the
 default, means the best model that is installed on the machine is used.
 `python -m kpibench.cli models` from the `benchmarking` folder says what
 is installed and what will be used.
+
+The Data Summarizer chooses its model the same way: `LLM_MODEL=auto`, the
+default, means the best model that is installed on the machine is used.
+`python -c "from app.llm.models import resolve; print(resolve())"` from
+the `sentinel/backend` folder says what will be used.
 
 The frontend applications read their own `.env` files, which are optional
 in development because sensible defaults are built in. See
@@ -442,6 +469,18 @@ It listens on <http://localhost:8077>. Opened on its own it signs in with
 its own accounts (`admin`, `analyst`, `approver`, `gm`); opened from the
 hub it is signed in with the account of the person who signed in there.
 
+# Run the Data Summarizer
+
+```bash
+cd sentinel/backend
+
+../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090
+```
+
+It listens on <http://localhost:8090> and serves its own interface from
+that address. Opened on its own it signs in with its own administrator;
+opened from the hub it is signed in as the person who signed in there.
+
 See [docs/integration.md](docs/integration.md) for the full description
 of how the applications share a session.
 
@@ -449,7 +488,7 @@ of how the applications share a session.
 
 # Run in Visual Studio Code
 
-The repository ships with a VS Code configuration for all three
+The repository ships with a VS Code configuration for all four
 services.
 
 ```text
@@ -519,7 +558,7 @@ Completed
 - JWT authentication with a role per application: `role_news` and `role_bench`
 - Landing page hub with single sign-on into the embedded dashboard
 - Peer benchmarking of PNB against SBI, BoB, Canara Bank and Union Bank
-- One sign-in across the hub, the news dashboard and Peer Benchmarking
+- One sign-in across the hub, the news dashboard, Peer Benchmarking and the Data Summarizer
 - One role per application, held in the users table: `role_news` for the News Feed and
   `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
@@ -531,7 +570,7 @@ In Progress
 
 Planned
 
-- SQL Genie and Data Summarizer services
+- SQL Genie service
 - Semantic search
 - Multi-source scraping
 - Scheduler

@@ -13,6 +13,9 @@
  *   token  - the service shares this platform's token and sessions.
  *   ticket - the service keeps its own sessions, so it is given a
  *            single-use sign-in ticket instead of the token.
+ *
+ * `ownAccounts` marks a service that keeps its own accounts and decides the roles
+ * there itself. Nobody is named by a column of this platform's user table.
  */
 
 import { env } from "./config/env.js";
@@ -48,7 +51,12 @@ export const SERVICES = [
         name: "Data Summarizer",
         icon: "📄",
         description: "PDF, PPT and Excel summarization service",
-        status: SERVICE_STATUS.PLANNED,
+        status: SERVICE_STATUS.LIVE,
+        url: env.VITE_SUMMARIZER_APP_URL || "http://localhost:8090/",
+        session: SESSION_MODE.TICKET,
+        // Everybody who has signed in may open it. The role inside the service is
+        // decided there, and the service keeps its own accounts.
+        ownAccounts: true,
     },
     {
         id: "benchmark",
