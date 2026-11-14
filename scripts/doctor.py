@@ -367,14 +367,16 @@ def main(argv: list[str] | None = None) -> int:
                 report.add(
                     WRONG,
                     f"{what} is not running on port {port}",
-                    "Start it: cd %s && %s"
-                    % (
-                        folder,
-                        {
-                            "benchmarking": ".venv/bin/python -m kpibench.main",
-                            "sentinel": "cd backend && ../.venv/bin/python -m uvicorn app.main:app --port 8090",
-                        }.get(folder, "npm run dev"),
-                    ),
+                    "Start it: %s"
+                    % {
+                        "landing": "cd landing && npm run dev",
+                        "frontend": "cd frontend && npm run dev",
+                        "benchmarking": "cd benchmarking && .venv/bin/python -m kpibench.main",
+                        "sentinel": (
+                            "cd sentinel/backend && ../.venv/bin/python -m uvicorn "
+                            "app.main:app --host 127.0.0.1 --port 8090"
+                        ),
+                    }.get(folder, "npm run dev"),
                 )
 
     report.print()
