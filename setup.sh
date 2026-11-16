@@ -89,12 +89,25 @@ deactivate
 cd ..
 
 say "5/7  The three web applications"
-# The versions that are installed are the ones that are written down in the
-# lock files, so that every machine ends up with the same ones.
-if ! (cd frontend && npm install --no-audit --no-fund); then
+
+# The packages are installed from the lock files, so that every machine ends up
+# with the same versions. When the installation fails halfway, it leaves a
+# broken folder behind, and a second attempt over it fails in the same way, so
+# the folder is removed before the second attempt.
+install_packages() {  # install_packages <folder>
+  local folder="$1"
+  (cd "$folder" && npm install --no-audit --no-fund) && return 0
+
+  note "The installation of $folder was interrupted. Trying once more."
+  rm -rf "$folder/node_modules"
+
+  (cd "$folder" && npm install --no-audit --no-fund)
+}
+
+if ! install_packages frontend; then
   problem "The libraries of the news application could not be downloaded."
 fi
-if ! (cd landing && npm install --no-audit --no-fund); then
+if ! install_packages landing; then
   problem "The libraries of the landing page could not be downloaded."
 fi
 # The Data Summarizer serves its own interface from the same address as its API,

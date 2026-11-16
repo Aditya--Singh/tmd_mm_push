@@ -91,14 +91,32 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Say "5/7  The three web applications"
-Push-Location frontend; npm install --no-audit --no-fund; $newsFailed = $LASTEXITCODE -ne 0; Pop-Location
+
+# The packages are installed from the lock files, so that every machine ends up
+# with the same versions. When the installation fails halfway, it leaves a
+# broken folder behind, and a second attempt over it fails in the same way, so
+# the folder is removed before the second attempt.
+function Install-Packages($folder) {
+    Push-Location $folder
+    npm install --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) {
+        Note "The installation of $folder was interrupted. Trying once more."
+        if (Test-Path node_modules) { Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue }
+        npm install --no-audit --no-fund
+    }
+    $failed = $LASTEXITCODE -ne 0
+    Pop-Location
+    return $failed
+}
+
+$newsFailed = Install-Packages "frontend"
 if ($newsFailed) { Problem "The libraries of the news application could not be downloaded." }
-Push-Location landing; npm install --no-audit --no-fund; $landingFailed = $LASTEXITCODE -ne 0; Pop-Location
+$landingFailed = Install-Packages "landing"
 if ($landingFailed) { Problem "The libraries of the landing page could not be downloaded." }
 # The Data Summarizer serves its own interface from the same address as its API,
 # so it is built once here rather than at every start.
 Push-Location sentinel\frontend
-if (-not (Test-Path node_modules)) { npm install }
+if (-not (Test-Path node_modules)) { npm install --no-audit --no-fund }
 npm run build
 $sentinelFailed = $LASTEXITCODE -ne 0
 Pop-Location
