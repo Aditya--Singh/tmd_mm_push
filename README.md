@@ -372,6 +372,8 @@ NEWS_CUTOFF_DATE=2026-06-20
 
 JWT_SECRET_KEY=<generated>
 
+PORT=8000
+
 KPI_APP_URL=http://127.0.0.1:8077
 
 KPI_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in benchmarking/.env>
@@ -380,6 +382,12 @@ SENTINEL_APP_URL=http://127.0.0.1:8090
 
 SENTINEL_HANDOFF_SECRET=<the same value as HANDOFF_SECRET in sentinel/.env>
 ```
+
+The backend of the hub listens on the port in `backend/.env` (`PORT`).
+When that port is taken on the machine — by a model server, for
+instance — give it another one and run `python scripts/make_env.py`
+again: the setup script tells the two web applications about the new
+port, so the sign-in keeps working.
 
 The news pipeline is told how far back the news may reach when it is
 started, from the dropdown beside the button in the News Feed. The

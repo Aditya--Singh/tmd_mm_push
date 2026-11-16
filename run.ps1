@@ -28,6 +28,12 @@ if (-not (Test-Path backend\.venv) -or -not (Test-Path benchmarking\.venv) -or -
     exit 1
 }
 
+# The port the backend of the hub listens on. It is read from backend/.env, so
+# that a machine where the port is already taken can use another one.
+$BackendPort = 8000
+$portLine = Select-String -Path (Join-Path $root 'backend\.env') -Pattern '^PORT=(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($portLine) { $BackendPort = [int]$portLine.Matches[0].Groups[1].Value }
+
 function Start-Service($name, $command, $workDir) {
     Write-Host "Starting $name"
     Start-Process -FilePath $command -ArgumentList $workDir -WorkingDirectory $root -WindowStyle Minimized
@@ -51,7 +57,7 @@ $backendLogPath = $backendLog.Replace("'", "''")
 $backendStoppedPath = $backendStopped.Replace("'", "''")
 
 $backendCommand = "Set-Location '$backendPath\backend'; " +
-    ".\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000 " +
+    ".\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port $BackendPort " +
     "2>&1 | Tee-Object -FilePath '$backendLogPath'; " +
     "Set-Content -Path '$backendStoppedPath' -Value 'stopped'"
 
@@ -67,7 +73,7 @@ for ($attempt = 0; $attempt -lt $BackendWaitSeconds; $attempt++) {
     if (Test-Path $backendStopped) { break }
 
     try {
-        $health = Invoke-WebRequest -Uri 'http://127.0.0.1:8000/health' -TimeoutSec 2 -UseBasicParsing
+        $health = Invoke-WebRequest -Uri "http://127.0.0.1:$BackendPort/health" -TimeoutSec 2 -UseBasicParsing
         if ($health.StatusCode -eq 200) { $backendUp = $true; break }
     } catch { }
     Start-Sleep -Seconds 1
@@ -82,14 +88,17 @@ if ($backendUp) {
 
     if (Test-Path $backendStopped) {
         Write-Host 'It stopped with an error. This is what it said:'
-    } elseif (Test-NetConnection -ComputerName 127.0.0.1 -Port 8000 -InformationLevel Quiet -WarningAction SilentlyContinue) {
-        Write-Host 'Something is on port 8000, but it is not the backend.'
-        Write-Host 'Stop it, and then start the platform again.'
+    } elseif (Test-NetConnection -ComputerName 127.0.0.1 -Port $BackendPort -InformationLevel Quiet -WarningAction SilentlyContinue) {
+        Write-Host "Something else is on port $BackendPort, so the backend cannot start."
+        Write-Host 'To see what it is:'
+        Write-Host "    netstat -ano | findstr :$BackendPort"
+        Write-Host 'Stop it, or give the backend another port in backend\.env (PORT=...)'
+        Write-Host "and run 'python scripts\make_env.py' again."
     } else {
         Write-Host ("It is still starting after {0} seconds, so it is slow on this machine." -f $BackendWaitSeconds)
         Write-Host 'Start it by hand to watch it go:'
         Write-Host '    cd backend'
-        Write-Host '    .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000'
+        Write-Host "    .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port $BackendPort"
     }
 
     Write-Host ''
@@ -136,7 +145,7 @@ The platform is starting.
     News dashboard      http://localhost:5173
     Peer Benchmarking   http://localhost:8077
     Data Summarizer     http://localhost:8090
-    Backend and its API http://127.0.0.1:8000/docs
+    Backend and its API http://127.0.0.1:$BackendPort/docs
 
 Sign in at http://localhost:5174 with admin / admin@tmd26
 

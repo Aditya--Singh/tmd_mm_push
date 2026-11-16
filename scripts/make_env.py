@@ -33,6 +33,13 @@ BENCH_ENV = ROOT / "benchmarking" / ".env"
 BENCH_EXAMPLE = ROOT / "benchmarking" / ".env.example"
 SENTINEL_ENV = ROOT / "sentinel" / ".env"
 SENTINEL_EXAMPLE = ROOT / "sentinel" / ".env.example"
+LANDING_ENV = ROOT / "landing" / ".env"
+LANDING_EXAMPLE = ROOT / "landing" / ".env.example"
+NEWS_ENV = ROOT / "frontend" / ".env"
+NEWS_EXAMPLE = ROOT / "frontend" / ".env.example"
+
+#: The port the backend of the hub listens on, when the settings do not say.
+DEFAULT_BACKEND_PORT = "8000"
 
 #: The value that means "not set yet" in the example files.
 PLACEHOLDERS = {
@@ -234,6 +241,14 @@ def main(argv: list[str] | None = None) -> int:
         sentinel = read(SENTINEL_ENV) or read(SENTINEL_EXAMPLE)
         sentinel_example = read(SENTINEL_EXAMPLE)
 
+    # The port the backend listens on. It is written into the landing page's
+    # settings as well, so that the landing page keeps talking to the backend
+    # when the port is changed because the old one was taken.
+    port = (get_value(backend, "PORT") or "").strip() or DEFAULT_BACKEND_PORT
+
+    if not get_value(backend, "PORT"):
+        backend = set_value(backend, "PORT", port)
+
     # The backend's own signing key.
     if needs_a_secret(backend, "JWT_SECRET_KEY"):
         backend = set_value(
@@ -315,6 +330,21 @@ def main(argv: list[str] | None = None) -> int:
 
         write(SENTINEL_ENV, sentinel)
 
+    # The two web applications forward the API to the backend. They have to be
+    # told where the backend is, or the sign-in cannot go through.
+    for env_path, example_path in (
+        (LANDING_ENV, LANDING_EXAMPLE),
+        (NEWS_ENV, NEWS_EXAMPLE),
+    ):
+        web = read(env_path) or read(example_path)
+
+        if not web:
+            continue
+
+        web = set_value(web, "VITE_API_PROXY_TARGET", f"http://127.0.0.1:{port}")
+
+        write(env_path, web)
+
     write(BACKEND_ENV, backend)
     write(BENCH_ENV, bench)
 
@@ -325,6 +355,15 @@ def main(argv: list[str] | None = None) -> int:
 
     if sentinel:
         print("  sentinel/.env")
+
+    if read(LANDING_ENV):
+        print("  landing/.env")
+
+    if read(NEWS_ENV):
+        print("  frontend/.env")
+
+    print("")
+    print(f"The backend of the hub listens on port {port}.")
 
     print("")
     print("The hub and Peer Benchmarking share one secret, so one sign-in opens both.")

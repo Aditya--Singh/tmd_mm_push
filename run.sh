@@ -22,6 +22,11 @@ SENTINEL_PID=""
 NEWS_PID=""
 LANDING_PID=""
 
+# The port the backend of the hub listens on. It is read from backend/.env, so
+# that a machine where the port is already taken can use another one.
+BACKEND_PORT="$(grep -E '^PORT=' backend/.env 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+
 cleanup() {
   echo ""
   echo "Stopping the platform."
@@ -67,7 +72,7 @@ rm -f "$BACKEND_LOG"
 wait_for_the_backend() {
   local attempt
   for attempt in $(seq 1 "$BACKEND_WAIT_SECONDS"); do
-    if curl -fsS --max-time 2 http://127.0.0.1:8000/health >/dev/null 2>&1; then
+    if curl -fsS --max-time 2 "http://127.0.0.1:$BACKEND_PORT/health" >/dev/null 2>&1; then
       echo "The backend is up."
       return 0
     fi
@@ -80,7 +85,7 @@ wait_for_the_backend() {
   return 1
 }
 
-start backend bash -c "cd '$ROOT/backend' && exec .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > '$BACKEND_LOG' 2>&1"
+start backend bash -c "cd '$ROOT/backend' && exec .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port $BACKEND_PORT > '$BACKEND_LOG' 2>&1"
 sleep 2
 
 # The landing page cannot sign anybody in without the backend, so wait for it and
@@ -92,14 +97,17 @@ if ! wait_for_the_backend; then
 
   if ! kill -0 "$BACKEND_PID" 2>/dev/null; then
     echo "It stopped with an error. This is what it said:"
-  elif port_is_open 8000; then
-    echo "Something is on port 8000, but it is not the backend."
-    echo "Stop it, and then start the platform again."
+  elif port_is_open "$BACKEND_PORT"; then
+    echo "Something else is on port $BACKEND_PORT, so the backend cannot start."
+    echo "To see what it is:"
+    echo "    sudo ss -tlnp | grep :$BACKEND_PORT"
+    echo "Stop it, or give the backend another port in backend/.env (PORT=...)"
+    echo "and run 'python scripts/make_env.py' again."
   else
     echo "It is still starting after ${BACKEND_WAIT_SECONDS} seconds, so it is slow on this machine."
     echo "Start it by hand to watch it go:"
     echo "    cd backend"
-    echo "    .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000"
+    echo "    .venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port $BACKEND_PORT"
   fi
 
   echo ""
@@ -132,7 +140,7 @@ The platform is starting.
     News dashboard      http://localhost:5173
     Peer Benchmarking   http://localhost:8077
     Data Summarizer     http://localhost:8090
-    Backend and its API http://127.0.0.1:8000/docs
+    Backend and its API http://127.0.0.1:$BACKEND_PORT/docs
 
 Sign in at http://localhost:5174 with admin / admin@tmd26
 

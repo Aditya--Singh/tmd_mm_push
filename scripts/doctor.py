@@ -72,8 +72,28 @@ def port_is_open(port: int, host: str = "127.0.0.1") -> bool:
             return False
 
 
-def the_backend_answers(url: str = "http://127.0.0.1:8000/health") -> bool:
+def the_backend_port() -> int:
+    """
+    The port the backend of the hub listens on.
+
+    It is read from backend/.env, because a machine where the port is already
+    taken uses another one.
+    """
+    value = read_env(BACKEND_ENV).get("PORT", "").strip()
+
+    try:
+        port = int(value)
+    except ValueError:
+        return 8000
+
+    return port if 1 <= port <= 65535 else 8000
+
+
+def the_backend_answers(url: str = "") -> bool:
     """Whether the backend of the hub answers."""
+    if not url:
+        url = f"http://127.0.0.1:{the_backend_port()}/health"
+
     try:
         with urllib.request.urlopen(url, timeout=2.5) as response:
             return response.status == 200
@@ -332,22 +352,28 @@ def main(argv: list[str] | None = None) -> int:
                 + said
                 + "\nStart the backend and it will set the file aside and use the "
                 "plain Python part instead: cd backend && .venv/bin/python -m uvicorn "
-                "app.main:app --port 8000",
+                f"app.main:app --port {the_backend_port()}",
             )
 
+        port = the_backend_port()
+
         if the_backend_answers():
-            report.add(OK, "the backend of the hub is answering on port 8000")
-        elif port_is_open(8000):
+            report.add(OK, f"the backend of the hub is answering on port {port}")
+        elif port_is_open(port):
             report.add(
                 WRONG,
-                "something is on port 8000, but it is not the backend",
-                "Stop it, or point the landing page at it with VITE_API_BASE_URL.",
+                f"something else is on port {port}, so the backend cannot start",
+                "To see what it is:\n"
+                f"    sudo ss -tlnp | grep :{port}\n"
+                f"    sudo lsof -i :{port}\n"
+                "Stop it, or give the backend another port in backend/.env (PORT=...)\n"
+                "and run 'python scripts/make_env.py' again.",
             )
         else:
             said = the_last_words_of_the_backend()
 
             how = (
-                "Start it: cd backend && uv run python -m uvicorn app.main:app --port 8000"
+                f"Start it: cd backend && uv run python -m uvicorn app.main:app --port {port}"
             )
 
             if said:

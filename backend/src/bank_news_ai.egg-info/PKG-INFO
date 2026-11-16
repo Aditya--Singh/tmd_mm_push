@@ -1,0 +1,26 @@
+Metadata-Version: 2.4
+Name: bank-news-ai
+Version: 0.1.0
+Summary: AI-powered banking news aggregation and summarization
+Author-email: singh.aditya90@gmail.com
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi
+Requires-Dist: uvicorn[standard]
+Requires-Dist: sqlalchemy<2.1,>=2.0.51
+Requires-Dist: pydantic>=2.0
+Requires-Dist: python-dotenv
+Requires-Dist: requests
+Requires-Dist: beautifulsoup4
+Requires-Dist: lxml
+Requires-Dist: loguru
+Requires-Dist: langchain
+Requires-Dist: langchain-community
+Requires-Dist: langchain-core
+Requires-Dist: ollama
+Requires-Dist: apscheduler
+Requires-Dist: pydantic-settings>=2.14.2
+Requires-Dist: alembic>=1.19.0
+Requires-Dist: bcrypt
+Requires-Dist: python-jose
+Requires-Dist: httpx

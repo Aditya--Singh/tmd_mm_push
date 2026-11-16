@@ -231,6 +231,7 @@ neither is ever sent to a browser.
 
 | Setting | Meaning |
 |---|---|
+| `PORT` | The port the backend of the hub listens on. `8000`. Change it when the port is taken on this machine; the setup script tells the two web applications about it. |
 | `JWT_SECRET_KEY` | Signs the access tokens of the hub. Generated for you. |
 | `DATABASE_URL` | The news database. A SQLite file by default. |
 | `OLLAMA_MODEL` | The model the AI analysis of the news uses. `qwen3:8b` by default. |
@@ -485,6 +486,27 @@ Peer Benchmarking was started from the wrong folder. Run it from
 
 Another copy is still running. Stop it, or change `PORT` in
 `benchmarking/.env` and `KPI_APP_URL` in `backend/.env` together.
+
+For the port of the backend of the hub, change `PORT` in `backend/.env`:
+
+```bash
+# find out what is on the port
+sudo ss -tlnp | grep :8000
+sudo lsof -i :8000
+```
+
+Then give the backend another port and tell the web applications about it:
+
+```bash
+# backend/.env
+PORT=8010
+
+python scripts/make_env.py
+```
+
+The setup script writes the new port into `landing/.env` and
+`frontend/.env`, so the sign-in keeps working. `run.sh` and `run.ps1`
+start the backend on that port ✓.
 
 ### The packages will not download
 

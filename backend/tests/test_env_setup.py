@@ -61,6 +61,18 @@ def workspace(tmp_path, monkeypatch):
         "BENCH_EXAMPLE",
         tmp_path / "benchmarking" / ".env.example",
     )
+    monkeypatch.setattr(module, "SENTINEL_ENV", tmp_path / "sentinel" / ".env")
+    monkeypatch.setattr(
+        module, "SENTINEL_EXAMPLE", tmp_path / "sentinel" / ".env.example"
+    )
+    monkeypatch.setattr(module, "LANDING_ENV", tmp_path / "landing" / ".env")
+    monkeypatch.setattr(
+        module, "LANDING_EXAMPLE", tmp_path / "landing" / ".env.example"
+    )
+    monkeypatch.setattr(module, "NEWS_ENV", tmp_path / "frontend" / ".env")
+    monkeypatch.setattr(
+        module, "NEWS_EXAMPLE", tmp_path / "frontend" / ".env.example"
+    )
 
     return module
 
@@ -121,6 +133,51 @@ def test_the_hub_may_frame_and_drive_the_benchmarking_app(workspace, tmp_path):
 
     assert "http://localhost:5174" in ancestors
     assert "http://127.0.0.1:5174" in ancestors
+
+
+def test_the_web_applications_are_told_where_the_backend_is(workspace, tmp_path):
+    """
+    Both web applications forward the API to the backend.
+
+    Without this, a sign-in cannot go through, and the reason is not obvious.
+    """
+    for folder in ("landing", "frontend"):
+        example = tmp_path / folder / ".env.example"
+        example.parent.mkdir(parents=True, exist_ok=True)
+        example.write_text(
+            "VITE_API_PROXY_TARGET=http://127.0.0.1:8000\n", encoding="utf-8"
+        )
+
+    workspace.main([])
+
+    for folder in ("landing", "frontend"):
+        target = value_of(tmp_path / folder / ".env", "VITE_API_PROXY_TARGET")
+
+        assert target == "http://127.0.0.1:8000", folder
+
+
+def test_the_port_of_the_backend_is_kept_in_step(workspace, tmp_path):
+    """
+    A machine where port 8000 is taken uses another port.
+
+    The web applications have to be told, or they keep talking to a port that
+    is not the backend.
+    """
+    (tmp_path / "backend" / ".env").write_text("PORT=8010\n", encoding="utf-8")
+
+    for folder in ("landing", "frontend"):
+        example = tmp_path / folder / ".env.example"
+        example.parent.mkdir(parents=True, exist_ok=True)
+        example.write_text(
+            "VITE_API_PROXY_TARGET=http://127.0.0.1:8000\n", encoding="utf-8"
+        )
+
+    workspace.main([])
+
+    for folder in ("landing", "frontend"):
+        target = value_of(tmp_path / folder / ".env", "VITE_API_PROXY_TARGET")
+
+        assert target == "http://127.0.0.1:8010", folder
 
 
 def test_running_the_setup_again_keeps_the_secret(workspace, tmp_path):

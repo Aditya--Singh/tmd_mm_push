@@ -49,7 +49,10 @@ def doctor(monkeypatch, tmp_path):
     )
 
     # What is running on this machine must not decide what the doctor says.
-    monkeypatch.setattr(module, "the_backend_answers", lambda *a, **k: False)
+    def refuse(url, timeout=None):
+        raise OSError("nothing is running on this machine")
+
+    monkeypatch.setattr(module.urllib.request, "urlopen", refuse)
     monkeypatch.setattr(module, "port_is_open", lambda *a, **k: False)
 
     return module
@@ -135,6 +138,48 @@ def test_the_doctor_says_when_the_backend_cannot_import_its_libraries(
     assert can_import is False
     assert "sqlalchemy" in said
     assert "ImportError" in said
+
+
+def test_the_doctor_asks_the_backend_on_the_port_it_is_set_to(
+    doctor, tmp_path, monkeypatch
+):
+    """
+    A machine where port 8000 is taken uses another port.
+
+    The doctor has to ask on that port, or it says the backend is not running
+    when it is.
+    """
+    (tmp_path / "backend").mkdir()
+    (tmp_path / "backend" / ".env").write_text("PORT=8010\n", encoding="utf-8")
+
+    assert doctor.the_backend_port() == 8010
+
+    asked = []
+
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    def fake_urlopen(url, timeout=None):
+        asked.append(url)
+        return FakeResponse()
+
+    monkeypatch.setattr(doctor.urllib.request, "urlopen", fake_urlopen)
+
+    assert doctor.the_backend_answers() is True
+    assert "8010" in asked[0], asked
+
+
+def test_the_doctor_falls_back_to_the_default_port(doctor, tmp_path):
+    (tmp_path / "backend").mkdir()
+    (tmp_path / "backend" / ".env").write_text("PORT=nonsense\n", encoding="utf-8")
+
+    assert doctor.the_backend_port() == 8000
 
 
 def test_the_doctor_shows_what_the_backend_said(doctor, tmp_path, capsys):
