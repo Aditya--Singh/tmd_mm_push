@@ -257,6 +257,60 @@ backend/.env      SENTINEL_HANDOFF_SECRET  the same value as
 sentinel/.env     HANDOFF_SECRET           the one below
 ```
 
+## 3.8 The SQL Genie in the workspace
+
+The SQL Genie is an application of its own that the hub opens in its
+workspace, like the other three. It is not part of this repository and
+is not started by the setup script: it is pointed at by name.
+
+```bash
+# landing/.env
+VITE_SQL_GENIE_APP_URL=http://localhost:8080/
+```
+
+Two things have to agree with that address:
+
+- **The origin has to be allowed.** The hub only accepts session
+  messages from the origins in `VITE_ALLOWED_CHILD_ORIGINS`. Add the
+  origin of the SQL Genie there, next to the ones that are already
+  there:
+
+  ```bash
+  VITE_ALLOWED_CHILD_ORIGINS=http://localhost:5173,...,http://localhost:8080,http://127.0.0.1:8080
+  ```
+
+  Without it, the application is shown, but the session is never handed
+  over and the person is asked to sign in again.
+
+- **The application has to accept the frame.** It has to allow the hub
+  to frame it, and it has to answer the messages of the bridge.
+
+### What the application is handed
+
+The SQL Genie shares this platform's token, the same way the news
+application does:
+
+```text
+child -> parent : { type: "hubint:ready" }
+parent -> child : { type: "hubint:auth", payload: { username, accessToken } }
+```
+
+It is **not** told a role. The hub says who the person is; the SQL
+Genie asks the backend who that is, and decides for itself what they
+may do:
+
+```bash
+curl -H "Authorization: Bearer <accessToken>" http://127.0.0.1:8000/api/auth/me
+```
+
+The answer carries both roles the person holds, so the application can
+write its own rules without a third column in the user table.
+
+The bridge is the same contract every service uses, and the client that
+implements it is small. The one in `frontend/src/session/index.js` is
+the shortest example: it listens for `hubint:auth`, keeps the token and
+hands it to the application.
+
 ### One role per application
 
 A person holds one role in each application, and the two are kept
@@ -452,7 +506,9 @@ independently usable.
 | `VITE_API_BASE_URL` | empty | Base URL of the API. Empty keeps the browser on the current origin, which is what the development proxy and a reverse proxy expect. |
 | `VITE_NEWS_APP_URL` | `http://localhost:5173/` | URL of the news application opened in the workspace. |
 | `VITE_BENCHMARKING_APP_URL` | `http://localhost:8077/` | URL of Peer Benchmarking opened in the workspace. |
-| `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. |
+| `VITE_SUMMARIZER_APP_URL` | `http://localhost:8090/` | URL of the Data Summarizer opened in the workspace. |
+| `VITE_SQL_GENIE_APP_URL` | `http://localhost:8080/` | URL of the SQL Genie opened in the workspace. |
+| `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. The origin of the SQL Genie has to be in this list. |
 
 ### News application (`frontend/.env`)
 

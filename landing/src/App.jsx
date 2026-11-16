@@ -33,7 +33,8 @@ import { servicesForRoles, SESSION_MODE } from "./services";
 /**
  * Origins an embedded application may be served from when they are not
  * configured explicitly. These are the development and shared-hosting
- * addresses of the news frontend and of Peer Benchmarking.
+ * addresses of the news frontend, of Peer Benchmarking, of the Data
+ * Summarizer and of the SQL Genie.
  */
 const DEFAULT_CHILD_ORIGINS = [
     "http://localhost:5173",
@@ -45,6 +46,8 @@ const DEFAULT_CHILD_ORIGINS = [
     "http://localhost:8090",
     "http://127.0.0.1:8090",
     "http://newsintel.pnbbank.in:8090",
+    "http://localhost:8080",
+    "http://127.0.0.1:8080",
 ];
 
 /**
@@ -354,9 +357,19 @@ function App() {
 
         // The News Feed shares this platform's token, and decides what the
         // news role may do there.
+        if (activeService.id === "news") {
+            return {
+                username: session.username,
+                roleNews: session.roleNews,
+                accessToken: session.accessToken,
+            };
+        }
+
+        // The SQL Genie shares the token as well. It is not told a role: it
+        // asks the backend who the person is, and decides for itself what
+        // they may do.
         return {
             username: session.username,
-            roleNews: session.roleNews,
             accessToken: session.accessToken,
         };
     }, [session, activeService, tickets]);

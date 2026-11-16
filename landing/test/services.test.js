@@ -14,18 +14,25 @@ function serviceOf(id, services) {
     return services.find((service) => service.id === id);
 }
 
-test("the three services that are built are live", () => {
+test("the four services that are built are live", () => {
     const services = servicesForRoles({ news: "user", bench: "user" });
 
     assert.equal(serviceOf("news", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("benchmark", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.LIVE);
+    assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.LIVE);
 });
 
-test("the service that is not built yet is marked as planned", () => {
-    const services = servicesForRoles({ news: "user", bench: "user" });
+test("the SQL Genie opens the application it is pointed at", () => {
+    const sql = serviceOf(
+        "sql",
+        servicesForRoles({ news: "user", bench: "user" }),
+    );
 
-    assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.PLANNED);
+    // The address may be set in the settings of the landing page, so only the
+    // presence of one is checked here.
+    assert.ok(sql.url, "the SQL Genie has no address to open");
+    assert.equal(sql.session, SESSION_MODE.TOKEN);
 });
 
 test("the data summarizer keeps its own sessions", () => {
@@ -93,8 +100,9 @@ test("a role that is not known opens nothing", () => {
     assert.equal(serviceOf("news", services), undefined);
     assert.equal(serviceOf("benchmark", services), undefined);
 
-    // The services that are not built yet are still listed.
-    assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.PLANNED);
+    // The services that are open to everybody are still listed.
+    assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.LIVE);
+    assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.LIVE);
 });
 
 test("every service names the column that decides who may open it", () => {
@@ -104,11 +112,13 @@ test("every service names the column that decides who may open it", () => {
         }
 
         // A service either follows a column of this platform's user table, or it
-        // keeps its own accounts and decides the roles there itself.
+        // decides for itself what the person may do: it either keeps its own
+        // accounts, or it shares this platform's token and asks the backend who
+        // the person is.
         if (!service.roles) {
             assert.ok(
-                service.ownAccounts,
-                `${service.id} names no role column and does not keep its own accounts`,
+                service.ownAccounts || service.session === SESSION_MODE.TOKEN,
+                `${service.id} names no role column and decides nothing itself`,
             );
             continue;
         }

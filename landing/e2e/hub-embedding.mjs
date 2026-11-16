@@ -188,24 +188,33 @@ check(
 const plannedBadge = await page
     .locator(".app-card", { hasText: "SQL Genie" })
     .locator(".app-badge")
-    .innerText();
+    .count();
 check(
-    "unimplemented services are marked as planned",
-    plannedBadge.trim().toLowerCase() === "planned",
-    plannedBadge,
+    "a service that is built is not marked as planned",
+    plannedBadge === 0,
+    `${plannedBadge} badges`,
 );
 
 // ------------------------------------------------------------------
-// 3. A service that is not built yet does not open a frame
+// 3. The SQL Genie opens the application it is pointed at
 // ------------------------------------------------------------------
 
 await page.locator(".app-card", { hasText: "SQL Genie" }).click();
-await page.waitForTimeout(500);
+await page.waitForTimeout(800);
+
+const sqlFrame = page.locator(".workspace-frame iframe");
 
 check(
-    "a planned service shows a placeholder instead of a frame",
-    (await page.locator(".workspace-frame iframe").count()) === 0 &&
-        (await page.locator(".placeholder").isVisible()),
+    "the SQL Genie opens a frame",
+    (await sqlFrame.count()) === 1,
+);
+
+const sqlSrc = (await sqlFrame.getAttribute("src")) || "";
+
+check(
+    "the frame points at the application of the SQL Genie",
+    sqlSrc.includes("8080") && sqlSrc.includes("embedded=1"),
+    sqlSrc,
 );
 
 // ------------------------------------------------------------------

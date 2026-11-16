@@ -44,7 +44,11 @@ export const SERVICES = [
         icon: "🧠",
         description:
             "Conversational analytics and natural language data exploration",
-        status: SERVICE_STATUS.PLANNED,
+        status: SERVICE_STATUS.LIVE,
+        url: env.VITE_SQL_GENIE_APP_URL || "http://localhost:8080/",
+        // The application shares this platform's token and asks the backend
+        // who the person is, so that it decides for itself what they may do.
+        session: SESSION_MODE.TOKEN,
     },
     {
         id: "summarizer",

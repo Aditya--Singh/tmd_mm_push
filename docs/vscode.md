@@ -228,11 +228,12 @@ cd backend
 uv run python run_scraper.py
 ```
 
-### The two other services show "Planned"
+### The SQL Genie opens nothing
 
-That is expected. SQL Genie and Data Summarizer are part of the platform
-scope but are not implemented yet. They are registered in
-`landing/src/services.js`.
+The SQL Genie is an application of its own. Point the hub at it with
+`VITE_SQL_GENIE_APP_URL` in `landing/.env`, and add its origin to
+`VITE_ALLOWED_CHILD_ORIGINS` in the same file. Without the second one,
+the application is shown but the session is never handed over.
 
 ### Peer Benchmarking shows "not connected yet"
 

@@ -43,6 +43,11 @@ NEWS_EXAMPLE = ROOT / "frontend" / ".env.example"
 #: The port the backend of the hub listens on, when the settings do not say.
 DEFAULT_BACKEND_PORT = "8000"
 
+#: Where the SQL Genie is served, when the settings do not say. It is an
+#: application of its own, so this is only a guess that the setup script
+#: writes down, so that it may be changed.
+DEFAULT_SQL_GENIE_URL = "http://localhost:8080/"
+
 #: The value that means "not set yet" in the example files.
 PLACEHOLDERS = {
     "JWT_SECRET_KEY": "change-me-generate-a-random-secret",
@@ -384,6 +389,37 @@ def the_embedding_model_to_use(installed: list[str]) -> str | None:
     return max(candidates, key=model_size_b)
 
 
+def origin_of(url: str) -> str:
+    """The origin of an address: scheme, host and port, without the path."""
+    match = re.match(r"^(https?://[^/?#]+)", str(url or "").strip())
+
+    return match.group(1) if match else ""
+
+
+def add_origins(content: str, origins: list[str]) -> str:
+    """
+    Add origins to the list of allowed origins, keeping the ones already there.
+
+    The list holds the places the hub may be served from and the places the
+    services it opens may be served from. What is already written is kept, so
+    that an address that was added by hand survives.
+    """
+    current = [
+        value.strip()
+        for value in (get_value(content, "VITE_ALLOWED_CHILD_ORIGINS") or "").split(",")
+        if value.strip()
+    ]
+
+    for origin in origins:
+        if origin and origin not in current:
+            current.append(origin)
+
+    if not current:
+        return content
+
+    return set_value(content, "VITE_ALLOWED_CHILD_ORIGINS", ",".join(current))
+
+
 def set_up_the_language_model(
     bench: str, installed: list[str], model: str
 ) -> tuple[str, str]:
@@ -647,6 +683,26 @@ def main(argv: list[str] | None = None) -> int:
                     "VITE_SUMMARIZER_APP_URL",
                     f"http://localhost:{ports['sentinel']}/",
                 )
+
+            # The SQL Genie is an application of its own, so its address is
+            # written down here, so that it may be changed.
+            if not get_value(web, "VITE_SQL_GENIE_APP_URL"):
+                web = set_value(
+                    web, "VITE_SQL_GENIE_APP_URL", DEFAULT_SQL_GENIE_URL
+                )
+
+            # The hub only accepts session messages from the origins in this
+            # list, so the place every service is served from is added to it.
+            # What is already written is kept.
+            web = add_origins(
+                web,
+                [
+                    origin_of(get_value(web, "VITE_NEWS_APP_URL") or ""),
+                    origin_of(get_value(web, "VITE_BENCHMARKING_APP_URL") or ""),
+                    origin_of(get_value(web, "VITE_SUMMARIZER_APP_URL") or ""),
+                    origin_of(get_value(web, "VITE_SQL_GENIE_APP_URL") or ""),
+                ],
+            )
 
         write(env_path, web)
 

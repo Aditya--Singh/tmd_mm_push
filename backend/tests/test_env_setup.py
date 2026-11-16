@@ -36,13 +36,8 @@ def workspace(tmp_path, monkeypatch):
 
     module = load_make_env()
 
-    (tmp_path / "backend").mkdir()
-    (tmp_path / "benchmarking").mkdir()
-
-    for folder, name in (
-        ("backend", "backend"),
-        ("benchmarking", "benchmarking"),
-    ):
+    for folder in ("backend", "benchmarking", "landing", "frontend"):
+        (tmp_path / folder).mkdir()
         shutil.copy(
             ROOT / folder / ".env.example",
             tmp_path / folder / ".env.example",
@@ -344,3 +339,63 @@ def test_the_model_is_written_into_the_settings(workspace, tmp_path):
 
     assert "OLLAMA_MODEL=qwen3:32b" in bench
     assert "OLLAMA_MODEL=qwen3:32b" in backend
+
+
+def test_the_address_of_the_sql_genie_is_written_down(workspace, tmp_path):
+    """
+    The SQL Genie is an application of its own.
+
+    Its address is written down, so that it may be changed, and the origin it
+    is served from is added to the origins the hub accepts messages from.
+    """
+    module = workspace
+
+    workspace.main([])
+
+    landing = (tmp_path / "landing" / ".env").read_text(encoding="utf-8")
+
+    assert "VITE_SQL_GENIE_APP_URL=http://localhost:8080/" in landing
+
+    allowed = module.get_value(landing, "VITE_ALLOWED_CHILD_ORIGINS")
+
+    assert "http://localhost:8080" in allowed
+
+
+def test_the_origins_that_are_already_written_are_kept(workspace, tmp_path):
+    """An address that was added by hand survives the setup."""
+    module = workspace
+
+    landing = tmp_path / "landing" / ".env"
+    landing.parent.mkdir(parents=True, exist_ok=True)
+    landing.write_text(
+        "VITE_ALLOWED_CHILD_ORIGINS=http://newsintel.pnbbank.in:5174\n"
+        "VITE_SQL_GENIE_APP_URL=http://sqlgenie.pnb.internal:9000/\n",
+        encoding="utf-8",
+    )
+
+    workspace.main([])
+
+    written = landing.read_text(encoding="utf-8")
+    allowed = module.get_value(written, "VITE_ALLOWED_CHILD_ORIGINS")
+
+    # The address that was there by hand is still there.
+    assert "http://newsintel.pnbbank.in:5174" in allowed
+
+    # And the place the SQL Genie is served from was added.
+    assert "http://sqlgenie.pnb.internal:9000" in allowed
+
+    # The address of the SQL Genie was not overwritten.
+    assert "VITE_SQL_GENIE_APP_URL=http://sqlgenie.pnb.internal:9000/" in written
+
+
+def test_the_origin_of_an_address_is_read_without_the_path(workspace):
+    """The origin is the scheme, the host and the port, and nothing else."""
+    module = workspace
+
+    assert module.origin_of("http://localhost:8080/") == "http://localhost:8080"
+    assert module.origin_of("http://127.0.0.1:5173/") == "http://127.0.0.1:5173"
+    assert module.origin_of("https://sqlgenie.pnb.internal/path?x=1") == (
+        "https://sqlgenie.pnb.internal"
+    )
+    assert module.origin_of("") == ""
+    assert module.origin_of("not an address") == ""

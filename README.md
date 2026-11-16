@@ -579,6 +579,7 @@ Completed
 - One role per application, held in the users table: `role_news` for the News Feed and
   `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
+- The SQL Genie opened in the workspace, with its address set in `landing/.env`
 
 In Progress
 
@@ -587,7 +588,6 @@ In Progress
 
 Planned
 
-- SQL Genie service
 - Semantic search
 - Multi-source scraping
 - Scheduler
