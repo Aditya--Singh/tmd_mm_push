@@ -43,11 +43,21 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
-    Note "Node.js 20 or newer is needed. See https://nodejs.org/"
+    Note "Node.js is needed. See https://nodejs.org/"
     exit 1
 }
 node --version
 npm --version
+
+# The web applications are built with Vite, which needs Node 18 or newer. An
+# older Node is reported plainly, because the failure otherwise shows up much
+# later as a strange error from the build.
+$nodeMajor = [int]((node -p "process.versions.node.split('.')[0]"))
+if ($nodeMajor -lt 18) {
+    Note "Node.js 18 or newer is needed to build the web applications."
+    Note "See https://nodejs.org/ for a newer version."
+    exit 1
+}
 
 Say "2/7  The backend of the hub"
 Push-Location backend
@@ -81,9 +91,9 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Say "5/7  The three web applications"
-Push-Location frontend; npm install; $newsFailed = $LASTEXITCODE -ne 0; Pop-Location
+Push-Location frontend; npm install --no-audit --no-fund; $newsFailed = $LASTEXITCODE -ne 0; Pop-Location
 if ($newsFailed) { Problem "The libraries of the news application could not be downloaded." }
-Push-Location landing; npm install; $landingFailed = $LASTEXITCODE -ne 0; Pop-Location
+Push-Location landing; npm install --no-audit --no-fund; $landingFailed = $LASTEXITCODE -ne 0; Pop-Location
 if ($landingFailed) { Problem "The libraries of the landing page could not be downloaded." }
 # The Data Summarizer serves its own interface from the same address as its API,
 # so it is built once here rather than at every start.

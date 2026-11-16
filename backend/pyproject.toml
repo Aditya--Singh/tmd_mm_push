@@ -1,3 +1,9 @@
+[build-system]
+# Named explicitly, so that the build does not depend on whatever setuptools
+# happens to be installed on the machine.
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "bank-news-ai"
 version = "0.1.0"
@@ -50,3 +56,10 @@ dev = [
 # importable from the tests regardless of how pytest is invoked.
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+# The backend directory holds more than the application package: the migration
+# scripts (alembic), the seed data (seed) and the tests. Without this, the
+# build refuses to go on, because it finds several top-level packages and
+# cannot tell which one is meant to be installed.
+include = ["app*"]

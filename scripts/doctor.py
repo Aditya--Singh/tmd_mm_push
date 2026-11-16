@@ -89,6 +89,23 @@ def the_backend_port() -> int:
     return port if 1 <= port <= 65535 else 8000
 
 
+def the_port_of(env_file: str, default: int) -> int:
+    """
+    The port a service listens on.
+
+    It is read from the settings file of that service, because a machine where
+    the port is already taken uses another one.
+    """
+    value = read_env(env_file).get("PORT", "").strip()
+
+    try:
+        port = int(value)
+    except ValueError:
+        return default
+
+    return port if 1 <= port <= 65535 else default
+
+
 def the_backend_answers(url: str = "") -> bool:
     """Whether the backend of the hub answers."""
     if not url:
@@ -384,8 +401,16 @@ def main(argv: list[str] | None = None) -> int:
         for port, what, folder in (
             (5174, "the landing page", "landing"),
             (5173, "the news application", "frontend"),
-            (8077, "Peer Benchmarking", "benchmarking"),
-            (8090, "the Data Summarizer", "sentinel"),
+            (
+                the_port_of(BENCH_ENV, 8077),
+                "Peer Benchmarking",
+                "benchmarking",
+            ),
+            (
+                the_port_of(SENTINEL_ENV, 8090),
+                "the Data Summarizer",
+                "sentinel",
+            ),
         ):
             if port_is_open(port):
                 report.add(OK, f"{what} is listening on port {port}")
@@ -400,7 +425,7 @@ def main(argv: list[str] | None = None) -> int:
                         "benchmarking": "cd benchmarking && .venv/bin/python -m kpibench.main",
                         "sentinel": (
                             "cd sentinel/backend && ../.venv/bin/python -m uvicorn "
-                            "app.main:app --host 127.0.0.1 --port 8090"
+                            f"app.main:app --host 127.0.0.1 --port {port}"
                         ),
                     }.get(folder, "npm run dev"),
                 )

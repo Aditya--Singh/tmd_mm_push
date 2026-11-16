@@ -17,8 +17,10 @@ is still in place.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import secrets
+import socket
 import sys
 import urllib.error
 import urllib.request
@@ -130,25 +132,282 @@ def ollama_is_running(url: str) -> bool:
         return False
 
 
-def set_up_the_language_model(bench: str) -> tuple[str, str]:
+#: The families of model this platform prefers, best first. A machine usually holds
+#: one or two families, and the newest one of them is usually the one that was meant.
+#: This is the same order the applications use when they choose for themselves.
+PREFERRED_FAMILIES: tuple[str, ...] = (
+    "qwen3",
+    "qwen2.5",
+    "qwen2",
+    "llama3.3",
+    "llama3.2",
+    "llama3.1",
+    "llama3",
+    "mistral-nemo",
+    "mistral",
+    "gemma3",
+    "gemma2",
+    "phi4",
+    "command-r",
+    "deepseek-r1",
+)
+
+#: Words that mark a model as one for embeddings rather than one for text.
+EMBEDDING_WORDS: tuple[str, ...] = (
+    "embed",
+    "bge",
+    "gte-",
+    "e5-",
+    "minilm",
+    "mxbai",
+)
+
+
+def model_family(name: str) -> str:
+    """The family of a model: `qwen3:8b` belongs to `qwen3`."""
+    return str(name or "").split(":")[0].strip().lower()
+
+
+def model_size_b(name: str) -> float:
+    """The size of a model in billions of parameters, as far as the name says."""
+    tag = str(name or "").split(":")[1] if ":" in str(name or "") else ""
+
+    match = re.search(r"(\d+(?:\.\d+)?)\s*b\b", tag)
+
+    if not match:
+        return 0.0
+
+    try:
+        return float(match.group(1))
+    except ValueError:
+        return 0.0
+
+
+def is_embedding_model(name: str) -> bool:
+    """Whether a model is one for embeddings rather than one for writing."""
+    lowered = str(name or "").lower()
+
+    return any(word in lowered for word in EMBEDDING_WORDS)
+
+
+def score_model(name: str) -> float:
+    """
+    How good a model is, in the order this platform prefers.
+
+    The family comes first: the newest family that is installed is the one that
+    was meant. Within a family the larger model wins.
+    """
+    family = model_family(name)
+
+    rank = (
+        PREFERRED_FAMILIES.index(family)
+        if family in PREFERRED_FAMILIES
+        else len(PREFERRED_FAMILIES)
+    )
+
+    size = min(model_size_b(name), 999.0)
+
+    # A named tag is better than the rolling `:latest` of the same model.
+    specific = 0.0 if str(name).endswith(":latest") else 5.0
+
+    return (len(PREFERRED_FAMILIES) - rank) * 10000.0 + size * 10.0 + specific
+
+
+def ollama_models(url: str) -> list[str]:
+    """
+    The models that are installed on the model server of this machine.
+
+    An empty list means the server is not running, or answers in a way that cannot
+    be read. Either way, nothing is written into the settings.
+    """
+    try:
+        with urllib.request.urlopen(
+            f"{url.rstrip('/')}/api/tags", timeout=5
+        ) as response:
+            if response.status != 200:
+                return []
+
+            payload = json.loads(response.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError, json.JSONDecodeError):
+        return []
+
+    names: list[str] = []
+
+    for model in payload.get("models", []) or []:
+        name = (model.get("model") or model.get("name") or "").strip()
+
+        if name and name not in names:
+            names.append(name)
+
+    return names
+
+
+def port_is_free(port: int) -> bool:
+    """Whether nothing is listening on a port yet."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+        try:
+            probe.bind(("127.0.0.1", port))
+        except OSError:
+            return False
+
+    return True
+
+
+def our_own_service_answers(port: int, path: str) -> bool:
+    """
+    Whether one of our own services is already answering on a port.
+
+    A port that our own service is using is not a problem and is left alone. A port
+    that something else is using - a model server, for instance - has to be moved,
+    because the service could not start there.
+    """
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}{path}", timeout=2
+        ) as response:
+            return response.status == 200
+    except (urllib.error.URLError, OSError, ValueError):
+        return False
+
+
+#: Where each service says that it is well. The backend answers on /health, Peer
+#: Benchmarking on /healthz, and the Data Summarizer on /api/meta.
+HEALTH_PATHS = {
+    "backend": "/health",
+    "benchmarking": "/healthz",
+    "sentinel": "/api/meta",
+}
+
+
+def a_free_port(preferred: int, taken: set[int]) -> int:
+    """
+    A port to use, when the preferred one is already taken.
+
+    The ports near the preferred one are tried first, so that the addresses a
+    person has written down keep working as much as possible.
+    """
+    for offset in range(0, 100):
+        for candidate in (preferred + offset, preferred - offset):
+            if candidate in taken or candidate <= 0 or candidate > 65535:
+                continue
+
+            if port_is_free(candidate):
+                return candidate
+
+    return preferred
+
+
+def plan_the_ports(
+    backend: str,
+    bench: str,
+    sentinel: str,
+) -> tuple[dict[str, int], list[str]]:
+    """
+    The port every service of the platform should use.
+
+    The port that is asked for is kept when it is free, or when one of our own
+    services is already answering on it. Otherwise another port nearby is chosen,
+    so that a machine where the usual ports are taken still starts.
+    """
+    notes: list[str] = []
+
+    def ask(content: str, key: str, preferred: int, service: str) -> int:
+        raw = (get_value(content, key) or "").strip()
+
+        wanted = int(raw) if raw.isdigit() else preferred
+
+        if port_is_free(wanted) or our_own_service_answers(
+            wanted, HEALTH_PATHS.get(service, "/health")
+        ):
+            return wanted
+
+        replacement = a_free_port(wanted, taken=set())
+
+        notes.append(
+            f"Port {wanted} is already taken on this machine, so {key} moved to "
+            f"port {replacement}."
+        )
+
+        return replacement
+
+    ports = {
+        "backend": ask(backend, "PORT", int(DEFAULT_BACKEND_PORT), "backend"),
+        "benchmarking": ask(bench, "PORT", 8077, "benchmarking"),
+    }
+
+    if sentinel:
+        ports["sentinel"] = ask(sentinel, "PORT", 8090, "sentinel")
+
+    return ports, notes
+
+
+def the_model_to_use(installed: list[str]) -> str:
+    """
+    The model that is written into the settings.
+
+    The best model that is installed on this machine is named, so that the
+    settings say plainly what will be used. The applications still fall back to
+    the best model that is there when the named one is gone, so a model that is
+    removed later does not stop them.
+    """
+    if not installed:
+        return "auto"
+
+    candidates = [
+        name for name in installed if name and not is_embedding_model(name)
+    ]
+
+    if not candidates:
+        return "auto"
+
+    return max(candidates, key=score_model)
+
+
+def the_embedding_model_to_use(installed: list[str]) -> str | None:
+    """
+    The model for embeddings that is installed on this machine.
+
+    A model that is not there cannot be used, so the one that is there is named.
+    When there is none, the caller falls back to a method of its own that needs
+    nothing to be downloaded.
+    """
+    candidates = [
+        name for name in installed if name and is_embedding_model(name)
+    ]
+
+    if not candidates:
+        return None
+
+    # The bigger one is the better one, and the family is not important here.
+    return max(candidates, key=model_size_b)
+
+
+def set_up_the_language_model(
+    bench: str, installed: list[str], model: str
+) -> tuple[str, str]:
     """
     Point Peer Benchmarking at the language model on this machine.
 
-    A model server that is running is used, and the model is left to be chosen from the
-    ones that are installed. A model server that is not running leaves the app in template
+    A model server that is running is used, and the model is the best one that is
+    actually installed. A model server that is not running leaves the app in template
     mode, which still works.
     """
     provider = (get_value(bench, "LLM_PROVIDER") or "").strip().lower()
     url = (get_value(bench, "OLLAMA_URL") or "http://localhost:11434").strip()
 
-    # The model to use: "auto" means the best one that is installed.
-    model = (get_value(bench, "OLLAMA_MODEL") or "").strip()
+    running = bool(installed)
 
-    if not model:
-        bench = set_value(bench, "OLLAMA_MODEL", "auto")
-        model = "auto"
+    if running:
+        # The model that is installed on this machine is named, so that the
+        # settings say plainly what will be used.
+        bench = set_value(bench, "OLLAMA_MODEL", model)
 
-    running = ollama_is_running(url)
+        embedding_model = the_embedding_model_to_use(installed)
+
+        if embedding_model:
+            bench = set_value(bench, "EMBED_MODEL", embedding_model)
 
     # A provider that was chosen on purpose is left alone.
     if provider in ("ollama", "openai_compatible"):
@@ -182,32 +441,37 @@ def set_up_the_language_model(bench: str) -> tuple[str, str]:
     )
 
 
-def set_up_the_summarizer(sentinel: str, ollama_running: bool) -> str:
+def set_up_the_summarizer(
+    sentinel: str, installed: list[str], model: str
+) -> str:
     """
     Point the Data Summarizer at the language model on this machine.
 
-    The model is left to be chosen from the ones that are installed, which is what
-    "auto" means. The embeddings come from the same server, so that nothing has to be
+    The model is the best one that is installed, which is what "auto" means at run
+    time. The embeddings come from the same server, so that nothing has to be
     downloaded. A machine without a model server still works: the retrieval falls back
     to a plain method of its own, and the interface says so.
     """
-    model = (get_value(sentinel, "LLM_MODEL") or "").strip()
+    embedding_model = the_embedding_model_to_use(installed)
 
-    if not model or model.lower() == "gpt-oss:20b":
-        # The model that was named before was the one the machine happened to have.
-        # From now on the best model that is installed is used.
-        sentinel = set_value(sentinel, "LLM_MODEL", "auto")
-        model = "auto"
+    if installed:
+        sentinel = set_value(sentinel, "LLM_MODEL", model)
 
-    if ollama_running:
         sentinel = set_value(sentinel, "LLM_PROVIDER", "openai_compat")
         sentinel = set_value(sentinel, "LLM_BASE_URL", "http://localhost:11434/v1")
         sentinel = set_value(sentinel, "OLLAMA_URL", "http://localhost:11434")
-        sentinel = set_value(sentinel, "EMBEDDING_PROVIDER", "openai_compat")
-        sentinel = set_value(sentinel, "EMBEDDING_BASE_URL", "http://localhost:11434/v1")
 
-        if not get_value(sentinel, "EMBEDDING_MODEL"):
-            sentinel = set_value(sentinel, "EMBEDDING_MODEL", "bge-m3")
+        if embedding_model:
+            sentinel = set_value(sentinel, "EMBEDDING_PROVIDER", "openai_compat")
+            sentinel = set_value(
+                sentinel, "EMBEDDING_BASE_URL", "http://localhost:11434/v1"
+            )
+            sentinel = set_value(sentinel, "EMBEDDING_MODEL", embedding_model)
+        else:
+            # No model for embeddings is installed, so the retrieval falls back to
+            # a plain method of its own. Nothing is downloaded, so the app is
+            # ready to start at once.
+            sentinel = set_value(sentinel, "EMBEDDING_PROVIDER", "hash")
     else:
         # Nothing is downloaded, so the app is ready to start at once.
         sentinel = set_value(sentinel, "EMBEDDING_PROVIDER", "hash")
@@ -241,13 +505,27 @@ def main(argv: list[str] | None = None) -> int:
         sentinel = read(SENTINEL_ENV) or read(SENTINEL_EXAMPLE)
         sentinel_example = read(SENTINEL_EXAMPLE)
 
-    # The port the backend listens on. It is written into the landing page's
-    # settings as well, so that the landing page keeps talking to the backend
-    # when the port is changed because the old one was taken.
-    port = (get_value(backend, "PORT") or "").strip() or DEFAULT_BACKEND_PORT
+    # The ports every service uses. A port that is taken on this machine by
+    # something else - a model server, for instance - is moved, and the new port
+    # is written everywhere the old one was named.
+    ports, port_notes = plan_the_ports(backend, bench, sentinel)
 
-    if not get_value(backend, "PORT"):
-        backend = set_value(backend, "PORT", port)
+    for note in port_notes:
+        print(note)
+
+    port = str(ports["backend"])
+    backend = set_value(backend, "PORT", port)
+
+    bench = set_value(bench, "PORT", str(ports["benchmarking"]))
+    backend = set_value(
+        backend, "KPI_APP_URL", f"http://127.0.0.1:{ports['benchmarking']}"
+    )
+
+    if sentinel:
+        sentinel = set_value(sentinel, "PORT", str(ports["sentinel"]))
+        backend = set_value(
+            backend, "SENTINEL_APP_URL", f"http://127.0.0.1:{ports['sentinel']}"
+        )
 
     # The backend's own signing key.
     if needs_a_secret(backend, "JWT_SECRET_KEY"):
@@ -293,8 +571,17 @@ def main(argv: list[str] | None = None) -> int:
     bench = set_value(bench, "DASHBOARD_URL", "http://localhost:5174/")
     bench = set_value(bench, "DASHBOARD_NAME", "Executive Intelligence Hub")
 
-    # The language model on this machine.
-    bench, message = set_up_the_language_model(bench)
+    # The language model on this machine. The models that are installed are asked
+    # for, so that the settings name the model that will really be used.
+    installed = ollama_models("http://localhost:11434")
+    model = the_model_to_use(installed)
+
+    bench, message = set_up_the_language_model(bench, installed, model)
+
+    # The backend writes its news summaries with a model too, so the same model
+    # is named there.
+    if model != "auto":
+        backend = set_value(backend, "OLLAMA_MODEL", model)
 
     if sentinel:
         # The summarizer's own signing key.
@@ -326,12 +613,14 @@ def main(argv: list[str] | None = None) -> int:
         sentinel = set_value(sentinel, "AUTH_ENABLED", "true")
         sentinel = set_value(sentinel, "CORS_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174")
 
-        sentinel = set_up_the_summarizer(sentinel, ollama_is_running("http://localhost:11434"))
+        sentinel = set_up_the_summarizer(sentinel, installed, model)
 
         write(SENTINEL_ENV, sentinel)
 
     # The two web applications forward the API to the backend. They have to be
-    # told where the backend is, or the sign-in cannot go through.
+    # told where the backend is, or the sign-in cannot go through. The landing
+    # page is also told where the other services are, so that it opens them at
+    # the address they really listen on.
     for env_path, example_path in (
         (LANDING_ENV, LANDING_EXAMPLE),
         (NEWS_ENV, NEWS_EXAMPLE),
@@ -342,6 +631,22 @@ def main(argv: list[str] | None = None) -> int:
             continue
 
         web = set_value(web, "VITE_API_PROXY_TARGET", f"http://127.0.0.1:{port}")
+
+        if env_path == LANDING_ENV:
+            # The landing page opens the other services in its workspace, so it
+            # has to know where they listen.
+            web = set_value(
+                web,
+                "VITE_BENCHMARKING_APP_URL",
+                f"http://localhost:{ports['benchmarking']}/",
+            )
+
+            if "sentinel" in ports:
+                web = set_value(
+                    web,
+                    "VITE_SUMMARIZER_APP_URL",
+                    f"http://localhost:{ports['sentinel']}/",
+                )
 
         write(env_path, web)
 
@@ -363,7 +668,12 @@ def main(argv: list[str] | None = None) -> int:
         print("  frontend/.env")
 
     print("")
-    print(f"The backend of the hub listens on port {port}.")
+    print("The ports of this platform:")
+    print(f"  Backend of the hub   {ports['backend']}")
+    print(f"  Peer Benchmarking    {ports['benchmarking']}")
+
+    if "sentinel" in ports:
+        print(f"  Data Summarizer      {ports['sentinel']}")
 
     print("")
     print("The hub and Peer Benchmarking share one secret, so one sign-in opens both.")

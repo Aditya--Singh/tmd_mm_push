@@ -14,6 +14,7 @@ import {
 import FeedbackModal from "./components/FeedbackModal";
 import Sidebar from "./components/Sidebar";
 import Workspace from "./components/Workspace";
+import { writtenDate } from "./components/writtenDate";
 import Login from "./pages/Login";
 import { envList } from "./config/env";
 import { submitFeedback } from "./api/feedback";
@@ -420,11 +421,7 @@ function App() {
                         </button>
 
                         <div className="header-date">
-                            {new Date().toLocaleDateString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                            })}
+                            {writtenDate(new Date())}
                         </div>
 
                         <button

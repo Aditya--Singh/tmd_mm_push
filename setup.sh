@@ -33,11 +33,22 @@ if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; t
   exit 1
 fi
 if ! command -v node >/dev/null; then
-  echo "   Node.js 20 or newer is needed. See https://nodejs.org/"
+  echo "   Node.js is needed. On Ubuntu: sudo apt install -y nodejs npm"
+  echo "   or, for a newer version: https://github.com/nodesource/distributions#installation-instructions"
   exit 1
 fi
 node --version
 npm --version
+
+# The web applications are built with Vite, which needs Node 18 or newer. An
+# older Node is reported plainly, because the failure otherwise shows up much
+# later as a strange error from the build.
+if ! node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0 : 1)'; then
+  echo "   Node.js 18 or newer is needed to build the web applications."
+  echo "   On Ubuntu: sudo apt install -y nodejs npm"
+  echo "   or, for a newer version: https://github.com/nodesource/distributions#installation-instructions"
+  exit 1
+fi
 
 say "2/7  The backend of the hub"
 cd backend
@@ -78,16 +89,29 @@ deactivate
 cd ..
 
 say "5/7  The three web applications"
-if ! (cd frontend && npm install); then
+# The versions that are installed are the ones that are written down in the
+# lock files, so that every machine ends up with the same ones.
+if ! (cd frontend && npm install --no-audit --no-fund); then
   problem "The libraries of the news application could not be downloaded."
 fi
-if ! (cd landing && npm install); then
+if ! (cd landing && npm install --no-audit --no-fund); then
   problem "The libraries of the landing page could not be downloaded."
 fi
 # The Data Summarizer serves its own interface from the same address as its API,
 # so it is built once here rather than at every start.
-if ! (cd sentinel/frontend && { [ -d node_modules ] || npm install; } && npm run build); then
+if ! (cd sentinel/frontend && { [ -d node_modules ] || npm install --no-audit --no-fund; } && npm run build); then
   problem "The interface of the Data Summarizer could not be built. It will show nothing until it is."
+fi
+
+# Some versions of npm leave out a library that is meant for this machine when
+# it is named for a newer version of Node. The Data Summarizer needs its
+# compiled part, and the build fails with a strange message when it is missing.
+if [ -d sentinel/frontend/node_modules/@tailwindcss/oxide ] && \
+   ! ls sentinel/frontend/node_modules/@tailwindcss/ | grep -q "linux-x64-gnu"; then
+  note "The compiled part of the Data Summarizer is missing. Installing it by hand."
+  (cd sentinel/frontend && npm install --no-save --no-audit --no-fund \
+    "@tailwindcss/oxide-linux-x64-gnu@$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version")") \
+    >/dev/null 2>&1 || true
 fi
 
 say "6/7  The settings files"

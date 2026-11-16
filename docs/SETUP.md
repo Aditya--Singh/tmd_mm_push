@@ -22,7 +22,7 @@ signed in on both sides with the role they hold in each of them.
 | Requirement | Version | Notes |
 |---|---|---|
 | Python | 3.11 or newer | `python --version` must work. |
-| Node.js | 20 or newer | `node --version` must work. |
+| Node.js | 18 or newer | `node --version` must work. The versions that are installed are written down in the lock files, so every machine ends up with the same ones. |
 | A C compiler and the headers of Python | — | Needed by a few packages of Peer Benchmarking (`pdfplumber`, `python-pptx`). On Debian and Ubuntu: `sudo apt install -y build-essential python3-dev`. |
 
 Nothing else. No database server, no message broker and no container
@@ -49,8 +49,11 @@ The script does seven things. It can be run again at any time.
 5. Installs the packages of the web applications, and builds the
    interface of the Data Summarizer.
 6. Writes `backend/.env`, `benchmarking/.env` and `sentinel/.env`,
-   **including the secrets the servers share**, and points the two
-   applications at the language model on the machine.
+   **including the secrets the servers share**. It also writes the
+   ports each service uses and the model that is really installed on
+   the machine. A port that is already taken — by a model server, for
+   instance — is moved, and every file that names it is written again
+   with the new port.
 7. Creates the demo accounts.
 
 Then start everything:
@@ -227,6 +230,35 @@ news may ever reach, whatever window is asked for.
 Two files hold the settings. Both are written by the setup script and
 neither is ever sent to a browser.
 
+### The ports and the model are worked out for you
+
+`scripts/make_env.py` looks at the machine and writes down what it finds,
+so that the settings match the machine they are on:
+
+- **The ports.** Each service has a port it prefers. When that port is
+  already taken — by a model server, for instance — another port nearby
+  is chosen instead, and every file that names the port is written again
+  with the new one. A port that one of our own services is already using
+  is left alone, so running the setup again while the platform is up does
+  not move anything.
+
+  The ports that were chosen are named at the end of the setup, and
+  `python scripts/doctor.py` checks the running services against them.
+
+- **The model.** The model server on the machine is asked which models it
+  has, and the best one of them is written into the settings, so that the
+  settings say plainly what will be used. A model for embeddings is
+  written as well; when the machine has none, the Data Summarizer falls
+  back to a plain method of its own and downloads nothing.
+
+  Nothing is downloaded by the setup. Pull a model first and run the
+  setup again to have it named:
+
+  ```bash
+  ollama pull qwen3:32b
+  python scripts/make_env.py
+  ```
+
 ### `backend/.env`
 
 | Setting | Meaning |
@@ -234,7 +266,7 @@ neither is ever sent to a browser.
 | `PORT` | The port the backend of the hub listens on. `8000`. Change it when the port is taken on this machine; the setup script tells the two web applications about it. |
 | `JWT_SECRET_KEY` | Signs the access tokens of the hub. Generated for you. |
 | `DATABASE_URL` | The news database. A SQLite file by default. |
-| `OLLAMA_MODEL` | The model the AI analysis of the news uses. `qwen3:8b` by default. |
+| `OLLAMA_MODEL` | The model the AI analysis of the news uses. The best model that is installed on the machine, written by the setup script. |
 | `NEWS_CUTOFF_DATE` | The oldest day the news may reach, whatever window is asked for. |
 | `CORS_ORIGINS` | The browser origins allowed to call the API. |
 | `KPI_APP_URL` | Where Peer Benchmarking is listening. `http://127.0.0.1:8077`. |
@@ -484,18 +516,23 @@ Peer Benchmarking was started from the wrong folder. Run it from
 
 ### Port 8077 or 8000 is already in use
 
-Another copy is still running. Stop it, or change `PORT` in
-`benchmarking/.env` and `KPI_APP_URL` in `backend/.env` together.
-
-For the port of the backend of the hub, change `PORT` in `backend/.env`:
+The setup script moves a port that is taken on this machine by something
+else — a model server, for instance — and writes the new port everywhere
+it is named. So the usual answer is to run the setup again:
 
 ```bash
-# find out what is on the port
+python scripts/make_env.py
+```
+
+To see what is on the port:
+
+```bash
 sudo ss -tlnp | grep :8000
 sudo lsof -i :8000
 ```
 
-Then give the backend another port and tell the web applications about it:
+To choose the port by hand, set it and run the same script, which writes
+it into every file that names it:
 
 ```bash
 # backend/.env
@@ -504,9 +541,34 @@ PORT=8010
 python scripts/make_env.py
 ```
 
-The setup script writes the new port into `landing/.env` and
-`frontend/.env`, so the sign-in keeps working. `run.sh` and `run.ps1`
-start the backend on that port ✓.
+A port that one of our own services is already using is left alone, so
+running the setup while the platform is up does not move anything.
+
+### "Multiple top-level packages discovered in a flat-layout"
+
+The backend could not be built. This happens with an old copy of the
+code, where the backend folder held more than one folder that could be a
+package. Take the newest copy of the project and run the setup again:
+
+```bash
+git pull
+./setup.sh
+```
+
+### "Cannot find native binding"
+
+The interface of the Data Summarizer could not be built: the compiled
+part of Tailwind was left out. Some versions of npm leave it out when it
+is named for a newer version of Node. The setup script installs it by
+hand when that happens. To do it yourself:
+
+```bash
+cd sentinel/frontend
+npm install --no-save "@tailwindcss/oxide-linux-x64-gnu@$(node -p "require('./node_modules/@tailwindcss/oxide/package.json').version")"
+npm run build
+```
+
+On a machine with a newer Node this does not happen at all.
 
 ### The packages will not download
 

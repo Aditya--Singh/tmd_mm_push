@@ -73,6 +73,10 @@ Planned
 - Vite
 - Material UI
 
+The web applications are built with Node.js 18 or newer. The versions
+that are used are written down in the lock files, so every machine ends
+up with the same ones.
+
 ## Database
 
 - SQLite
@@ -232,6 +236,11 @@ The setup script installs everything, writes `backend/.env`,
 share, points the applications at the language model on the machine, and
 creates the demo accounts. Then open <http://localhost:5174> and sign in
 with `admin` / `admin@tmd26`.
+
+It also works out the machine as it is: a port that is already taken —
+by a model server, for instance — is moved and every file that names it
+is written again, and the model that is really installed on the machine
+is written into the settings. Nothing is downloaded behind your back.
 
 **[docs/SETUP.md](docs/SETUP.md) has the full instructions for both
 operating systems**, including what to do when a package will not

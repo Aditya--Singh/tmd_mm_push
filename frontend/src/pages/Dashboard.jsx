@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getDashboardSummary } from "../api/dashboard";
 import { getNews } from "../api/news";
 import DashboardStats from "../components/DashboardStats";
+import { writtenDate } from "../components/writtenDate";
 
 function Dashboard() {
     console.log("NEW DASHBOARD COMPONENT LOADED");
@@ -58,9 +59,7 @@ function Dashboard() {
 
                         <p>
                             {article.source} ·{" "}
-                            {new Date(
-                                article.publish_date
-                            ).toLocaleDateString("en-IN")}
+                            {writtenDate(article.publish_date)}
                         </p>
                     </div>
                 ))}

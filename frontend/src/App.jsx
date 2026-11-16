@@ -26,6 +26,7 @@ import NewsFilters from "./components/NewsFilters";
 
 import ApplicationInsights from "./components/ApplicationInsights";
 import NewsPipelineControl from "./components/NewsPipelineControl";
+import { writtenDate } from "./components/writtenDate";
 import {
   getBridge,
   isEmbeddedContext,
@@ -334,11 +335,7 @@ function App() {
             </button>
 
             <div className="header-date">
-              {new Date().toLocaleDateString("en-IN", {
-                day: "2-digit",
-                month: "short",
-                year: "numeric",
-              })}
+              {writtenDate(new Date())}
             </div>
 
             <button

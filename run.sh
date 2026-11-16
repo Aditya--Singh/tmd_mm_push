@@ -22,10 +22,18 @@ SENTINEL_PID=""
 NEWS_PID=""
 LANDING_PID=""
 
-# The port the backend of the hub listens on. It is read from backend/.env, so
-# that a machine where the port is already taken can use another one.
-BACKEND_PORT="$(grep -E '^PORT=' backend/.env 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')"
-BACKEND_PORT="${BACKEND_PORT:-8000}"
+# The ports every service listens on. They are read from the settings files, so
+# that a machine where a port is already taken can use another one. The setup
+# script writes those ports there.
+read_port() {  # read_port <file> <default>
+  local value
+  value="$(grep -E '^PORT=' "$1" 2>/dev/null | head -1 | cut -d= -f2 | tr -d '[:space:]')"
+  echo "${value:-$2}"
+}
+
+BACKEND_PORT="$(read_port backend/.env 8000)"
+BENCH_PORT="$(read_port benchmarking/.env 8077)"
+SENTINEL_PORT="$(read_port sentinel/.env 8090)"
 
 cleanup() {
   echo ""
@@ -126,7 +134,7 @@ start benchmarking bash -c "cd benchmarking && .venv/bin/python -m kpibench.main
 sleep 2
 
 # The Data Summarizer serves its own interface from the same address as its API.
-start sentinel bash -c "cd '$ROOT/sentinel/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090"
+start sentinel bash -c "cd '$ROOT/sentinel/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port $SENTINEL_PORT"
 sleep 2
 
 start news bash -c "cd frontend && npm run dev -- --host 127.0.0.1 --port 5173"
@@ -138,8 +146,8 @@ The platform is starting.
 
     Landing page hub    http://localhost:5174
     News dashboard      http://localhost:5173
-    Peer Benchmarking   http://localhost:8077
-    Data Summarizer     http://localhost:8090
+    Peer Benchmarking   http://localhost:$BENCH_PORT
+    Data Summarizer     http://localhost:$SENTINEL_PORT
     Backend and its API http://127.0.0.1:$BACKEND_PORT/docs
 
 Sign in at http://localhost:5174 with admin / admin@tmd26

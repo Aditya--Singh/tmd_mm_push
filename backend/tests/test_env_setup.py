@@ -209,3 +209,138 @@ def test_an_existing_secret_is_kept(workspace, tmp_path):
         value_of(tmp_path / "backend" / ".env", "KPI_HANDOFF_SECRET")
         == existing
     )
+
+
+def test_a_port_that_is_taken_is_moved(workspace, tmp_path):
+    """
+    A machine where the port is taken needs another one.
+
+    The port that is asked for is kept when it is free.
+    """
+    module = workspace
+
+    taken = 8000
+
+    def fake_port_is_free(port):
+        return port != taken
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(module, "port_is_free", fake_port_is_free)
+    # Nothing of ours is answering on the port: something else has it.
+    monkeypatch.setattr(module, "our_own_service_answers", lambda port, path: False)
+
+    try:
+        ports, notes = module.plan_the_ports("", "", "")
+    finally:
+        monkeypatch.undo()
+
+    assert ports["backend"] != taken
+    assert ports["backend"] in range(taken + 1, taken + 100)
+    assert notes, "the move was not reported"
+
+
+def test_a_free_port_is_kept(workspace):
+    """The port that is asked for is used when it is free."""
+    module = workspace
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(module, "port_is_free", lambda port: True)
+
+    try:
+        ports, notes = module.plan_the_ports("PORT=8010\n", "PORT=8077\n", "")
+    finally:
+        monkeypatch.undo()
+
+    assert ports["backend"] == 8010
+    assert ports["benchmarking"] == 8077
+    assert notes == []
+
+
+def test_our_own_service_keeps_its_port(workspace):
+    """
+    A port that one of our own services is using is left alone.
+
+    Otherwise the setup would move the port every time it is run while the
+    platform is up.
+    """
+    module = workspace
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(module, "port_is_free", lambda port: False)
+    monkeypatch.setattr(module, "our_own_service_answers", lambda port, path: True)
+
+    try:
+        ports, notes = module.plan_the_ports("PORT=8000\n", "", "")
+    finally:
+        monkeypatch.undo()
+
+    assert ports["backend"] == 8000
+    assert notes == []
+
+
+def test_the_model_of_this_machine_is_named(workspace, tmp_path):
+    """
+    The settings name the model that is really installed.
+
+    Otherwise the application would look for a model that is not there.
+    """
+    module = workspace
+
+    # A model server with a few models on it.
+    class FakeResponse:
+        status = 200
+
+        def __init__(self, body):
+            self.body = body
+
+        def read(self):
+            return self.body
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    body = (
+        b'{"models": [{"name": "llama3.3:70b"}, {"name": "qwen3:32b"}, '
+        b'{"name": "nomic-embed-text"}]}'
+    )
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(
+        module.urllib.request, "urlopen", lambda *a, **k: FakeResponse(body)
+    )
+
+    try:
+        installed = module.ollama_models("http://localhost:11434")
+    finally:
+        monkeypatch.undo()
+
+    assert installed == ["llama3.3:70b", "qwen3:32b", "nomic-embed-text"]
+
+    # The newest family that is installed wins, and a model for embeddings is
+    # never used to write.
+    assert module.the_model_to_use(installed) == "qwen3:32b"
+
+    # Without a model server, nothing is named and "auto" is used.
+    assert module.the_model_to_use([]) == "auto"
+
+
+def test_the_model_is_written_into_the_settings(workspace, tmp_path):
+    """The model that was found is written into the settings files."""
+    module = workspace
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(module, "ollama_models", lambda url: ["qwen3:32b"])
+
+    try:
+        workspace.main([])
+    finally:
+        monkeypatch.undo()
+
+    bench = (tmp_path / "benchmarking" / ".env").read_text(encoding="utf-8")
+    backend = (tmp_path / "backend" / ".env").read_text(encoding="utf-8")
+
+    assert "OLLAMA_MODEL=qwen3:32b" in bench
+    assert "OLLAMA_MODEL=qwen3:32b" in backend
