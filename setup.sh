@@ -50,9 +50,23 @@ if ! node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 18 ? 0
   exit 1
 fi
 
+# An environment that was made halfway is of no use, and the installation
+# fails on it in a way that is hard to understand. A broken one is therefore
+# removed and made again.
+make_the_environment() {  # make_the_environment <folder>
+  local folder="$1"
+
+  if [ -d "$folder/.venv" ] && ! "$folder/.venv/bin/python" --version >/dev/null 2>&1; then
+    note "The environment of $folder was made halfway. Making it again."
+    rm -rf "$folder/.venv"
+  fi
+
+  [ -d "$folder/.venv" ] || "$PY" -m venv "$folder/.venv"
+}
+
 say "2/7  The backend of the hub"
 cd backend
-[ -d .venv ] || "$PY" -m venv .venv
+make_the_environment .
 # shellcheck disable=SC1091
 source .venv/bin/activate
 python -m pip install --upgrade pip wheel >/dev/null 2>&1 || true
@@ -66,7 +80,7 @@ cd ..
 
 say "3/7  Peer Benchmarking"
 cd benchmarking
-[ -d .venv ] || "$PY" -m venv .venv
+make_the_environment .
 # shellcheck disable=SC1091
 source .venv/bin/activate
 python -m pip install --upgrade pip wheel >/dev/null 2>&1 || true
@@ -78,7 +92,7 @@ cd ..
 
 say "4/7  The Data Summarizer (Regulatory Sentinel)"
 cd sentinel
-[ -d .venv ] || "$PY" -m venv .venv
+make_the_environment .
 # shellcheck disable=SC1091
 source .venv/bin/activate
 python -m pip install --upgrade pip wheel >/dev/null 2>&1 || true

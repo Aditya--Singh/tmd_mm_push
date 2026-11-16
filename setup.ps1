@@ -59,6 +59,22 @@ if ($nodeMajor -lt 18) {
     exit 1
 }
 
+# An environment that was made halfway is of no use, and the installation
+# fails on it in a way that is hard to understand. A broken one is therefore
+# removed and made again.
+function Make-TheEnvironment($folder) {
+    $python = Join-Path $folder ".venv\Scripts\python.exe"
+    if ((Test-Path (Join-Path $folder ".venv")) -and -not (Test-Path $python)) {
+        Note "The environment of $folder was made halfway. Making it again."
+        Remove-Item (Join-Path $folder ".venv") -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    if (-not (Test-Path (Join-Path $folder ".venv"))) {
+        Push-Location $folder
+        & $Python -m venv .venv
+        Pop-Location
+    }
+}
+
 Say "2/7  The backend of the hub"
 Push-Location backend
 if (-not (Test-Path .venv)) { & $Python -m venv .venv }
@@ -71,8 +87,8 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Say "3/7  Peer Benchmarking"
+Make-TheEnvironment "benchmarking"
 Push-Location benchmarking
-if (-not (Test-Path .venv)) { & $Python -m venv .venv }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
 & .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 if ($LASTEXITCODE -ne 0) {
@@ -81,8 +97,8 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Say "4/7  The Data Summarizer (Regulatory Sentinel)"
+Make-TheEnvironment "sentinel"
 Push-Location sentinel
-if (-not (Test-Path .venv)) { & $Python -m venv .venv }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
 & .\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
 if ($LASTEXITCODE -ne 0) {
