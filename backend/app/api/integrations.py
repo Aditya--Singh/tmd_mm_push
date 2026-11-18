@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
 from app.auth.dependencies import get_current_user
-from app.auth.roles import bench_role_label
+from app.auth.roles import bench_role_label, news_role_label
 from app.config.settings import get_settings
 from app.models.user import User
 
@@ -341,5 +341,153 @@ def summarizer_manifest():
         service=data.get("service", "data-summarizer"),
         title=data.get("title", "Data Summarizer"),
         defaultSection=data.get("defaultSection", "overview"),
+        sections=[Section(**section) for section in data.get("sections", [])],
+    )
+
+
+# ---------------------------------------------------------------------------
+# The Data Analyzer, which reads the documents a person shares.
+# ---------------------------------------------------------------------------
+
+analyzer_router = APIRouter(
+    prefix="/api/services/analyzer",
+    tags=["Data Analyzer"],
+)
+
+
+def _analyzer_handoff_url() -> str:
+    return f"{settings.analyzer_app_url.rstrip('/')}/api/auth/handoff"
+
+
+def _analyzer_manifest_url() -> str:
+    return f"{settings.analyzer_app_url.rstrip('/')}/api/ui/manifest"
+
+
+def _require_analyzer_secret() -> str:
+    secret = settings.analyzer_handoff_secret.strip()
+
+    if len(secret) < 32:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The Data Analyzer is not connected yet. Set ANALYZER_HANDOFF_SECRET in "
+                "the backend .env to the same value as HANDOFF_SECRET in the analyzer's "
+                ".env, then restart the backend."
+            ),
+        )
+
+    return secret
+
+
+@analyzer_router.post(
+    "/ticket",
+    response_model=TicketResponse,
+)
+def create_analyzer_ticket(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Ask the Data Analyzer for a sign-in ticket for the person who signed in here.
+
+    The role is the `role_news` column of this platform's own user table, and it is handed
+    over unchanged: the analyzer uses the same names, so that one person holds one role in
+    each of the applications they may open. A browser can never choose the role: it is
+    taken from the signed-in person, not from the request.
+    """
+    secret = _require_analyzer_secret()
+
+    role = current_user.role_news
+
+    payload = {
+        "username": current_user.username,
+        "full_name": current_user.username,
+        "embed": True,
+        "role": role,
+    }
+
+    try:
+        response = httpx.post(
+            _analyzer_handoff_url(),
+            json=payload,
+            headers={"X-Handoff-Secret": secret},
+            timeout=settings.kpi_request_timeout,
+        )
+    except httpx.HTTPError as exc:
+        logger.warning("The Data Analyzer could not be reached: %s", exc)
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "The Data Analyzer could not be reached. Check that it is running and "
+                f"that ANALYZER_APP_URL points at it (currently {settings.analyzer_app_url})."
+            ),
+        )
+
+    if response.status_code != 200:
+        detail = "The Data Analyzer refused the sign-in."
+
+        try:
+            detail = response.json().get("detail", detail)
+        except ValueError:
+            pass
+
+        logger.warning(
+            "The Data Analyzer refused the sign-in for %s: %s",
+            current_user.username,
+            response.status_code,
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=detail,
+        )
+
+    data = response.json()
+
+    return TicketResponse(
+        ticket=data["ticket"],
+        role=data.get("role", role),
+        roleLabel=data.get("role_label", news_role_label(role)),
+        expiresIn=int(data.get("expires_in", 120)),
+        tab="documents",
+    )
+
+
+@analyzer_router.get(
+    "/manifest",
+    response_model=ManifestResponse,
+)
+def analyzer_manifest():
+    """
+    The navigation of the Data Analyzer, for the landing page's own rail.
+
+    It names the screens and nothing else. Everything behind them stays behind the role
+    checks of the analyzer itself.
+    """
+    try:
+        response = httpx.get(
+            _analyzer_manifest_url(),
+            timeout=settings.kpi_request_timeout,
+        )
+    except httpx.HTTPError as exc:
+        logger.warning("The Data Analyzer manifest could not be read: %s", exc)
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="The Data Analyzer could not be reached.",
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="The Data Analyzer did not return its navigation.",
+        )
+
+    data = response.json()
+
+    return ManifestResponse(
+        service=data.get("service", "data-analyzer"),
+        title=data.get("title", "Data Analyzer"),
+        defaultSection=data.get("defaultSection", "documents"),
         sections=[Section(**section) for section in data.get("sections", [])],
     )

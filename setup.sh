@@ -26,7 +26,7 @@ problem() {
 
 PY="${PYTHON:-python3}"
 
-say "1/7  Checking what is installed"
+say "1/8  Checking what is installed"
 "$PY" --version
 if ! "$PY" -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)'; then
   echo "   Python 3.11 or newer is needed. On Ubuntu: sudo apt install -y python3 python3-venv python3-pip"
@@ -64,7 +64,7 @@ make_the_environment() {  # make_the_environment <folder>
   [ -d "$folder/.venv" ] || "$PY" -m venv "$folder/.venv"
 }
 
-say "2/7  The backend of the hub"
+say "2/8  The backend of the hub"
 cd backend
 make_the_environment .
 # shellcheck disable=SC1091
@@ -78,7 +78,7 @@ fi
 deactivate
 cd ..
 
-say "3/7  Peer Benchmarking"
+say "3/8  Peer Benchmarking"
 cd benchmarking
 make_the_environment .
 # shellcheck disable=SC1091
@@ -90,7 +90,7 @@ fi
 deactivate
 cd ..
 
-say "4/7  The Data Summarizer (Regulatory Sentinel)"
+say "4/8  The Data Summarizer (Regulatory Sentinel)"
 cd sentinel
 make_the_environment .
 # shellcheck disable=SC1091
@@ -102,7 +102,19 @@ fi
 deactivate
 cd ..
 
-say "5/7  The three web applications"
+say "5/8  The Data Analyzer"
+cd dataanalyzer
+make_the_environment .
+# shellcheck disable=SC1091
+source .venv/bin/activate
+python -m pip install --upgrade pip wheel >/dev/null 2>&1 || true
+if ! python -m pip install -r backend/requirements.txt; then
+  problem "The Data Analyzer could not be installed. The hub still works without it."
+fi
+deactivate
+cd ..
+
+say "6/8  The four web applications"
 
 # The packages are installed from the lock files, so that every machine ends up
 # with the same versions. When the installation fails halfway, it leaves a
@@ -130,6 +142,12 @@ if ! (cd sentinel/frontend && { [ -d node_modules ] || npm install --no-audit --
   problem "The interface of the Data Summarizer could not be built. It will show nothing until it is."
 fi
 
+# The Data Analyzer serves its own interface from the same address as its API,
+# so it is built once here rather than at every start.
+if ! (cd dataanalyzer/frontend && { [ -d node_modules ] || npm install --no-audit --no-fund; } && npm run build); then
+  problem "The interface of the Data Analyzer could not be built. It will show nothing until it is."
+fi
+
 # Some versions of npm leave out a library that is meant for this machine when
 # it is named for a newer version of Node. The Data Summarizer needs its
 # compiled part, and the build fails with a strange message when it is missing.
@@ -141,10 +159,10 @@ if [ -d sentinel/frontend/node_modules/@tailwindcss/oxide ] && \
     >/dev/null 2>&1 || true
 fi
 
-say "6/7  The settings files"
+say "7/8  The settings files"
 "$PY" scripts/make_env.py || problem "The settings files could not be written."
 
-say "7/7  The demo accounts"
+say "8/8  The demo accounts"
 if ! (cd backend && .venv/bin/python seed_users.py); then
   problem "The accounts could not be written. Nobody can sign in until they are."
 fi

@@ -257,7 +257,55 @@ backend/.env      SENTINEL_HANDOFF_SECRET  the same value as
 sentinel/.env     HANDOFF_SECRET           the one below
 ```
 
-## 3.8 The SQL Genie in the workspace
+## 3.8 The Data Analyzer in the workspace
+
+The Data Analyzer reads the Excel workbooks and CSV files a person shares, and writes
+their summary, their pictures and their findings. It is an application of its own, in
+`dataanalyzer/`, with its own database and its own sessions.
+
+It works the same way as Peer Benchmarking: the hub vouches for the person and the
+application decides for itself what they may do.
+
+```text
+browser          hub backend      data analyzer backend
+   |                 |                    |
+   | open the        |                    |
+   | service         |                    |
+   |---------------->|                    |
+   |                 | POST /api/auth/handoff
+   |                 |  X-Handoff-Secret  |
+   |                 | {username, role}   |
+   |                 |------------------->|
+   |                 |     one-use       |
+   |                 |     ticket        |
+   | |<-------------------|
+   |                                     |
+   |  hubint:auth { ticket }  over the frame bridge
+   |-------------------------------------------->|
+   |                                     |
+   |                    POST /api/auth/exchange
+   |                                     |---------->|
+   |                                     |  session  |
+   |<------------ the application is signed in -----|
+```
+
+**The role is the role of the News Feed.** The `role_news` column of the `users` table
+holds `admin` or `user`, and the analyzer uses the same names, so a person holds one role
+in each of the applications they may open. The role is taken from the signed-in person and
+never from the request, so a browser cannot make itself an administrator.
+
+The secret is a secret of its own, so that the two applications never share one:
+
+```text
+backend/.env        ANALYZER_HANDOFF_SECRET  the same value as
+dataanalyzer/.env   HANDOFF_SECRET           the one below
+```
+
+**It serves its own interface from the same address as its API.** The built interface is
+served by the analyzer itself on port 8095, so there is one address to allow in the
+browser and one to frame.
+
+## 3.9 The SQL Genie in the workspace
 
 The SQL Genie is an application of its own that the hub opens in its
 workspace, like the other three. It is not part of this repository and
@@ -508,6 +556,7 @@ independently usable.
 | `VITE_BENCHMARKING_APP_URL` | `http://localhost:8077/` | URL of Peer Benchmarking opened in the workspace. |
 | `VITE_SUMMARIZER_APP_URL` | `http://localhost:8090/` | URL of the Data Summarizer opened in the workspace. |
 | `VITE_SQL_GENIE_APP_URL` | `http://localhost:8080/` | URL of the SQL Genie opened in the workspace. |
+| `VITE_ANALYZER_APP_URL` | `http://localhost:8095/` | URL of the Data Analyzer opened in the workspace. |
 | `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. The origin of the SQL Genie has to be in this list. |
 
 ### News application (`frontend/.env`)

@@ -277,8 +277,10 @@
                 "Test: landing page",
                 "Test: benchmarking",
                 "Test: the Data Summarizer",
+                "Test: the Data Analyzer",
                 "Test: news feed for every role",
-                "Test: hub with the Data Summarizer"
+                "Test: hub with the Data Summarizer",
+                "Test: hub with the Data Analyzer"
             ],
             "problemMatcher": []
         },
@@ -338,10 +340,55 @@
             "problemMatcher": []
         },
         {
+            "label": "Setup: analyzer dependencies",
+            "detail": "Install the Data Analyzer and build its interface",
+            "type": "shell",
+            "command": "python -m pip install -r backend/requirements.txt",
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer"
+            },
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run: the Data Analyzer",
+            "detail": "Serve the Data Analyzer on port 8095",
+            "type": "shell",
+            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8095",
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer/backend"
+            },
+            "isBackground": true,
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: the Data Analyzer",
+            "detail": "Run the tests of the Data Analyzer",
+            "type": "shell",
+            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m pytest -q",
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer/backend"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
             "label": "Test: hub with the Data Summarizer",
             "detail": "Open the Data Summarizer in the hub and check the sign-in",
             "type": "shell",
             "command": "node summarizer.mjs",
+            "options": {
+                "cwd": "${workspaceFolder}/landing/e2e"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: hub with the Data Analyzer",
+            "detail": "Open the Data Analyzer in the hub, share a document and check the sign-in",
+            "type": "shell",
+            "command": "node analyzer.mjs",
             "options": {
                 "cwd": "${workspaceFolder}/landing/e2e"
             },

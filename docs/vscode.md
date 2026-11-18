@@ -49,6 +49,8 @@ Four terminals open side by side:
 | Landing page hub | <http://localhost:5174> | `Run: landing page` |
 | News dashboard | <http://localhost:5173> | `Run: news frontend` |
 | Peer Benchmarking | <http://localhost:8077> | `Run: benchmarking` |
+| Data Summarizer | <http://localhost:8090> | `Run: the Data Summarizer` |
+| Data Analyzer | <http://localhost:8095> | `Run: the Data Analyzer` |
 | FastAPI backend | <http://127.0.0.1:8000> | `Run: backend` |
 | API documentation | <http://127.0.0.1:8000/docs> | |
 
@@ -56,10 +58,13 @@ Open <http://localhost:5174> and sign in with a seeded account, for
 example `admin` / `admin@tmd26`. Select **News Feed** in the sidebar
 and the dashboard opens inside the workspace, already signed in. Select
 **Peer Benchmarking** and the benchmarking app opens there, already
-signed in, with its own screens listed underneath it in the rail.
+signed in, with its own screens listed underneath it in the rail. Select
+**Data Analyzer** and the analyzer opens there too: share an Excel file
+or a CSV file, and it is described, summarised, drawn and asked about.
 
 Each service can also be started on its own with `Run: backend`,
-`Run: benchmarking`, `Run: news frontend` or `Run: landing page`.
+`Run: benchmarking`, `Run: the Data Summarizer`, `Run: the Data
+Analyzer`, `Run: news frontend` or `Run: landing page`.
 
 ## 4. Debugging
 
@@ -92,8 +97,10 @@ extension offers **Debug Test** on the backend suite.
 | `Test: landing page` | Hub frame bridge (`node --test`). |
 | `Test: benchmarking` | The hand-off and navigation tests of Peer Benchmarking (`pytest`). |
 | `Test: hub with Peer Benchmarking` | The browser test of the benchmarking service. It needs the platform running. |
+| `Test: the Data Analyzer` | The tests of the Data Analyzer (`pytest`). |
+| `Test: hub with the Data Analyzer` | The browser test of the analyzer: it shares a document and asks a question. It needs the platform running. |
 | `Test: news feed for every role` | The browser test that every role can read the news. It needs the platform running. |
-| `Test: all` | All six, in parallel. |
+| `Test: all` | All of them, in parallel. |
 
 `Check: lint and build` lints and builds the news frontend. The same
 commands work in `landing/`.
@@ -234,6 +241,12 @@ The SQL Genie is an application of its own. Point the hub at it with
 `VITE_SQL_GENIE_APP_URL` in `landing/.env`, and add its origin to
 `VITE_ALLOWED_CHILD_ORIGINS` in the same file. Without the second one,
 the application is shown but the session is never handed over.
+
+### The Data Analyzer shows no documents
+
+The Data Analyzer keeps the documents it has read in its own database, in
+`dataanalyzer/backend/data/`. A new installation is empty: share an
+Excel workbook or a CSV file from the hub, and it appears there.
 
 ### Peer Benchmarking shows "not connected yet"
 

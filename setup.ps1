@@ -34,7 +34,7 @@ Set-Location $root
 
 $Python = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 
-Say "1/7  Checking what is installed"
+Say "1/8  Checking what is installed"
 & $Python --version
 # The backend asks for Python 3.11 or newer, so that is what is checked here.
 & $Python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
@@ -75,7 +75,7 @@ function Make-TheEnvironment($folder) {
     }
 }
 
-Say "2/7  The backend of the hub"
+Say "2/8  The backend of the hub"
 Push-Location backend
 if (-not (Test-Path .venv)) { & $Python -m venv .venv }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
@@ -86,7 +86,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pop-Location
 
-Say "3/7  Peer Benchmarking"
+Say "3/8  Peer Benchmarking"
 Make-TheEnvironment "benchmarking"
 Push-Location benchmarking
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
@@ -96,7 +96,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pop-Location
 
-Say "4/7  The Data Summarizer (Regulatory Sentinel)"
+Say "4/8  The Data Summarizer (Regulatory Sentinel)"
 Make-TheEnvironment "sentinel"
 Push-Location sentinel
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
@@ -106,7 +106,17 @@ if ($LASTEXITCODE -ne 0) {
 }
 Pop-Location
 
-Say "5/7  The three web applications"
+Say "5/8  The Data Analyzer"
+Make-TheEnvironment "dataanalyzer"
+Push-Location dataanalyzer
+& .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
+& .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+if ($LASTEXITCODE -ne 0) {
+    Problem "The Data Analyzer could not be installed. The hub still works without it."
+}
+Pop-Location
+
+Say "6/8  The four web applications"
 
 # The packages are installed from the lock files, so that every machine ends up
 # with the same versions. When the installation fails halfway, it leaves a
@@ -140,11 +150,22 @@ if ($sentinelFailed) {
     Problem "The interface of the Data Summarizer could not be built. It will show nothing until it is."
 }
 
-Say "6/7  The settings files"
+# The Data Analyzer serves its own interface from the same address as its API,
+# so it is built once here rather than at every start.
+Push-Location dataanalyzer\frontend
+if (-not (Test-Path node_modules)) { npm install --no-audit --no-fund }
+npm run build
+$analyzerFailed = $LASTEXITCODE -ne 0
+Pop-Location
+if ($analyzerFailed) {
+    Problem "The interface of the Data Analyzer could not be built. It will show nothing until it is."
+}
+
+Say "7/8  The settings files"
 & $Python scripts/make_env.py
 if ($LASTEXITCODE -ne 0) { Problem "The settings files could not be written." }
 
-Say "7/7  The demo accounts"
+Say "8/8  The demo accounts"
 Push-Location backend
 & .\.venv\Scripts\python.exe seed_users.py
 $accountsFailed = $LASTEXITCODE -ne 0

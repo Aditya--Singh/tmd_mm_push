@@ -14,13 +14,30 @@ function serviceOf(id, services) {
     return services.find((service) => service.id === id);
 }
 
-test("the four services that are built are live", () => {
+test("the five services that are built are live", () => {
     const services = servicesForRoles({ news: "user", bench: "user" });
 
     assert.equal(serviceOf("news", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("benchmark", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.LIVE);
+    assert.equal(serviceOf("analyzer", services).status, SERVICE_STATUS.LIVE);
+});
+
+test("the data analyzer is opened by the role of the news feed", () => {
+    const analyzer = serviceOf(
+        "analyzer",
+        servicesForRoles({ news: "user", bench: "user" }),
+    );
+
+    // It keeps its own sessions, so it is given a ticket of its own.
+    assert.equal(analyzer.session, SESSION_MODE.TICKET);
+
+    // Who may open it is decided by the role in the News Feed.
+    assert.deepEqual(analyzer.roles, { news: NEWS_ROLES });
+
+    // And it has an address to open.
+    assert.ok(analyzer.url);
 });
 
 test("the SQL Genie opens the application it is pointed at", () => {

@@ -1,0 +1,444 @@
+/* The colours of the platform, as the hub and the news application use them. */
+@import "tailwindcss";
+
+:root {
+    --primary: #a6192e;
+    --primary-dark: #8a1426;
+    --primary-deep: #4e0c18;
+    --accent: #f2b600;
+    --accent-dark: #a87f00;
+    --background: #f3f4f7;
+    --surface: #ffffff;
+    --surface-soft: #f9fafb;
+    --text: #1b2130;
+    --text-secondary: #465063;
+    --muted: #6e788a;
+    --border: #e2e5eb;
+    --border-light: #eef0f4;
+    --good: #17734a;
+    --good-bg: #e5f4ec;
+    --warn: #9a5b00;
+    --warn-bg: #fff3dc;
+    --info: #22599c;
+    --info-bg: #e8f0fa;
+    --danger: #b42318;
+    --danger-bg: #fcebe9;
+    --radius-sm: 6px;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 2px rgba(27, 33, 48, 0.06), 0 2px 8px rgba(27, 33, 48, 0.04);
+    --shadow-md: 0 8px 28px rgba(27, 33, 48, 0.14);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    background: var(--background);
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- the shell */
+
+.shell {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: var(--primary-deep);
+    color: #fff;
+}
+
+.topbar__mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--primary-deep);
+    font-weight: 700;
+}
+
+.topbar__title {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+}
+
+.topbar__subtitle {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.topbar__who {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.avatar {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--primary-deep);
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.content {
+    flex: 1;
+    padding: 24px;
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- the cards */
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+.card__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.card__title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.card__body {
+    padding: 18px;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+.small {
+    font-size: 12px;
+}
+
+.grid {
+    display: grid;
+    gap: 18px;
+}
+
+.grid--two {
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+}
+
+.grid--plots {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+/* ---------------------------------------------------------------- the buttons */
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+    background: var(--primary-dark);
+}
+
+.button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.button--quiet {
+    background: var(--surface);
+    color: var(--text-secondary);
+    border-color: var(--border);
+}
+
+.button--quiet:hover:not(:disabled) {
+    background: var(--surface-soft);
+    color: var(--text);
+}
+
+.button--danger {
+    background: var(--danger);
+}
+
+/* ---------------------------------------------------------------- the forms */
+
+.input,
+.textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.input:focus,
+.textarea:focus {
+    outline: 2px solid rgba(166, 25, 46, 0.18);
+    border-color: var(--primary);
+}
+
+.textarea {
+    min-height: 76px;
+    resize: vertical;
+}
+
+.dropzone {
+    display: block;
+    padding: 30px 20px;
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-soft);
+    text-align: center;
+    cursor: pointer;
+}
+
+.dropzone:hover {
+    border-color: var(--primary);
+    background: #fff;
+}
+
+/* ---------------------------------------------------------------- the tables */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.table th {
+    position: sticky;
+    top: 0;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-soft);
+    color: var(--text-secondary);
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border-light);
+    white-space: nowrap;
+}
+
+.table__scroll {
+    max-height: 340px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+/* ---------------------------------------------------------------- the labels */
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.pill--number {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.pill--text {
+    background: var(--surface-soft);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.pill--date {
+    background: var(--good-bg);
+    color: var(--good);
+}
+
+.pill--warning {
+    background: var(--warn-bg);
+    color: var(--warn);
+}
+
+.pill--danger {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.pill--info {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+/* ---------------------------------------------------------------- the findings */
+
+.finding {
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-left-width: 3px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+}
+
+.finding--warning {
+    border-left-color: var(--warn);
+}
+
+.finding--insight {
+    border-left-color: var(--info);
+}
+
+.finding--note {
+    border-left-color: var(--muted);
+}
+
+.finding__title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 3px;
+}
+
+.finding__text {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- the pictures */
+
+.plot {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    padding: 8px;
+}
+
+.plot img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.plot__name {
+    margin-top: 6px;
+    font-size: 11.5px;
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- the notice */
+
+.notice {
+    padding: 12px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+}
+
+.notice--error {
+    background: var(--danger-bg);
+    color: var(--danger);
+}
+
+.notice--info {
+    background: var(--info-bg);
+    color: var(--info);
+}
+
+.waiting {
+    display: grid;
+    place-items: center;
+    min-height: 60vh;
+    text-align: center;
+}
+
+.list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.list__row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+}
+
+.list__row:hover {
+    background: var(--surface-soft);
+}
+
+.list__row--active {
+    background: #fdf3f4;
+    box-shadow: inset 3px 0 0 var(--primary);
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.spread {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}

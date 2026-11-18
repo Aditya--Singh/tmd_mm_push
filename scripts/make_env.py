@@ -35,6 +35,9 @@ BENCH_ENV = ROOT / "benchmarking" / ".env"
 BENCH_EXAMPLE = ROOT / "benchmarking" / ".env.example"
 SENTINEL_ENV = ROOT / "sentinel" / ".env"
 SENTINEL_EXAMPLE = ROOT / "sentinel" / ".env.example"
+
+ANALYZER_ENV = ROOT / "dataanalyzer" / ".env"
+ANALYZER_EXAMPLE = ROOT / "dataanalyzer" / ".env.example"
 LANDING_ENV = ROOT / "landing" / ".env"
 LANDING_EXAMPLE = ROOT / "landing" / ".env.example"
 NEWS_ENV = ROOT / "frontend" / ".env"
@@ -56,6 +59,7 @@ PLACEHOLDERS = {
     "HANDOFF_SECRET": "",
     "KPI_HANDOFF_SECRET": "",
     "SENTINEL_HANDOFF_SECRET": "",
+    "ANALYZER_HANDOFF_SECRET": "",
 }
 
 #: The addresses the hub is served from. The applications that are opened in its
@@ -283,6 +287,7 @@ HEALTH_PATHS = {
     "backend": "/health",
     "benchmarking": "/healthz",
     "sentinel": "/api/meta",
+    "analyzer": "/api/meta",
 }
 
 
@@ -308,6 +313,7 @@ def plan_the_ports(
     backend: str,
     bench: str,
     sentinel: str,
+    analyzer: str = "",
 ) -> tuple[dict[str, int], list[str]]:
     """
     The port every service of the platform should use.
@@ -344,6 +350,9 @@ def plan_the_ports(
 
     if sentinel:
         ports["sentinel"] = ask(sentinel, "PORT", 8090, "sentinel")
+
+    if analyzer:
+        ports["analyzer"] = ask(analyzer, "PORT", 8095, "analyzer")
 
     return ports, notes
 
@@ -477,6 +486,22 @@ def set_up_the_language_model(
     )
 
 
+def set_up_the_analyzer(analyzer: str, installed: list[str], model: str) -> str:
+    """
+    Point the Data Analyzer at the language model on this machine.
+
+    The model is the best one that is installed, which is what "auto" means at run
+    time. A machine without a model server still works: the summary is then written
+    from the figures of the data alone, and the interface says so.
+    """
+    if installed:
+        analyzer = set_value(analyzer, "LLM_MODEL", model)
+        analyzer = set_value(analyzer, "LLM_BASE_URL", "http://localhost:11434/v1")
+        analyzer = set_value(analyzer, "OLLAMA_URL", "http://localhost:11434")
+
+    return analyzer
+
+
 def set_up_the_summarizer(
     sentinel: str, installed: list[str], model: str
 ) -> str:
@@ -541,10 +566,16 @@ def main(argv: list[str] | None = None) -> int:
         sentinel = read(SENTINEL_ENV) or read(SENTINEL_EXAMPLE)
         sentinel_example = read(SENTINEL_EXAMPLE)
 
+    # The Data Analyzer is optional as well: the platform works without it.
+    analyzer = ""
+
+    if ANALYZER_EXAMPLE.exists():
+        analyzer = read(ANALYZER_ENV) or read(ANALYZER_EXAMPLE)
+
     # The ports every service uses. A port that is taken on this machine by
     # something else - a model server, for instance - is moved, and the new port
     # is written everywhere the old one was named.
-    ports, port_notes = plan_the_ports(backend, bench, sentinel)
+    ports, port_notes = plan_the_ports(backend, bench, sentinel, analyzer)
 
     for note in port_notes:
         print(note)
@@ -561,6 +592,12 @@ def main(argv: list[str] | None = None) -> int:
         sentinel = set_value(sentinel, "PORT", str(ports["sentinel"]))
         backend = set_value(
             backend, "SENTINEL_APP_URL", f"http://127.0.0.1:{ports['sentinel']}"
+        )
+
+    if analyzer:
+        analyzer = set_value(analyzer, "PORT", str(ports["analyzer"]))
+        backend = set_value(
+            backend, "ANALYZER_APP_URL", f"http://127.0.0.1:{ports['analyzer']}"
         )
 
     # The backend's own signing key.
@@ -653,6 +690,39 @@ def main(argv: list[str] | None = None) -> int:
 
         write(SENTINEL_ENV, sentinel)
 
+    if analyzer:
+        # The analyzer's own signing key.
+        if needs_a_secret(analyzer, "JWT_SECRET"):
+            analyzer = set_value(analyzer, "JWT_SECRET", secrets.token_urlsafe(48))
+            print("Gave the Data Analyzer a new JWT_SECRET.")
+
+        # The secret the hub and the analyzer share. It is a secret of their own, so
+        # that the secret of the summarizer stays a secret of its own.
+        analyzer_secret = get_value(analyzer, "HANDOFF_SECRET") or ""
+
+        if args.force_secret or not analyzer_secret or len(analyzer_secret) < 32:
+            analyzer_secret = secrets.token_urlsafe(48)
+            analyzer = set_value(analyzer, "HANDOFF_SECRET", analyzer_secret)
+            print("Gave the hub and the Data Analyzer a new shared secret.")
+
+        backend = set_value(backend, "ANALYZER_HANDOFF_SECRET", analyzer_secret)
+
+        # The hub must be allowed to frame and drive the analyzer, in the places the
+        # hub is served from.
+        analyzer = set_value(analyzer, "EMBED_PARENT_ORIGINS", HUB_ORIGINS)
+        analyzer = set_value(
+            analyzer, "FRAME_ANCESTORS", "http://localhost:5174 http://127.0.0.1:5174"
+        )
+        analyzer = set_value(
+            analyzer, "CORS_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174"
+        )
+
+        # The model of this machine is named in the settings of the analyzer, so
+        # that it says plainly what it will write with.
+        analyzer = set_up_the_analyzer(analyzer, installed, model)
+
+        write(ANALYZER_ENV, analyzer)
+
     # The two web applications forward the API to the backend. They have to be
     # told where the backend is, or the sign-in cannot go through. The landing
     # page is also told where the other services are, so that it opens them at
@@ -684,6 +754,13 @@ def main(argv: list[str] | None = None) -> int:
                     f"http://localhost:{ports['sentinel']}/",
                 )
 
+            if "analyzer" in ports:
+                web = set_value(
+                    web,
+                    "VITE_ANALYZER_APP_URL",
+                    f"http://localhost:{ports['analyzer']}/",
+                )
+
             # The SQL Genie is an application of its own, so its address is
             # written down here, so that it may be changed.
             if not get_value(web, "VITE_SQL_GENIE_APP_URL"):
@@ -700,6 +777,7 @@ def main(argv: list[str] | None = None) -> int:
                     origin_of(get_value(web, "VITE_NEWS_APP_URL") or ""),
                     origin_of(get_value(web, "VITE_BENCHMARKING_APP_URL") or ""),
                     origin_of(get_value(web, "VITE_SUMMARIZER_APP_URL") or ""),
+                    origin_of(get_value(web, "VITE_ANALYZER_APP_URL") or ""),
                     origin_of(get_value(web, "VITE_SQL_GENIE_APP_URL") or ""),
                 ],
             )
@@ -717,6 +795,9 @@ def main(argv: list[str] | None = None) -> int:
     if sentinel:
         print("  sentinel/.env")
 
+    if analyzer:
+        print("  dataanalyzer/.env")
+
     if read(LANDING_ENV):
         print("  landing/.env")
 
@@ -731,6 +812,9 @@ def main(argv: list[str] | None = None) -> int:
     if "sentinel" in ports:
         print(f"  Data Summarizer      {ports['sentinel']}")
 
+    if "analyzer" in ports:
+        print(f"  Data Analyzer        {ports['analyzer']}")
+
     print("")
     print("The hub and Peer Benchmarking share one secret, so one sign-in opens both.")
     print("Peer Benchmarking accepts the hub for every role: analyst,")
@@ -740,6 +824,11 @@ def main(argv: list[str] | None = None) -> int:
         print("")
         print("The hub and the Data Summarizer share a secret of their own, so one")
         print("sign-in opens the Data Summarizer as well.")
+
+    if analyzer:
+        print("")
+        print("The hub and the Data Analyzer share a secret of their own, so one")
+        print("sign-in opens the Data Analyzer as well.")
 
     if message:
         print("")

@@ -1,0 +1,17 @@
+# secrets and local settings
+.env
+
+# data written by the app: the documents that were shared, their pictures,
+# the database and the logs
+backend/data/
+/data/
+
+# Python
+.venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / build output
+frontend/node_modules/
+frontend/dist/

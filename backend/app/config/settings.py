@@ -78,6 +78,18 @@ class Settings(BaseSettings):
     # While it is empty, the Data Summarizer workspace stays closed and says why.
     sentinel_handoff_secret: str = ""
 
+    # The Data Analyzer, which the landing page opens in its workspace under that name.
+    #
+    # It reads the Excel workbooks and CSV files a person shares, and writes their summary,
+    # their pictures and their insights. The landing page asks it for a single-use sign-in
+    # ticket on behalf of the person who signed in here, and gives it the role the person
+    # holds in the News Feed.
+    analyzer_app_url: str = "http://127.0.0.1:8095"
+
+    # The same value as HANDOFF_SECRET in the analyzer's .env.
+    # While it is empty, the Data Analyzer workspace stays closed and says why.
+    analyzer_handoff_secret: str = ""
+
     @model_validator(mode="after")
     def validate_secret_key(self):
         if not self.jwt_secret_key.strip():

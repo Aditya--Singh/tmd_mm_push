@@ -51,6 +51,19 @@ export const SERVICES = [
         session: SESSION_MODE.TOKEN,
     },
     {
+        id: "analyzer",
+        name: "Data Analyzer",
+        icon: "📈",
+        description:
+            "Read, summarise and chart the documents you share",
+        status: SERVICE_STATUS.LIVE,
+        url: env.VITE_ANALYZER_APP_URL || "http://localhost:8095/",
+        session: SESSION_MODE.TICKET,
+        // Who may open it is decided by the role in the News Feed, and that role is
+        // the one the analyzer is given.
+        roles: { news: NEWS_ROLES },
+    },
+    {
         id: "summarizer",
         name: "Data Summarizer",
         icon: "📄",

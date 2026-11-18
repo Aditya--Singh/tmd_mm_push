@@ -43,6 +43,7 @@ def doctor(monkeypatch, tmp_path):
     monkeypatch.setattr(module, "BACKEND_ENV", tmp_path / "backend" / ".env")
     monkeypatch.setattr(module, "BENCH_ENV", tmp_path / "benchmarking" / ".env")
     monkeypatch.setattr(module, "SENTINEL_ENV", tmp_path / "sentinel" / ".env")
+    monkeypatch.setattr(module, "ANALYZER_ENV", tmp_path / "dataanalyzer" / ".env")
     monkeypatch.setattr(module, "BACKEND_DB", tmp_path / "backend" / "news.db")
     monkeypatch.setattr(
         module, "BACKEND_LOG", tmp_path / "backend" / "logs" / "backend.log"
@@ -71,10 +72,12 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
     (tmp_path / "backend").mkdir()
     (tmp_path / "benchmarking").mkdir()
     (tmp_path / "sentinel").mkdir()
+    (tmp_path / "dataanalyzer").mkdir()
 
     (tmp_path / "backend" / ".env").write_text(
         "JWT_SECRET_KEY=one\nKPI_HANDOFF_SECRET=shared\n"
-        "SENTINEL_HANDOFF_SECRET=shared-too\n",
+        "SENTINEL_HANDOFF_SECRET=shared-too\n"
+        "ANALYZER_HANDOFF_SECRET=shared-analyzer\n",
         encoding="utf-8",
     )
     (tmp_path / "benchmarking" / ".env").write_text(
@@ -82,6 +85,9 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
     )
     (tmp_path / "sentinel" / ".env").write_text(
         "HANDOFF_SECRET=shared-too\n", encoding="utf-8"
+    )
+    (tmp_path / "dataanalyzer" / ".env").write_text(
+        "HANDOFF_SECRET=shared-analyzer\n", encoding="utf-8"
     )
 
     connection = sqlite3.connect(tmp_path / "backend" / "news.db")
@@ -93,6 +99,7 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
     (tmp_path / "backend" / ".venv").mkdir()
     (tmp_path / "benchmarking" / ".venv").mkdir()
     (tmp_path / "sentinel" / ".venv").mkdir()
+    (tmp_path / "dataanalyzer" / ".venv").mkdir()
     (tmp_path / "landing" / "node_modules").mkdir(parents=True)
     (tmp_path / "frontend" / "node_modules").mkdir(parents=True)
 
@@ -102,6 +109,7 @@ def test_the_doctor_is_happy_when_everything_is_in_place(doctor, tmp_path, capsy
 
     assert "the two servers share the same secret" in said
     assert "the hub and the Data Summarizer share the same secret" in said
+    assert "the hub and the Data Analyzer share the same secret" in said
     assert "the database holds 1 accounts" in said
     assert "Everything is in place" in said
 

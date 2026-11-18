@@ -78,7 +78,7 @@ const userName = (await page.locator(".header-user-info strong").innerText()).tr
 check("signed-in user is shown", userName === USERNAME, userName);
 
 const cardCount = await page.locator(".app-card").count();
-check("all four intelligence services are listed", cardCount === 4, `${cardCount}`);
+check("all five intelligence services are listed", cardCount === 5, `${cardCount}`);
 
 check(
     "Peer Benchmarking is no longer marked as planned",
@@ -146,7 +146,7 @@ check(
 
 check(
     "the collapsed rail keeps the service names",
-    (await page.locator(".app-card .app-name").count()) === 4,
+    (await page.locator(".app-card .app-name").count()) === 5,
 );
 
 check(

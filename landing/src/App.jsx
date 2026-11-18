@@ -11,6 +11,10 @@ import {
     fetchManifest as fetchSummarizerManifest,
     requestTicket as requestSummarizerTicket,
 } from "./api/summarizer";
+import {
+    fetchManifest as fetchAnalyzerManifest,
+    requestTicket as requestAnalyzerTicket,
+} from "./api/dataanalyzer";
 import FeedbackModal from "./components/FeedbackModal";
 import Sidebar from "./components/Sidebar";
 import Workspace from "./components/Workspace";
@@ -48,6 +52,8 @@ const DEFAULT_CHILD_ORIGINS = [
     "http://newsintel.pnbbank.in:8090",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
+    "http://localhost:8095",
+    "http://127.0.0.1:8095",
 ];
 
 /**
@@ -67,6 +73,11 @@ const TICKET_SERVICES = {
         label: "Data Summarizer",
         manifest: fetchSummarizerManifest,
         ticket: requestSummarizerTicket,
+    },
+    analyzer: {
+        label: "Data Analyzer",
+        manifest: fetchAnalyzerManifest,
+        ticket: requestAnalyzerTicket,
     },
 };
 

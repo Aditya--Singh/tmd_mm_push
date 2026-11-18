@@ -23,7 +23,7 @@ $BackendWaitSeconds = 90
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-if (-not (Test-Path backend\.venv) -or -not (Test-Path benchmarking\.venv) -or -not (Test-Path sentinel\.venv)) {
+if (-not (Test-Path backend\.venv) -or -not (Test-Path benchmarking\.venv) -or -not (Test-Path sentinel\.venv) -or -not (Test-Path dataanalyzer\.venv)) {
     Write-Host "Run .\setup.ps1 first." -ForegroundColor Red
     exit 1
 }
@@ -33,6 +33,12 @@ if (-not (Test-Path backend\.venv) -or -not (Test-Path benchmarking\.venv) -or -
 $BackendPort = 8000
 $portLine = Select-String -Path (Join-Path $root 'backend\.env') -Pattern '^PORT=(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($portLine) { $BackendPort = [int]$portLine.Matches[0].Groups[1].Value }
+
+# The port the Data Analyzer listens on. It is read from its own settings, so that a
+# machine where the port is already taken can use another one.
+$AnalyzerPort = 8095
+$analyzerPortLine = Select-String -Path (Join-Path $root 'dataanalyzer\.env') -Pattern '^PORT=(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($analyzerPortLine) { $AnalyzerPort = [int]$analyzerPortLine.Matches[0].Groups[1].Value }
 
 function Start-Service($name, $command, $workDir) {
     Write-Host "Starting $name"
@@ -127,6 +133,13 @@ Start-Process -FilePath "powershell" `
 
 Start-Sleep -Seconds 2
 
+# The Data Analyzer. It serves its own interface from the same address as its API.
+Start-Process -FilePath "powershell" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\dataanalyzer\backend'; ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port $AnalyzerPort" `
+    -WorkingDirectory $root -WindowStyle Minimized
+
+Start-Sleep -Seconds 2
+
 # The news dashboard.
 Start-Process -FilePath "powershell" `
     -ArgumentList "-NoExit", "-Command", "Set-Location '$root\frontend'; npm run dev -- --host 127.0.0.1 --port 5173" `
@@ -145,6 +158,7 @@ The platform is starting.
     News dashboard      http://localhost:5173
     Peer Benchmarking   http://localhost:8077
     Data Summarizer     http://localhost:8090
+    Data Analyzer       http://localhost:$AnalyzerPort
     Backend and its API http://127.0.0.1:$BackendPort/docs
 
 Sign in at http://localhost:5174 with admin / admin@tmd26

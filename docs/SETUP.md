@@ -200,6 +200,7 @@ sign-out, and the rail on the left holds the services.
 | **Peer Benchmarking** | Opens in the workspace, already signed in. The rail grows a list of screens underneath it, and choosing one moves the application to it. |
 | **Data Summarizer** | The Regulatory Sentinel application: the circulars and the notifications of the Reserve Bank of India, and their summaries. Opens in the workspace, already signed in, with its own sidebar replaced by a slim tab bar. |
 | **News Feed** | Opens in the workspace, already signed in, with its own header hidden. |
+| **Data Analyzer** | Opens in the workspace, already signed in. The documents you share are read there: Excel workbooks and CSV files are described, summarised, drawn and asked about. |
 | **SQL Genie** | Opens in the workspace, already signed in. It is an application of its own: point the hub at it with `VITE_SQL_GENIE_APP_URL` in `landing/.env`, and add its origin to `VITE_ALLOWED_CHILD_ORIGINS` there as well. |
 
 Signing out of the hub ends the session in every open service as well.

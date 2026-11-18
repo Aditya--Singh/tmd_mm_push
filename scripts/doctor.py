@@ -23,6 +23,8 @@ ROOT = Path(__file__).resolve().parent.parent
 BACKEND_ENV = ROOT / "backend" / ".env"
 BENCH_ENV = ROOT / "benchmarking" / ".env"
 SENTINEL_ENV = ROOT / "sentinel" / ".env"
+
+ANALYZER_ENV = ROOT / "dataanalyzer" / ".env"
 BACKEND_DB = ROOT / "backend" / "news.db"
 BACKEND_LOG = ROOT / "backend" / "logs" / "backend.log"
 
@@ -263,6 +265,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         report.add(OK, "sentinel/.env is there")
 
+    analyzer = read_env(ANALYZER_ENV)
+
+    if not analyzer:
+        report.add(
+            WRONG,
+            "dataanalyzer/.env is missing",
+            "Run ./setup.sh (or .\\setup.ps1 on Windows) to write it.",
+        )
+    else:
+        report.add(OK, "dataanalyzer/.env is there")
+
     if backend and not backend.get("JWT_SECRET_KEY", "").strip():
         report.add(
             WRONG,
@@ -298,6 +311,24 @@ def main(argv: list[str] | None = None) -> int:
                 "(backend/.env) and HANDOFF_SECRET (sentinel/.env).",
             )
 
+    shared_analyzer = backend.get("ANALYZER_HANDOFF_SECRET", "").strip()
+    shared_analyzer_app = analyzer.get("HANDOFF_SECRET", "").strip()
+
+    if backend and analyzer:
+        if (
+            shared_analyzer
+            and shared_analyzer_app
+            and shared_analyzer == shared_analyzer_app
+        ):
+            report.add(OK, "the hub and the Data Analyzer share the same secret")
+        else:
+            report.add(
+                WRONG,
+                "the hub and the Data Analyzer do not share the same secret",
+                "Run ./setup.sh again, or put the same value in ANALYZER_HANDOFF_SECRET "
+                "(backend/.env) and HANDOFF_SECRET (dataanalyzer/.env).",
+            )
+
     # ---------------------------------------------------------- the accounts
     if BACKEND_DB.exists():
         try:
@@ -331,6 +362,7 @@ def main(argv: list[str] | None = None) -> int:
         ("the backend", ROOT / "backend" / ".venv"),
         ("Peer Benchmarking", ROOT / "benchmarking" / ".venv"),
         ("the Data Summarizer", ROOT / "sentinel" / ".venv"),
+        ("the Data Analyzer", ROOT / "dataanalyzer" / ".venv"),
     ):
         if path.exists():
             report.add(OK, f"the environment of {name} is there")
@@ -411,6 +443,11 @@ def main(argv: list[str] | None = None) -> int:
                 "the Data Summarizer",
                 "sentinel",
             ),
+            (
+                the_port_of(ANALYZER_ENV, 8095),
+                "the Data Analyzer",
+                "analyzer",
+            ),
         ):
             if port_is_open(port):
                 report.add(OK, f"{what} is listening on port {port}")
@@ -425,6 +462,10 @@ def main(argv: list[str] | None = None) -> int:
                         "benchmarking": "cd benchmarking && .venv/bin/python -m kpibench.main",
                         "sentinel": (
                             "cd sentinel/backend && ../.venv/bin/python -m uvicorn "
+                            f"app.main:app --host 127.0.0.1 --port {port}"
+                        ),
+                        "analyzer": (
+                            "cd dataanalyzer/backend && ../.venv/bin/python -m uvicorn "
                             f"app.main:app --host 127.0.0.1 --port {port}"
                         ),
                     }.get(folder, "npm run dev"),

@@ -575,11 +575,12 @@ Completed
 - JWT authentication with a role per application: `role_news` and `role_bench`
 - Landing page hub with single sign-on into the embedded dashboard
 - Peer benchmarking of PNB against SBI, BoB, Canara Bank and Union Bank
-- One sign-in across the hub, the news dashboard, Peer Benchmarking and the Data Summarizer
+- One sign-in across the hub, the news dashboard, Peer Benchmarking, the Data Summarizer and the Data Analyzer
 - One role per application, held in the users table: `role_news` for the News Feed and
   `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
 - The SQL Genie opened in the workspace, with its address set in `landing/.env`
+- The Data Analyzer: the documents a person shares are read, summarised, drawn and asked about
 
 In Progress
 
