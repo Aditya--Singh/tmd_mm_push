@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pnb-maroon: #a6192e;
+  --color-pnb-maroon-dark: #7d1322;
+  --color-pnb-gold: #f2a900;
+  --color-pnb-cream: #fdf8ef;
+  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+  @apply bg-white text-slate-800 antialiased;
+}
