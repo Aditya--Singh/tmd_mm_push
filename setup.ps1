@@ -110,7 +110,7 @@ Say "5/8  The Data Analyzer"
 Make-TheEnvironment "dataanalyzer"
 Push-Location dataanalyzer
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
-& .\.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+& .\.venv\Scripts\python.exe -m pip install -e .\backend
 if ($LASTEXITCODE -ne 0) {
     Problem "The Data Analyzer could not be installed. The hub still works without it."
 }

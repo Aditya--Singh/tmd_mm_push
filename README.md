@@ -580,7 +580,7 @@ Completed
   `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
 - The SQL Genie opened in the workspace, with its address set in `landing/.env`
-- The Data Analyzer: the documents a person shares are read, summarised, drawn and asked about
+- The Data Analyzer: the PNB Employee Productivity Tool — a document is extracted, summarised, rewritten, proofread, exported, and asked about in words
 
 In Progress
 

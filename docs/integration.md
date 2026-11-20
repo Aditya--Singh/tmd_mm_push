@@ -259,9 +259,12 @@ sentinel/.env     HANDOFF_SECRET           the one below
 
 ## 3.8 The Data Analyzer in the workspace
 
-The Data Analyzer reads the Excel workbooks and CSV files a person shares, and writes
-their summary, their pictures and their findings. It is an application of its own, in
-`dataanalyzer/`, with its own database and its own sessions.
+The Data Analyzer is the **PNB Employee Productivity Tool**: a document assistant that
+extracts a document, summarises it, rewrites it, proofreads it, exports it, and answers
+questions about a spreadsheet in words. It is an application of its own, in
+`dataanalyzer/`, with its own API and its own sessions. It keeps no accounts of its own,
+and it has no database: the hub states who the person is, and the application decides
+what that role may do.
 
 It works the same way as Peer Benchmarking: the hub vouches for the person and the
 application decides for itself what they may do.

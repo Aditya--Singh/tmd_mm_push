@@ -1,8 +1,8 @@
 """Central configuration.
 
-Every value can be overridden through an environment variable or a `.env` file. The
-settings are read with the **first** occurrence winning, which is the rule the whole
-platform uses, so a value set in the shell wins over the one in the file.
+Every value can be overridden through an environment variable or a `.env` file. When two
+files hold the same key, the first one wins: the app's own `backend/.env` before the
+`dataanalyzer/.env` beside it. A value given in the shell wins over both.
 
 The names of the language model and of the grammar checker are the upstream's, so the
 upstream's modules work unchanged. The names of the hub's settings are the platform's.
@@ -12,6 +12,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 #: The backend's own directory, so the `.env` file is found wherever the app is run from.
@@ -40,7 +41,7 @@ class Settings(BaseSettings):
 
     # ---- The uploads --------------------------------------------------------
     max_upload_mb: int = 20
-    data_dir: str = str(BACKEND_DIR / "data")
+    data_dir: str = ""
 
     # ---- The web ------------------------------------------------------------
     # Who may call this app from a browser, who may frame it, and who may drive it
@@ -63,6 +64,18 @@ class Settings(BaseSettings):
     def max_upload_bytes(self) -> int:
         """The largest upload, in bytes."""
         return self.max_upload_mb * 1024 * 1024
+
+    @field_validator("ollama_model", mode="after")
+    @classmethod
+    def _the_model_to_use(cls, value: str) -> str:
+        """An empty setting means the default model of the upstream."""
+        return value.strip() or "gpt-oss:20b"
+
+    @field_validator("data_dir", mode="after")
+    @classmethod
+    def _where_the_documents_are_kept(cls, value: str) -> str:
+        """An empty setting means the backend's own folder."""
+        return value.strip() or str(BACKEND_DIR / "data")
 
     @property
     def cors_origin_list(self) -> list[str]:

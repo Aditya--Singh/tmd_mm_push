@@ -108,7 +108,7 @@ make_the_environment .
 # shellcheck disable=SC1091
 source .venv/bin/activate
 python -m pip install --upgrade pip wheel >/dev/null 2>&1 || true
-if ! python -m pip install -r backend/requirements.txt; then
+if ! python -m pip install -e ./backend; then
   problem "The Data Analyzer could not be installed. The hub still works without it."
 fi
 deactivate

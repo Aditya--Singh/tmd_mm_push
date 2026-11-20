@@ -2,18 +2,14 @@
 //
 // The hub signs the person in, opens the Data Analyzer, and the analyzer must be signed
 // in too, as the same person, with the role the person holds in the News Feed.
-//
-// A document is shared, and the analyzer must describe it, draw it and answer a question
-// about it.
 import { chromium } from 'playwright';
-import { writeFileSync } from 'node:fs';
 
 const HUB = process.env.HUB_URL || 'http://127.0.0.1:5174/';
 const USER = process.env.E2E_USER || 'analyst';
 const PASS = process.env.E2E_PASS || 'Pnb@12345';
-const PORT = process.env.E2E_ANALYZER_PORT || '8095';
 
-// The role of the News Feed that the analyzer is given.
+// The role the person holds in the News Feed. The hub states it, and the analyzer is
+// given the same one.
 const EXPECTED_ROLE = process.env.E2E_ROLE || 'user';
 
 const browser = await chromium.launch({
@@ -40,19 +36,6 @@ function check(label, condition, detail = '') {
     }
 }
 
-// A small table to share.
-const csv = [
-    'branch,balance,opened',
-    'Delhi,1000,2023-01-01',
-    'Mumbai,2500,2023-02-01',
-    'Chennai,800,2023-03-01',
-    'Delhi,1200,2023-04-01',
-    'Kolkata,640,2023-05-01',
-    'Delhi,1100,',
-].join('\n');
-
-writeFileSync('/tmp/analyzer-e2e.csv', csv);
-
 await page.goto(HUB, { waitUntil: 'networkidle' });
 
 await page.fill('#username', USER);
@@ -76,24 +59,22 @@ await card.click();
 
 const frame = page.frameLocator('iframe');
 
+// The app must come up signed in, with no sign-in form of its own.
 await frame.locator('body').first().waitFor({ timeout: 25000 });
 await page.waitForTimeout(3000);
 
 check('the analyzer opens inside the workspace', true);
 
-const appFrame = page.frames().find((f) => f.url().includes(PORT));
+const appFrame = page.frames().find((f) => f.url().includes('8095'));
 check('the frame of the analyzer is there', appFrame !== undefined);
 
 const hasPasswordField = await frame.locator('input[type="password"]').count();
 check('the analyzer shows no sign-in form', hasPasswordField === 0);
 
-// The identity must have travelled with the sign-in.
+// The identity and the role must have travelled with the sign-in.
 const who = await appFrame.evaluate(async () => {
-    const token = localStorage.getItem('dataanalyzer.token');
-    const response = await fetch('/api/documents', {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
-    return response.ok ? await response.json() : { error: response.status, hasToken: !!token };
+    const response = await fetch('/api/auth/me');
+    return response.ok ? await response.json() : { error: response.status };
 });
 
 check('the analyzer knows the person', who !== null, JSON.stringify(who));
@@ -103,7 +84,7 @@ check(
     who?.username,
 );
 check(
-    'the analyzer gave the person the role of the news feed',
+    'the analyzer gave the person the role it holds in the News Feed',
     who?.role === EXPECTED_ROLE,
     who?.role + ' (expected ' + EXPECTED_ROLE + ')',
 );
@@ -114,39 +95,31 @@ const sections = (await page.locator('.app-section').allTextContents()).map((s) 
 );
 check(
     'the hub rail offers the screens of the analyzer',
-    sections.length >= 1 && sections[0] === 'Documents',
+    sections.length >= 3 && sections[0] === 'Document Assistant',
     JSON.stringify(sections),
 );
 
-// A document is shared, and it must be read, described and drawn.
-await frame.locator('input[type="file"]').setInputFiles('/tmp/analyzer-e2e.csv');
-await page.waitForTimeout(6000);
+// Choosing a screen in the rail must move the app to it.
+await page.locator('.app-section', { hasText: 'Circular Analyzer' }).click();
+await page.waitForTimeout(2500);
 
-const heading = await frame.locator('.card__title').allTextContents();
+const onCircular = await appFrame.evaluate(() => location.hash);
 check(
-    'the analyzer shows the document',
-    heading.some((text) => text.includes('analyzer-e2e')),
-    JSON.stringify(heading),
+    'choosing a screen in the rail moves the app to it',
+    onCircular.includes('circular-analyzer'),
+    onCircular,
 );
 
-const summary = await frame.locator('.card__body p').first().innerText().catch(() => '');
-check('the analyzer wrote a summary', summary.length > 0, summary.slice(0, 120));
+await page.screenshot({ path: '/workspace/analyzer-circular.png' });
 
-const pictures = await frame.locator('.plot img').count();
-check('the analyzer drew the document', pictures >= 1, pictures + ' pictures');
-
-const columns = await frame.locator('.table tbody tr').count();
-check('the analyzer described the columns', columns >= 3, columns + ' columns');
-
-// A question about the document is asked.
-await frame.locator('.textarea').fill('Which branch has the highest balance?');
-await frame.locator('button', { hasText: 'Ask' }).click();
-await page.waitForTimeout(4000);
-
-const answer = await frame.locator('.card__body').last().innerText().catch(() => '');
-check('the analyzer answered the question', answer.length > 0, answer.slice(0, 120));
-
-await page.screenshot({ path: '/workspace/analyzer-document.png' });
+// A reader may not delete a document; the app must refuse it.
+const refused = await appFrame.evaluate(async () => {
+    const response = await fetch('/api/document-assistant/files/nope', {
+        method: 'DELETE',
+    });
+    return response.status;
+});
+check('a reader may not delete a document', refused === 403, String(refused));
 
 // Signing out of the hub must end the session in the app too.
 await page.evaluate(() => {
@@ -167,7 +140,7 @@ check('the analyzer confirms the sign-out', ack === true);
 
 await page.waitForTimeout(2000);
 
-const frameGone = page.frames().find((f) => f.url().includes(PORT)) === undefined;
+const frameGone = page.frames().find((f) => f.url().includes('8095')) === undefined;
 check('the hub closes the workspace once the app has signed out', frameGone);
 
 const backToLogin = await page.locator('.login-page').count();

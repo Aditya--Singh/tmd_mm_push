@@ -490,14 +490,25 @@ def set_up_the_analyzer(analyzer: str, installed: list[str], model: str) -> str:
     """
     Point the Data Analyzer at the language model on this machine.
 
-    The model is the best one that is installed, which is what "auto" means at run
-    time. A machine without a model server still works: the summary is then written
-    from the figures of the data alone, and the interface says so.
+    The model is the best one that is installed, which is what most machines want. A
+    machine without a model server still works: the tool starts, says that the model is
+    not running, and the grammar check, which needs no model for its spelling, still
+    runs.
+
+    The grammar checker is optional. Its address is written so that the tool can say
+    where to start it, but nothing is installed for it.
     """
+    analyzer = set_value(analyzer, "OLLAMA_URL", "http://localhost:11434")
+
     if installed:
-        analyzer = set_value(analyzer, "LLM_MODEL", model)
-        analyzer = set_value(analyzer, "LLM_BASE_URL", "http://localhost:11434/v1")
-        analyzer = set_value(analyzer, "OLLAMA_URL", "http://localhost:11434")
+        analyzer = set_value(analyzer, "OLLAMA_MODEL", model)
+    else:
+        # No model on this machine. The setting is left empty, so that the tool says
+        # which model is missing, rather than naming one that is not there.
+        analyzer = set_value(analyzer, "OLLAMA_MODEL", "")
+
+    analyzer = set_value(analyzer, "LANGUAGETOOL_URL", "http://localhost:8120")
+    analyzer = set_value(analyzer, "MAX_UPLOAD_MB", "20")
 
     return analyzer
 
@@ -711,7 +722,7 @@ def main(argv: list[str] | None = None) -> int:
         # hub is served from.
         analyzer = set_value(analyzer, "EMBED_PARENT_ORIGINS", HUB_ORIGINS)
         analyzer = set_value(
-            analyzer, "FRAME_ANCESTORS", "http://localhost:5174 http://127.0.0.1:5174"
+            analyzer, "FRAME_ANCESTORS", "http://localhost:5174,http://127.0.0.1:5174"
         )
         analyzer = set_value(
             analyzer, "CORS_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174"
