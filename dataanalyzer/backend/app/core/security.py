@@ -1,4 +1,9 @@
-"""Passwords and the sessions of this app."""
+"""The sessions of this app.
+
+The app keeps no accounts of its own. The hub signs a person in, vouches for them with a
+single-use ticket, and the person is given a token of this app. The token carries the role
+the person holds in the News Feed of the platform: `admin` or `user`.
+"""
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -6,10 +11,8 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy.orm import Session
 
-from app.config import get_settings
-from app.core.db import get_db
+from app.core.config import get_settings
 
 ALGORITHM = "HS256"
 
@@ -26,6 +29,7 @@ bearer = HTTPBearer(auto_error=False)
 
 
 def create_access_token(username: str, role: str) -> str:
+    """A token for a person, carrying the role the hub stated."""
     settings = get_settings()
     now = datetime.now(timezone.utc)
 
@@ -42,6 +46,7 @@ def create_access_token(username: str, role: str) -> str:
 
 
 def decode_token(token: str) -> dict:
+    """What a token says, or an error when it is not a valid one."""
     settings = get_settings()
 
     return jwt.decode(
@@ -53,12 +58,12 @@ def decode_token(token: str) -> dict:
 
 
 def role_label(role: str) -> str:
+    """The name of a role, to show to a person."""
     return ROLE_LABELS.get(role, role.title() if role else "Unknown")
 
 
 def current_session(
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
-    db: Session = Depends(get_db),
 ) -> dict:
     """
     The person who is signed in, as the hub handed them over.

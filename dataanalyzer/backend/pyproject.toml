@@ -1,0 +1,39 @@
+[project]
+name = "pnb-productivity-backend"
+version = "0.1.0"
+description = "PNB Employee Productivity Tool - the Data Analyzer of the Executive Intelligence Hub"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.143.0",
+    "httpx>=0.28.1",
+    "openpyxl>=3.1.5",
+    "pandas>=3.0.6",
+    "pypdf>=6.20.1",
+    "python-docx>=1.2.0",
+    "python-multipart>=0.0.32",
+    "python-pptx>=1.0.2",
+    "uvicorn[standard]>=0.54.0",
+    "pyjwt>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "python-dotenv>=1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-m 'not ollama'"
+markers = [
+    "ollama: needs live local Ollama (and LanguageTool for proofread); run with `uv run pytest -m ollama`",
+]

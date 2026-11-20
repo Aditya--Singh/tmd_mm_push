@@ -16,7 +16,7 @@ import json
 import secrets
 import time
 
-from app.config import get_settings
+from app.core.config import get_settings
 
 
 def _secret() -> bytes:

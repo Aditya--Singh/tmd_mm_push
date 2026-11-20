@@ -1,0 +1,30 @@
+# Standard Indian banking and RBI usage. Proofread never flags these words or phrases.
+# One word or phrase per line. Lines starting with # are ignored.
+# Entries with capital letters (acronyms) match exactly; others ignore case.
+vide
+updation
+may please
+positively
+failing which
+at the earliest
+kindly
+lakh
+crore
+NPA
+CASA
+KYC
+RBI
+PNB
+CBS
+NEFT
+RTGS
+IFSC
+MSME
+SARFAESI
+OTS
+ZO
+CO
+HO
+DGM
+AGM
+CGM
