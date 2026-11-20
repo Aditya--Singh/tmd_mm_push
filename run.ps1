@@ -1,16 +1,19 @@
 <#
 .SYNOPSIS
-    Starts the whole platform in four windows: the backend of the hub, Peer
-    Benchmarking, the news dashboard and the landing page.
+    Starts the whole platform in six windows: the backend of the hub, Peer
+    Benchmarking, the Data Summarizer, the Data Analyzer, the news dashboard
+    and the landing page.
 
 .DESCRIPTION
     .\run.ps1
 
-    Close the four windows to stop everything.
+    Close the six windows to stop everything.
 
     What the backend says is written to backend\logs\backend.log. If the
     backend does not come up, the last of it is shown here, so the reason is
     never hidden in a window that is out of the way.
+#>
+ the way.
 #>
 
 $ErrorActionPreference = "Continue"

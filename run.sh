@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Starts the whole platform in four terminals: the backend of the hub, Peer
-# Benchmarking, the news dashboard and the landing page.
+# Starts the whole platform: the backend of the hub, Peer Benchmarking, the
+# Data Summarizer, the Data Analyzer, the news dashboard and the landing page.
 #
 #     ./run.sh
 #
-# Stop everything with Ctrl+C in each terminal.
+# Stop everything with Ctrl+C in the terminal that started this script.
 #
 # On Windows use run.ps1 in PowerShell instead.
 set -euo pipefail
