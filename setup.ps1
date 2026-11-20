@@ -124,11 +124,14 @@ Say "6/8  The four web applications"
 # the folder is removed before the second attempt.
 function Install-Packages($folder) {
     Push-Location $folder
-    npm install --no-audit --no-fund
+    # The answer of npm is shown to the person running the setup, but it must not
+    # become part of what this function returns: a function returns everything it
+    # writes, and the caller asks only whether the installation failed.
+    npm install --no-audit --no-fund | Out-Host
     if ($LASTEXITCODE -ne 0) {
         Note "The installation of $folder was interrupted. Trying once more."
         if (Test-Path node_modules) { Remove-Item node_modules -Recurse -Force -ErrorAction SilentlyContinue }
-        npm install --no-audit --no-fund
+        npm install --no-audit --no-fund | Out-Host
     }
     $failed = $LASTEXITCODE -ne 0
     Pop-Location

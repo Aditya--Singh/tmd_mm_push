@@ -55,6 +55,21 @@
             "justMyCode": false
         },
         {
+            "name": "Data Analyzer: FastAPI",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "app.main:app",
+                "--reload",
+                "--port",
+                "8095"
+            ],
+            "cwd": "${workspaceFolder}/dataanalyzer/backend",
+            "jinja": true,
+            "justMyCode": false
+        },
+        {
             "name": "Peer Benchmarking (Chrome)",
             "type": "chrome",
             "request": "launch",

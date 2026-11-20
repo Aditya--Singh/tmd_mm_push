@@ -8,8 +8,10 @@
 #
 # On Windows use run.ps1 in PowerShell instead.
 set -euo pipefail
-ROOT="$(pwd)"
 cd "$(dirname "$0")"
+# The root of the project is the folder this script is in, wherever it was started
+# from.
+ROOT="$(pwd)"
 
 # How long the backend is given to answer before it is called a failure. A first
 # start on a new machine is slow: every file of the environment is read for the
@@ -147,7 +149,7 @@ sleep 2
 start news bash -c "cd frontend && npm run dev -- --host 127.0.0.1 --port 5173"
 start landing bash -c "cd landing && npm run dev -- --host 127.0.0.1 --port 5174"
 
-cat <<'DONE'
+cat <<DONE
 
 The platform is starting.
 

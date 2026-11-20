@@ -23,7 +23,12 @@ node_modules/
 dist/
 
 # IDE
-.vscode/
+# The tasks and the debug configurations of this platform are part of it. The
+# settings of a person are not.
+.vscode/*
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/settings.json
 .idea/
 
 # OS

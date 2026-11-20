@@ -40,10 +40,22 @@ $AnalyzerPort = 8095
 $analyzerPortLine = Select-String -Path (Join-Path $root 'dataanalyzer\.env') -Pattern '^PORT=(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($analyzerPortLine) { $AnalyzerPort = [int]$analyzerPortLine.Matches[0].Groups[1].Value }
 
-function Start-Service($name, $command, $workDir) {
-    Write-Host "Starting $name"
-    Start-Process -FilePath $command -ArgumentList $workDir -WorkingDirectory $root -WindowStyle Minimized
-}
+# The port the Data Summarizer listens on. It is read from its own settings for the
+# same reason: the setup script moves a port that is already taken on this machine,
+# and the summarizer has to be started on the port it was given.
+$SummarizerPort = 8090
+$summarizerPortLine = Select-String -Path (Join-Path $root 'sentinel\.env') -Pattern '^PORT=(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($summarizerPortLine) { $SummarizerPort = [int]$summarizerPortLine.Matches[0].Groups[1].Value }
+
+# The port Peer Benchmarking listens on. It is only shown here: the application
+# reads the port from its own settings.
+$BenchmarkingPort = 8077
+$benchmarkingPortLine = Select-String -Path (Join-Path $root 'benchmarking\.env') -Pattern '^PORT=(\d+)' -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($benchmarkingPortLine) { $BenchmarkingPort = [int]$benchmarkingPortLine.Matches[0].Groups[1].Value }
+
+# The path is put in single quotes for the windows below, so a name with an
+# apostrophe in it is escaped first.
+$rootEscaped = $root.Replace("'", "''")
 
 # --------------------------------------------------------------- the backend
 # Everything the backend says is kept, and shown here if it does not come up.
@@ -58,7 +70,7 @@ Remove-Item $backendStopped -ErrorAction SilentlyContinue
 
 # The path is put in single quotes for the window below, so a name with an
 # apostrophe in it is escaped first.
-$backendPath = $root.Replace("'", "''")
+$backendPath = $rootEscaped
 $backendLogPath = $backendLog.Replace("'", "''")
 $backendStoppedPath = $backendStopped.Replace("'", "''")
 
@@ -121,33 +133,33 @@ if ($backendUp) {
 
 # Peer Benchmarking.
 Start-Process -FilePath "powershell" `
-    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\benchmarking'; .\.venv\Scripts\python.exe -m kpibench.main" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$rootEscaped\benchmarking'; .\.venv\Scripts\python.exe -m kpibench.main" `
     -WorkingDirectory $root -WindowStyle Minimized
 
 Start-Sleep -Seconds 2
 
 # The Data Summarizer. It serves its own interface from the same address as its API.
 Start-Process -FilePath "powershell" `
-    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\sentinel\backend'; ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$rootEscaped\sentinel\backend'; ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port $SummarizerPort" `
     -WorkingDirectory $root -WindowStyle Minimized
 
 Start-Sleep -Seconds 2
 
 # The Data Analyzer. It serves its own interface from the same address as its API.
 Start-Process -FilePath "powershell" `
-    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\dataanalyzer\backend'; ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port $AnalyzerPort" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$rootEscaped\dataanalyzer\backend'; ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port $AnalyzerPort" `
     -WorkingDirectory $root -WindowStyle Minimized
 
 Start-Sleep -Seconds 2
 
 # The news dashboard.
 Start-Process -FilePath "powershell" `
-    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\frontend'; npm run dev -- --host 127.0.0.1 --port 5173" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$rootEscaped\frontend'; npm run dev -- --host 127.0.0.1 --port 5173" `
     -WorkingDirectory $root -WindowStyle Minimized
 
 # The landing page hub.
 Start-Process -FilePath "powershell" `
-    -ArgumentList "-NoExit", "-Command", "Set-Location '$root\landing'; npm run dev -- --host 127.0.0.1 --port 5174" `
+    -ArgumentList "-NoExit", "-Command", "Set-Location '$rootEscaped\landing'; npm run dev -- --host 127.0.0.1 --port 5174" `
     -WorkingDirectory $root -WindowStyle Minimized
 
 Write-Host @"
@@ -156,8 +168,8 @@ The platform is starting.
 
     Landing page hub    http://localhost:5174
     News dashboard      http://localhost:5173
-    Peer Benchmarking   http://localhost:8077
-    Data Summarizer     http://localhost:8090
+    Peer Benchmarking   http://localhost:$BenchmarkingPort
+    Data Summarizer     http://localhost:$SummarizerPort
     Data Analyzer       http://localhost:$AnalyzerPort
     Backend and its API http://127.0.0.1:$BackendPort/docs
 

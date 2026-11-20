@@ -32,18 +32,34 @@
             "problemMatcher": []
         },
         {
-            "label": "Setup: benchmarking dependencies",
-            "detail": "Create the virtual environment and install the Peer Benchmarking packages",
+            "label": "Setup: benchmarking environment",
+            "detail": "Create the virtual environment of Peer Benchmarking",
             "type": "shell",
-            "command": "python -m venv .venv && ./.venv/bin/python -m pip install --upgrade pip && ./.venv/bin/python -m pip install -r requirements.txt",
+            "command": "python -m venv .venv",
             "options": {
                 "cwd": "${workspaceFolder}/benchmarking"
             },
             "problemMatcher": []
         },
         {
+            "label": "Setup: benchmarking dependencies",
+            "detail": "Install the Peer Benchmarking packages",
+            "type": "shell",
+            "command": "./.venv/bin/python -m pip install --upgrade pip; ./.venv/bin/python -m pip install -r requirements.txt",
+            "windows": {
+                "command": ".\\.venv\\Scripts\\python.exe -m pip install --upgrade pip; .\\.venv\\Scripts\\python.exe -m pip install -r requirements.txt"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/benchmarking"
+            },
+            "dependsOn": [
+                "Setup: benchmarking environment"
+            ],
+            "problemMatcher": []
+        },
+        {
             "label": "Setup: settings files",
-            "detail": "Write the environment files and the secret the two servers share",
+            "detail": "Write the environment files and the secrets the servers share",
             "type": "shell",
             "command": "python scripts/make_env.py",
             "options": {
@@ -75,6 +91,10 @@
                 "Setup: news frontend dependencies",
                 "Setup: landing page dependencies",
                 "Setup: benchmarking dependencies",
+                "Setup: sentinel dependencies",
+                "Setup: the Data Summarizer interface",
+                "Setup: analyzer dependencies",
+                "Setup: the Data Analyzer interface",
                 "Setup: settings files",
                 "Setup: seed demo users"
             ],
@@ -157,6 +177,9 @@
             "detail": "Peer Benchmarking on http://localhost:8077",
             "type": "shell",
             "command": "./.venv/bin/python -m kpibench.main",
+            "windows": {
+                "command": ".\\.venv\\Scripts\\python.exe -m kpibench.main"
+            },
             "options": {
                 "cwd": "${workspaceFolder}/benchmarking"
             },
@@ -182,15 +205,46 @@
             }
         },
         {
-            "label": "Dev: all services",
-            "detail": "Backend, Peer Benchmarking, the Data Summarizer, the news dashboard and the landing page, each in its own terminal",
+            "label": "Run: the Data Summarizer",
+            "detail": "Serve the Data Summarizer on port 8090",
             "type": "shell",
-            "command": "echo 'Starting the backend, Peer Benchmarking, the Data Summarizer, the news dashboard and the landing page.'",
+            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090",
+            "windows": {
+                "command": "${workspaceFolder}\\sentinel\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel/backend"
+            },
+            "isBackground": true,
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Run: the Data Analyzer",
+            "detail": "Serve the Data Analyzer on port 8095",
+            "type": "shell",
+            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8095",
+            "windows": {
+                "command": "${workspaceFolder}\\dataanalyzer\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8095"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer/backend"
+            },
+            "isBackground": true,
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Dev: all services",
+            "detail": "Backend, Peer Benchmarking, the Data Summarizer, the Data Analyzer, the news dashboard and the landing page, each in its own terminal",
+            "type": "shell",
+            "command": "echo 'Starting the backend, Peer Benchmarking, the Data Summarizer, the Data Analyzer, the news dashboard and the landing page.'",
             "dependsOrder": "parallel",
             "dependsOn": [
                 "Run: backend",
                 "Run: benchmarking",
                 "Run: the Data Summarizer",
+                "Run: the Data Analyzer",
                 "Run: news frontend",
                 "Run: landing page"
             ],
@@ -237,8 +291,39 @@
             "detail": "Hand-off and navigation tests of Peer Benchmarking",
             "type": "shell",
             "command": "./.venv/bin/python -m pytest tests -q",
+            "windows": {
+                "command": ".\\.venv\\Scripts\\python.exe -m pytest tests -q"
+            },
             "options": {
                 "cwd": "${workspaceFolder}/benchmarking"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: the Data Summarizer",
+            "detail": "Run the tests of the Data Summarizer",
+            "type": "shell",
+            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m pytest -q",
+            "windows": {
+                "command": "${workspaceFolder}\\sentinel\\.venv\\Scripts\\python.exe -m pytest -q"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel/backend"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: the Data Analyzer",
+            "detail": "Run the tests of the Data Analyzer",
+            "type": "shell",
+            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m pytest -q",
+            "windows": {
+                "command": "${workspaceFolder}\\dataanalyzer\\.venv\\Scripts\\python.exe -m pytest -q"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer/backend"
             },
             "group": "test",
             "problemMatcher": []
@@ -266,114 +351,6 @@
             "problemMatcher": []
         },
         {
-            "label": "Test: all",
-            "detail": "Run every test suite",
-            "type": "shell",
-            "command": "echo 'Running the backend, news frontend and landing page test suites.'",
-            "dependsOrder": "parallel",
-            "dependsOn": [
-                "Test: backend",
-                "Test: news frontend",
-                "Test: landing page",
-                "Test: benchmarking",
-                "Test: the Data Summarizer",
-                "Test: the Data Analyzer",
-                "Test: news feed for every role",
-                "Test: hub with the Data Summarizer",
-                "Test: hub with the Data Analyzer"
-            ],
-            "problemMatcher": []
-        },
-        {
-            "label": "Check: lint and build",
-            "detail": "Lint and build both frontend applications",
-            "type": "shell",
-            "command": "npm run lint && npm run build",
-            "options": {
-                "cwd": "${workspaceFolder}/frontend"
-            },
-            "problemMatcher": []
-        },
-        {
-            "label": "Doctor: check the platform",
-            "detail": "Check that the settings, the accounts and the four services are in place",
-            "type": "shell",
-            "command": "python scripts/doctor.py",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "group": "test",
-            "problemMatcher": []
-        },
-        {
-            "label": "Setup: sentinel dependencies",
-            "detail": "Install the Data Summarizer and build its interface",
-            "type": "shell",
-            "command": "python -m pip install -r backend/requirements-dev.txt",
-            "options": {
-                "cwd": "${workspaceFolder}/sentinel"
-            },
-            "group": "none",
-            "problemMatcher": []
-        },
-        {
-            "label": "Run: the Data Summarizer",
-            "detail": "Serve the Data Summarizer on port 8090",
-            "type": "shell",
-            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090",
-            "options": {
-                "cwd": "${workspaceFolder}/sentinel/backend"
-            },
-            "isBackground": true,
-            "group": "none",
-            "problemMatcher": []
-        },
-        {
-            "label": "Test: the Data Summarizer",
-            "detail": "Run the tests of the Data Summarizer",
-            "type": "shell",
-            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m pytest -q",
-            "options": {
-                "cwd": "${workspaceFolder}/sentinel/backend"
-            },
-            "group": "test",
-            "problemMatcher": []
-        },
-        {
-            "label": "Setup: analyzer dependencies",
-            "detail": "Install the Data Analyzer and build its interface",
-            "type": "shell",
-            "command": "python -m pip install -r backend/requirements.txt",
-            "options": {
-                "cwd": "${workspaceFolder}/dataanalyzer"
-            },
-            "group": "none",
-            "problemMatcher": []
-        },
-        {
-            "label": "Run: the Data Analyzer",
-            "detail": "Serve the Data Analyzer on port 8095",
-            "type": "shell",
-            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8095",
-            "options": {
-                "cwd": "${workspaceFolder}/dataanalyzer/backend"
-            },
-            "isBackground": true,
-            "group": "none",
-            "problemMatcher": []
-        },
-        {
-            "label": "Test: the Data Analyzer",
-            "detail": "Run the tests of the Data Analyzer",
-            "type": "shell",
-            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m pytest -q",
-            "options": {
-                "cwd": "${workspaceFolder}/dataanalyzer/backend"
-            },
-            "group": "test",
-            "problemMatcher": []
-        },
-        {
             "label": "Test: hub with the Data Summarizer",
             "detail": "Open the Data Summarizer in the hub and check the sign-in",
             "type": "shell",
@@ -393,6 +370,136 @@
                 "cwd": "${workspaceFolder}/landing/e2e"
             },
             "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: the whole platform on one address",
+            "detail": "Build both web applications for one address and check that the whole platform works from it",
+            "type": "shell",
+            "command": "node same-origin.mjs",
+            "options": {
+                "cwd": "${workspaceFolder}/landing/e2e"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Test: all",
+            "detail": "Run every test suite",
+            "type": "shell",
+            "command": "echo 'Running the backend, news frontend and landing page test suites.'",
+            "dependsOrder": "parallel",
+            "dependsOn": [
+                "Test: backend",
+                "Test: news frontend",
+                "Test: landing page",
+                "Test: benchmarking",
+                "Test: the Data Summarizer",
+                "Test: the Data Analyzer",
+                "Test: news feed for every role",
+                "Test: hub with Peer Benchmarking",
+                "Test: hub with the Data Summarizer",
+                "Test: hub with the Data Analyzer"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Check: lint and build",
+            "detail": "Lint and build both frontend applications",
+            "type": "shell",
+            "command": "npm run lint; npm run build",
+            "options": {
+                "cwd": "${workspaceFolder}/frontend"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Doctor: check the platform",
+            "detail": "Check that the settings, the accounts and the six services are in place",
+            "type": "shell",
+            "command": "python scripts/doctor.py",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "test",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: sentinel environment",
+            "detail": "Create the virtual environment of the Data Summarizer",
+            "type": "shell",
+            "command": "python -m venv .venv",
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel"
+            },
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: sentinel dependencies",
+            "detail": "Install the Data Summarizer",
+            "type": "shell",
+            "command": "./.venv/bin/python -m pip install --upgrade pip; ./.venv/bin/python -m pip install -r backend/requirements-dev.txt",
+            "windows": {
+                "command": ".\\.venv\\Scripts\\python.exe -m pip install --upgrade pip; .\\.venv\\Scripts\\python.exe -m pip install -r backend/requirements-dev.txt"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel"
+            },
+            "dependsOn": [
+                "Setup: sentinel environment"
+            ],
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: the Data Summarizer interface",
+            "detail": "Install the packages of the interface of the Data Summarizer and build it",
+            "type": "shell",
+            "command": "npm install; npm run build",
+            "options": {
+                "cwd": "${workspaceFolder}/sentinel/frontend"
+            },
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: analyzer environment",
+            "detail": "Create the virtual environment of the Data Analyzer",
+            "type": "shell",
+            "command": "python -m venv .venv",
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer"
+            },
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: analyzer dependencies",
+            "detail": "Install the Data Analyzer",
+            "type": "shell",
+            "command": "./.venv/bin/python -m pip install --upgrade pip; ./.venv/bin/python -m pip install -e ./backend",
+            "windows": {
+                "command": ".\\.venv\\Scripts\\python.exe -m pip install --upgrade pip; .\\.venv\\Scripts\\python.exe -m pip install -e ./backend"
+            },
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer"
+            },
+            "dependsOn": [
+                "Setup: analyzer environment"
+            ],
+            "group": "none",
+            "problemMatcher": []
+        },
+        {
+            "label": "Setup: the Data Analyzer interface",
+            "detail": "Install the packages of the interface of the Data Analyzer and build it",
+            "type": "shell",
+            "command": "npm install; npm run build",
+            "options": {
+                "cwd": "${workspaceFolder}/dataanalyzer/frontend"
+            },
+            "group": "none",
             "problemMatcher": []
         }
     ]
