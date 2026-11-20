@@ -4,9 +4,11 @@ An AI-powered banking intelligence platform. A landing page hub owns the
 sign-in and opens four services inside it: the news dashboard, which
 collects news from Indian business publications and summarises it with a
 local language model; Peer Benchmarking, which compares PNB with its
-peers quarter by quarter from the banks' own published figures; and the
+peers quarter by quarter from the banks' own published figures; the
 Data Summarizer, which reads the circulars and the notifications of the
-Reserve Bank of India and writes their summaries.
+Reserve Bank of India and writes their summaries; and the Data Analyzer,
+the PNB Employee Productivity Tool, which reads, summarises, rewrites,
+proofreads and draws the documents that are shared with it.
 
 One sign-in opens all of them, with the role the person holds in each.
 
@@ -211,8 +213,8 @@ account; it is hashed before it is stored, so the database only ever holds the h
 ## Clone
 
 ```bash
-git clone https://github.com/Aditya--Singh/top-management-dashboard.git
-cd top-management-dashboard
+git clone https://github.com/Aditya--Singh/tmd_mm_push.git
+cd tmd_mm_push
 ```
 
 ## The quick way
@@ -232,10 +234,14 @@ On Windows:
 ```
 
 The setup script installs everything, writes `backend/.env`,
-`benchmarking/.env` and `sentinel/.env` with the secrets the servers
-share, points the applications at the language model on the machine, and
-creates the demo accounts. Then open <http://localhost:5174> and sign in
-with `admin` / `admin@tmd26`.
+`benchmarking/.env`, `sentinel/.env` and `dataanalyzer/.env` with the
+secrets the servers share, points the applications at the language model
+on the machine, and creates the demo accounts. Then open
+<http://localhost:5174> and sign in with `admin` / `admin@tmd26`.
+
+Six services come up: the landing page hub on port 5174, the news
+dashboard on 5173, Peer Benchmarking on 8077, the Data Summarizer on
+8090, the Data Analyzer on 8095, and the API of the hub on 8000.
 
 It also works out the machine as it is: a port that is already taken —
 by a model server, for instance — is moved and every file that names it
@@ -252,7 +258,7 @@ To check that everything is in place, at any time:
 python scripts/doctor.py
 ```
 
-It looks at the settings, the accounts and the five services, and says
+It looks at the settings, the accounts and the six services, and says
 what is missing and the command that fixes it. What the backend said the
 last time it ran is kept in `backend/logs/backend.log`.
 
@@ -317,6 +323,16 @@ pip install -r backend/requirements-dev.txt
 cd frontend && npm install && npm run build && cd ..
 ```
 
+### Install the Data Analyzer
+
+```bash
+cd dataanalyzer
+python -m venv .venv
+source .venv/bin/activate       # .venv\Scripts\activate on Windows
+pip install -e ./backend
+cd frontend && npm install && npm run build && cd ..
+```
+
 ### Install the two web applications
 
 ```bash
@@ -331,9 +347,9 @@ cd ..
 python scripts/make_env.py
 ```
 
-This writes `backend/.env`, `benchmarking/.env` and `sentinel/.env`,
-including the secrets the servers share, so that one sign-in opens all
-of them.
+This writes `backend/.env`, `benchmarking/.env`, `sentinel/.env` and
+`dataanalyzer/.env`, including the secrets the servers share, so that one
+sign-in opens all of them.
 
 ---
 

@@ -171,7 +171,7 @@ http://localhost:5173/
 
 ## 12. The Ports
 
-Run all four services:
+Six services:
 
 ```text
 Terminal 1
@@ -183,10 +183,18 @@ FastAPI (Peer Benchmarking)
 http://localhost:8077
 
 Terminal 3
+FastAPI (the Data Summarizer)
+http://localhost:8090
+
+Terminal 4
+FastAPI (the Data Analyzer)
+http://localhost:8095
+
+Terminal 5
 React/Vite (news dashboard)
 http://localhost:5173
 
-Terminal 4
+Terminal 6
 React/Vite (landing page hub)
 http://localhost:5174
 ```

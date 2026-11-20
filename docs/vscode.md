@@ -42,7 +42,7 @@ one at a time:
 
 **Tasks: Run Task** → **Dev: all services**.
 
-Four terminals open side by side:
+Six terminals open side by side:
 
 | Service | URL | Terminal |
 |---|---|---|
@@ -74,15 +74,22 @@ Open the **Run and Debug** panel (<kbd>F5</kbd>).
 |---|---|
 | `Backend: FastAPI` | Runs the backend under the debugger, with breakpoints in the Python code. |
 | `Benchmarking: FastAPI` | Runs Peer Benchmarking under the debugger. |
+| `Data Summarizer: FastAPI` | Runs the Data Summarizer under the debugger. |
+| `Data Analyzer: FastAPI` | Runs the Data Analyzer under the debugger. |
 | `Landing page (Chrome)` | Opens the landing page in Chrome with the frontend source maps. |
 | `News dashboard (Chrome)` | Opens the news dashboard in Chrome. |
 | `Peer Benchmarking (Chrome)` | Opens the benchmarking app on its own. |
-| `Debug: landing page with all services` | Starts all four services, attaches the Python debugger to the backend and opens the landing page in Chrome. |
+| `Debug: landing page with all services` | Starts all six services, attaches the Python debugger to the backend and opens the landing page in Chrome. |
 | `Debug: hub and Peer Benchmarking` | The same, with both Python servers under the debugger. |
 
 The last one is the useful one for working on the integration: it starts
 everything, and you can set a breakpoint in `backend/app/api/auth.py`, in
 `backend/app/api/integrations.py` or in the session bridge.
+
+The tasks work on Linux, on macOS and on Windows. A task that needs the
+python of a virtual environment uses the place it is in on the system it
+runs on: `.venv/bin/python` on Linux and macOS, `.venv\Scripts\python.exe`
+on Windows.
 
 ## 5. Tests
 

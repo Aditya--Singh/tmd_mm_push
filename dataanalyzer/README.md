@@ -95,9 +95,19 @@ a message cannot be used a second time.
 
 ## Running it on its own
 
+The environment of the tool is in `dataanalyzer/.venv`, one folder above the
+backend:
+
 ```bash
 cd dataanalyzer/backend
-.venv/bin/python -m uvicorn app.main:app --port 8095
+../.venv/bin/python -m uvicorn app.main:app --port 8095
+```
+
+On Windows:
+
+```powershell
+cd dataanalyzer\backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8095
 ```
 
 The interface is built once and served from the same address:
@@ -115,7 +125,14 @@ to be opened from the dashboard.
 
 ```bash
 cd dataanalyzer/backend
-.venv/bin/python -m pytest
+../.venv/bin/python -m pytest
+```
+
+On Windows:
+
+```powershell
+cd dataanalyzer\backend
+..\.venv\Scripts\python.exe -m pytest
 ```
 
 The upstream's own tests are here, plus the tests for the bridge to the hub.

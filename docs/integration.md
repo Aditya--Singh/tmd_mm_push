@@ -515,11 +515,13 @@ The short version:
 ./run.sh        # or .\run.ps1 on Windows
 ```
 
-That is four services:
+That is six services:
 
 ```text
 cd backend      && .venv/bin/python -m uvicorn app.main:app --reload
 cd benchmarking && .venv/bin/python -m kpibench.main
+cd sentinel/backend && ../.venv/bin/python -m uvicorn app.main:app --port 8090
+cd dataanalyzer/backend && ../.venv/bin/python -m uvicorn app.main:app --port 8095
 cd frontend     && npm run dev                # http://localhost:5173
 cd landing      && npm run dev                # http://localhost:5174
 ```
@@ -609,12 +611,16 @@ cd frontend
 VITE_BASE_PATH=/news/ npm run build
 ```
 
-The landing page is built normally:
+The landing page is built with the address the news application is
+served from, so that the frame points inside the one address:
 
 ```bash
 cd landing
-npm run build
+VITE_NEWS_APP_URL=https://newsintel.pnbbank.in/news/ npm run build
 ```
+
+The address has to be the one the browser uses, and nothing else may be
+loaded from a second address.
 
 Because both are then served from one origin, the frame adopts the
 session from shared storage and the `postMessage` handover is not
@@ -655,18 +661,27 @@ that the hub's rail offers its screens and that choosing one moves the
 application to it, and that signing out of the hub ends the session
 inside the app.
 
-To exercise the same-origin deployment, build both applications, start
-the bundled proxy and point the script at it:
+To exercise the same-origin deployment, build both applications for that
+arrangement and run the check. It starts a small proxy in place of the web
+server, proves that the whole platform works from one address, and stops
+the proxy again:
 
 ```bash
 cd frontend && VITE_BASE_PATH=/news/ npm run build
 cd landing  && VITE_NEWS_APP_URL=http://127.0.0.1:5175/news/ npm run build
 
+cd landing/e2e && node same-origin.mjs
+```
+
+The backend, Peer Benchmarking, the Data Summarizer and the Data Analyzer
+have to be running, as they do for the other browser tests.
+
+The proxy on its own can also be started by hand, which is useful when the
+browser is the thing being looked at:
+
+```bash
 HUB_DIST=landing/dist NEWS_DIST=frontend/dist PORT=5175 \
     node landing/e2e/same-origin-proxy.mjs
-
-HUB_URL=http://127.0.0.1:5175/ E2E_FRAME_MATCH=/news/ \
-    node landing/e2e/hub-embedding.mjs
 ```
 
 ## 9. Adding another service

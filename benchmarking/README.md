@@ -29,7 +29,7 @@ repository:
 
 ```bash
 ../setup.sh     # once: every service, the settings files and the demo accounts
-../run.sh       # every time: all four services
+../run.sh       # every time: all six services
 ```
 
 Then open <http://localhost:5174> and sign in there. Choosing **Peer Benchmarking** opens this

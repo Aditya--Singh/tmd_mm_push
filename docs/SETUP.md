@@ -35,26 +35,27 @@ runtime: both servers use a SQLite file next to the code.
 Open a terminal in the repository folder.
 
 ```bash
-git clone https://github.com/Aditya--Singh/top-management-dashboard.git
-cd top-management-dashboard
+git clone https://github.com/Aditya--Singh/tmd_mm_push.git
+cd tmd_mm_push
 ./setup.sh
 ```
 
-The script does seven things. It can be run again at any time.
+The script does eight things. It can be run again at any time.
 
 1. Checks that Python and Node.js are installed.
 2. Creates `backend/.venv` and installs the backend.
 3. Creates `benchmarking/.venv` and installs Peer Benchmarking.
 4. Creates `sentinel/.venv` and installs the Data Summarizer.
-5. Installs the packages of the web applications, and builds the
-   interface of the Data Summarizer.
-6. Writes `backend/.env`, `benchmarking/.env` and `sentinel/.env`,
-   **including the secrets the servers share**. It also writes the
-   ports each service uses and the model that is really installed on
-   the machine. A port that is already taken — by a model server, for
-   instance — is moved, and every file that names it is written again
-   with the new port.
-7. Creates the demo accounts.
+5. Creates `dataanalyzer/.venv` and installs the Data Analyzer.
+6. Installs the packages of the web applications, and builds the
+   interfaces of the Data Summarizer and of the Data Analyzer.
+7. Writes `backend/.env`, `benchmarking/.env`, `sentinel/.env` and
+   `dataanalyzer/.env`, **including the secrets the servers share**. It
+   also writes the ports each service uses and the model that is really
+   installed on the machine. A port that is already taken — by a model
+   server, for instance — is moved, and every file that names it is
+   written again with the new port.
+8. Creates the demo accounts.
 
 Then start everything:
 
@@ -62,13 +63,14 @@ Then start everything:
 ./run.sh
 ```
 
-Five services come up:
+Six services come up:
 
 ```
 Landing page hub    http://localhost:5174
 News dashboard      http://localhost:5173
 Peer Benchmarking   http://localhost:8077
 Data Summarizer     http://localhost:8090
+Data Analyzer       http://localhost:8095
 Backend and its API http://127.0.0.1:8000/docs
 ```
 
@@ -76,6 +78,10 @@ Open <http://localhost:5174> and sign in.
 
 Stop everything with <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal that
 started `run.sh`; the other services are stopped with it.
+
+The Data Summarizer reads the whole corpus into memory when it starts, so
+it takes a few seconds to come up on a machine that holds the circulars of
+several years. Everything else is up in about the same time.
 
 ### Doing it by hand
 
@@ -91,11 +97,19 @@ cd backend
 cd benchmarking
 .venv/bin/python -m kpibench.main
 
-# Terminal 3 - the news dashboard
+# Terminal 3 - the Data Summarizer
+cd sentinel/backend
+../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090
+
+# Terminal 4 - the Data Analyzer
+cd dataanalyzer/backend
+../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8095
+
+# Terminal 5 - the news dashboard
 cd frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 
-# Terminal 4 - the landing page hub
+# Terminal 6 - the landing page hub
 cd landing
 npm run dev -- --host 127.0.0.1 --port 5174
 ```
@@ -112,10 +126,14 @@ powershell -ExecutionPolicy Bypass -File .\setup.ps1
 ```
 
 ```powershell
-git clone https://github.com/Aditya--Singh/top-management-dashboard.git
-cd top-management-dashboard
+git clone https://github.com/Aditya--Singh/tmd_mm_push.git
+cd tmd_mm_push
 .\setup.ps1
 ```
+
+The script does the same eight things as on Linux. A step that fails does
+not stop the ones after it: the settings files and the accounts are written
+whatever else went wrong, and the problems are listed at the end.
 
 Then start everything:
 
@@ -123,8 +141,11 @@ Then start everything:
 .\run.ps1
 ```
 
-Five windows open, one for each service. Close them to stop the
-platform.
+Six windows open, one for each service. Close them to stop the platform.
+
+The ports are read from the settings files, so the window of every service
+names the port it really uses. A port that was taken on this machine is
+moved by the setup, and the hub is told about it.
 
 ### Doing it by hand
 
@@ -141,14 +162,41 @@ cd benchmarking
 cd sentinel\backend
 ..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090
 
-# Window 4 - the news dashboard
+# Window 4 - the Data Analyzer
+cd dataanalyzer\backend
+..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8095
+
+# Window 5 - the news dashboard
 cd frontend
 npm run dev -- --host 127.0.0.1 --port 5173
 
-# Window 5 - the landing page hub
+# Window 6 - the landing page hub
 cd landing
 npm run dev -- --host 127.0.0.1 --port 5174
 ```
+
+### Two things that are different on Windows
+
+**A compiled file of a library may be refused.** A machine with an
+Application Control policy blocks the compiled part of SQLAlchemy, and the
+backend then stops before it has said anything. The backend notices this at
+start and uses the plain Python part of the library instead. If the backend
+still does not start, see
+[An Application Control policy has blocked this file](#an-application-control-policy-has-blocked-this-file).
+
+**The path of the project may hold an apostrophe.** It is escaped in the
+commands that `run.ps1` opens, so a folder such as `C:\Users\O'Brien\...`
+works.
+
+### Checking that everything is in place
+
+```powershell
+python scripts\doctor.py
+```
+
+The doctor checks the settings files, the secrets, the accounts, the
+environments, the packages, the ports and the health of every service, and
+says what to do about each thing it finds.
 
 ---
 
@@ -382,6 +430,8 @@ browser will not show an `http://` frame inside an `https://` page.
 
 ## 8. Tests
 
+### The tests of every part
+
 ```bash
 # The backend
 cd backend && .venv/bin/python -m pytest -q
@@ -389,15 +439,76 @@ cd backend && .venv/bin/python -m pytest -q
 # Peer Benchmarking
 cd benchmarking && .venv/bin/python -m pytest tests -q
 
+# The Data Summarizer
+cd sentinel/backend && ../.venv/bin/python -m pytest -q
+
+# The Data Analyzer
+cd dataanalyzer/backend && ../.venv/bin/python -m pytest -q
+
 # The two web applications
 cd frontend && node --test
 cd landing && node --test
-
-# The browser tests, with the platform running
-cd landing/e2e && node hub-embedding.mjs
-cd landing/e2e && node benchmarking.mjs
-cd landing/e2e && node news-roles.mjs
 ```
+
+### The browser tests
+
+These need the platform to be running (`./run.sh`, or `.\run.ps1` on
+Windows). They open a real browser, sign in as a person and open every
+service in its workspace.
+
+```bash
+cd landing/e2e
+
+# The hub, the news application and the news pipeline
+node hub-embedding.mjs
+
+# The news application and the roles of the News Feed
+node news-roles.mjs
+
+# Peer Benchmarking in the workspace
+node benchmarking.mjs
+
+# The Data Summarizer in the workspace
+node summarizer.mjs
+
+# The Data Analyzer in the workspace
+node analyzer.mjs
+```
+
+### The production layout
+
+On a server everything is served from one address. The check below builds
+the two web applications for that arrangement, starts a small proxy in
+place of the web server and proves that the whole platform works from one
+address — that nothing is loaded from a second one.
+
+```bash
+cd frontend && VITE_BASE_PATH=/news/ npm run build
+cd landing  && VITE_NEWS_APP_URL=http://127.0.0.1:5175/news/ npm run build
+
+cd landing/e2e && node same-origin.mjs
+```
+
+The proxy is started and stopped by the check itself. The backend, Peer
+Benchmarking, the Data Summarizer and the Data Analyzer have to be running,
+as they do for the other browser tests.
+
+### What has been checked, and where
+
+| What | How |
+|---|---|
+| Every service starts, answers and can be stopped | `./run.sh` on Linux, `.\run.ps1` on Windows |
+| Every service opens in the workspace, signed in, with the right role | the browser tests above |
+| The whole platform works from one address | `same-origin.mjs` |
+| The backend, the four running services and the two web applications | the tests of every part |
+
+Linux was checked by running the platform and the tests above. Windows was
+checked by reading the scripts and the code of that path — `setup.ps1`,
+`run.ps1`, the compiled-file repair of the backend, and the paths of every
+script — because a Windows machine was not available. The parts of the
+platform that differ between the two systems are the start scripts, the
+place of the interpreter in a virtual environment, and the compiled files
+of the libraries; nothing else in the code is specific to one system.
 
 ---
 
@@ -527,6 +638,37 @@ does not point at it. It listens on port 8090:
 ```bash
 cd sentinel/backend && ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090
 ```
+
+It reads the whole corpus into memory when it starts, so it takes a few
+seconds to answer the first time on a machine that holds several years of
+circulars. Watch it come up in the window it was started in.
+
+### "The Data Analyzer is not connected yet"
+
+The hub and the analyzer do not share a secret. Run the setup again:
+
+```bash
+python scripts/make_env.py
+```
+
+It writes the same secret into `backend/.env`
+(`ANALYZER_HANDOFF_SECRET`) and `dataanalyzer/.env` (`HANDOFF_SECRET`).
+
+### "The Data Analyzer could not be reached"
+
+The analyzer is not running, or `ANALYZER_APP_URL` in `backend/.env` does
+not point at it. It listens on port 8095:
+
+```bash
+cd dataanalyzer/backend && ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8095
+```
+
+If the analyzer starts but the document assistant says that the model is
+not there, no language model is running on this machine. Install
+[Ollama](https://ollama.com/), pull a model, and run `python
+scripts/make_env.py` again to write the model that is really installed into
+the settings. The grammar checker is optional: the app works without it and
+says that it is not there.
 
 ### The app is refused in the frame
 
