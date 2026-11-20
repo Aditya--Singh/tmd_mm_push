@@ -12,23 +12,45 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 from .config import settings
 
 settings.ensure_dirs()
-engine = create_engine(
-    settings.DB_URL,
-    connect_args={"check_same_thread": False, "timeout": 30} if settings.DB_URL.startswith("sqlite") else {},
-    pool_pre_ping=True,
-    json_serializer=lambda o: json.dumps(o, default=str),
-)
 
-if settings.DB_URL.startswith("sqlite"):
-    @event.listens_for(engine, "connect")
-    def _sqlite_pragmas(dbapi_conn, _):  # pragma: no cover
-        cur = dbapi_conn.cursor()
-        cur.execute("PRAGMA journal_mode=WAL")
-        cur.execute("PRAGMA synchronous=NORMAL")
-        cur.execute("PRAGMA foreign_keys=ON")
-        cur.close()
+
+def make_engine(url: str):
+    """An engine for a database, with the settings this app expects of it."""
+    engine = create_engine(
+        url,
+        connect_args={"check_same_thread": False, "timeout": 30} if url.startswith("sqlite") else {},
+        pool_pre_ping=True,
+        json_serializer=lambda o: json.dumps(o, default=str),
+    )
+
+    if url.startswith("sqlite"):
+        @event.listens_for(engine, "connect")
+        def _sqlite_pragmas(dbapi_conn, _):  # pragma: no cover
+            cur = dbapi_conn.cursor()
+            cur.execute("PRAGMA journal_mode=WAL")
+            cur.execute("PRAGMA synchronous=NORMAL")
+            cur.execute("PRAGMA foreign_keys=ON")
+            cur.close()
+
+    return engine
+
+
+engine = make_engine(settings.DB_URL)
 
 SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
+
+
+def use_database(url: str) -> None:
+    """Point this app at another database.
+
+    The engine is made when this module is imported, and the module may be imported
+    before the address of the database is known. The tests use this to work on a
+    throw-away database of their own, and to leave the database of the machine alone.
+    """
+    global engine, SessionLocal
+
+    engine = make_engine(url)
+    SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
 
 
 def now() -> dt.datetime:

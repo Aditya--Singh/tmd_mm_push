@@ -29,7 +29,13 @@ def client():
         # The settings are read when the modules are imported, so they
         # have to be in place first.
         from kpibench.main import app
-        from kpibench.db import init_db
+        from kpibench.db import init_db, use_database
+
+        # The engine is made when the database module is imported, and another test
+        # may have imported it already. The app is pointed at the throw-away
+        # database of this test, so the test never writes into the database of the
+        # machine.
+        use_database(os.environ["DB_URL"])
 
         init_db()
 
