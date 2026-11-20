@@ -1,12 +1,17 @@
 <#
 .SYNOPSIS
     One-time setup for the whole platform: the backend of the hub, Peer
-    Benchmarking, the Data Summarizer, the news dashboard and the landing page.
+    Benchmarking, the Data Summarizer, the Data Analyzer, the news dashboard
+    and the landing page.
 
 .DESCRIPTION
     Safe to run again. Open PowerShell in the repository folder and run:
 
         .\setup.ps1
+
+    On Linux and macOS, with PowerShell 7 installed, the same script works:
+
+        pwsh ./setup.ps1
 
     If the script is blocked, run it once with:
 
@@ -32,12 +37,29 @@ function Problem($text) {
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
-$Python = if ($env:PYTHON) { $env:PYTHON } else { "python" }
+# Whether this is a Windows machine. Windows PowerShell 5 does not know the
+# $IsWindows variable, and it only ever runs on Windows.
+$OnWindows = ($PSVersionTable.PSVersion.Major -lt 6) -or ($IsWindows -eq $true)
+
+# The interpreter of a virtual environment is in a different place on each
+# system, and the same script has to work on both.
+function The-Interpreter($folder) {
+    if ($OnWindows) {
+        return Join-Path $folder ".venv\Scripts\python.exe"
+    }
+
+    return Join-Path $folder ".venv/bin/python"
+}
+
+# The python of this machine. It has a name of its own, so that no function
+# of this script can take its place by accident: PowerShell does not tell
+# $SystemPython and $systempython apart.
+$SystemPython = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 
 Say "1/8  Checking what is installed"
-& $Python --version
+& $SystemPython --version
 # The backend asks for Python 3.11 or newer, so that is what is checked here.
-& $Python -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
+& $SystemPython -c "import sys; sys.exit(0 if sys.version_info >= (3, 11) else 1)"
 if ($LASTEXITCODE -ne 0) {
     Note "Python 3.11 or newer is needed."
     exit 1
@@ -62,24 +84,40 @@ if ($nodeMajor -lt 18) {
 # An environment that was made halfway is of no use, and the installation
 # fails on it in a way that is hard to understand. A broken one is therefore
 # removed and made again.
+#
+# The interpreter of the environment is not called $python here: PowerShell does
+# not tell $python and $Python apart, and a name like that inside this function
+# would take the place of the python of the machine.
 function Make-TheEnvironment($folder) {
-    $python = Join-Path $folder ".venv\Scripts\python.exe"
-    if ((Test-Path (Join-Path $folder ".venv")) -and -not (Test-Path $python)) {
+    $interpreter = The-Interpreter $folder
+
+    if ((Test-Path (Join-Path $folder ".venv")) -and -not (Test-Path $interpreter)) {
         Note "The environment of $folder was made halfway. Making it again."
         Remove-Item (Join-Path $folder ".venv") -Recurse -Force -ErrorAction SilentlyContinue
     }
+
     if (-not (Test-Path (Join-Path $folder ".venv"))) {
         Push-Location $folder
-        & $Python -m venv .venv
+        & $SystemPython -m venv .venv
         Pop-Location
     }
+
+    # Without this, the steps after this one fail one after the other with a
+    # message about a file that was never there.
+    if (-not (Test-Path $interpreter)) {
+        Problem "The environment of $folder could not be made. The python of this machine may be the wrong one; set `$env:PYTHON to the python you want to use."
+        return $false
+    }
+
+    return $true
 }
 
 Say "2/8  The backend of the hub"
+Make-TheEnvironment "backend" | Out-Null
+$backendPython = The-Interpreter (Join-Path $root "backend")
 Push-Location backend
-if (-not (Test-Path .venv)) { & $Python -m venv .venv }
-& .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
-& .\.venv\Scripts\python.exe -m pip install -e .
+& $backendPython -m pip install --upgrade pip wheel | Out-Null
+& $backendPython -m pip install -e .
 if ($LASTEXITCODE -ne 0) {
     Note "The packages could not be downloaded. Behind a proxy, set `$env:HTTPS_PROXY first."
     exit 1
@@ -87,30 +125,33 @@ if ($LASTEXITCODE -ne 0) {
 Pop-Location
 
 Say "3/8  Peer Benchmarking"
-Make-TheEnvironment "benchmarking"
+Make-TheEnvironment "benchmarking" | Out-Null
+$benchmarkingPython = The-Interpreter (Join-Path $root "benchmarking")
 Push-Location benchmarking
-& .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
-& .\.venv\Scripts\python.exe -m pip install -r requirements.txt
+& $benchmarkingPython -m pip install --upgrade pip wheel | Out-Null
+& $benchmarkingPython -m pip install -r requirements.txt
 if ($LASTEXITCODE -ne 0) {
     Problem "Peer Benchmarking could not be installed. The hub still works without it."
 }
 Pop-Location
 
 Say "4/8  The Data Summarizer (Regulatory Sentinel)"
-Make-TheEnvironment "sentinel"
+Make-TheEnvironment "sentinel" | Out-Null
+$sentinelPython = The-Interpreter (Join-Path $root "sentinel")
 Push-Location sentinel
-& .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
-& .\.venv\Scripts\python.exe -m pip install -r backend\requirements-dev.txt
+& $sentinelPython -m pip install --upgrade pip wheel | Out-Null
+& $sentinelPython -m pip install -r backend/requirements-dev.txt
 if ($LASTEXITCODE -ne 0) {
     Problem "The Data Summarizer could not be installed. The hub still works without it."
 }
 Pop-Location
 
 Say "5/8  The Data Analyzer"
-Make-TheEnvironment "dataanalyzer"
+Make-TheEnvironment "dataanalyzer" | Out-Null
+$analyzerPython = The-Interpreter (Join-Path $root "dataanalyzer")
 Push-Location dataanalyzer
-& .\.venv\Scripts\python.exe -m pip install --upgrade pip wheel | Out-Null
-& .\.venv\Scripts\python.exe -m pip install -e .\backend
+& $analyzerPython -m pip install --upgrade pip wheel | Out-Null
+& $analyzerPython -m pip install -e ./backend
 if ($LASTEXITCODE -ne 0) {
     Problem "The Data Analyzer could not be installed. The hub still works without it."
 }
@@ -144,7 +185,7 @@ $landingFailed = Install-Packages "landing"
 if ($landingFailed) { Problem "The libraries of the landing page could not be downloaded." }
 # The Data Summarizer serves its own interface from the same address as its API,
 # so it is built once here rather than at every start.
-Push-Location sentinel\frontend
+Push-Location sentinel/frontend
 if (-not (Test-Path node_modules)) { npm install --no-audit --no-fund }
 npm run build
 $sentinelFailed = $LASTEXITCODE -ne 0
@@ -155,7 +196,7 @@ if ($sentinelFailed) {
 
 # The Data Analyzer serves its own interface from the same address as its API,
 # so it is built once here rather than at every start.
-Push-Location dataanalyzer\frontend
+Push-Location dataanalyzer/frontend
 if (-not (Test-Path node_modules)) { npm install --no-audit --no-fund }
 npm run build
 $analyzerFailed = $LASTEXITCODE -ne 0
@@ -165,12 +206,12 @@ if ($analyzerFailed) {
 }
 
 Say "7/8  The settings files"
-& $Python scripts/make_env.py
+& $SystemPython scripts/make_env.py
 if ($LASTEXITCODE -ne 0) { Problem "The settings files could not be written." }
 
 Say "8/8  The demo accounts"
 Push-Location backend
-& .\.venv\Scripts\python.exe seed_users.py
+& $backendPython seed_users.py
 $accountsFailed = $LASTEXITCODE -ne 0
 Pop-Location
 if ($accountsFailed) { Problem "The accounts could not be written. Nobody can sign in until they are." }
@@ -182,11 +223,11 @@ Everything is ready.
 
 Start the platform with:
 
-    .\run.ps1
+    pwsh ./run.ps1
 
 Check that everything is in place at any time:
 
-    python scripts\doctor.py
+    python scripts/doctor.py
 
 Then open http://localhost:5174 and sign in with, for example:
 
@@ -203,11 +244,11 @@ The setup finished with problems. The rest of the platform is ready.
 
 Start the platform with:
 
-    .\run.ps1
+    pwsh ./run.ps1
 
 Check what is still missing at any time:
 
-    python scripts\doctor.py
+    python scripts/doctor.py
 
 The problems were:
 

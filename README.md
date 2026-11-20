@@ -233,6 +233,14 @@ On Windows:
 .\run.ps1
 ```
 
+Both scripts of Windows work on Linux and macOS as well, with PowerShell 7
+installed:
+
+```bash
+pwsh ./setup.ps1
+pwsh ./run.ps1
+```
+
 The setup script installs everything, writes `backend/.env`,
 `benchmarking/.env`, `sentinel/.env` and `dataanalyzer/.env` with the
 secrets the servers share, points the applications at the language model

@@ -147,6 +147,21 @@ The ports are read from the settings files, so the window of every service
 names the port it really uses. A port that was taken on this machine is
 moved by the setup, and the hub is told about it.
 
+### The same scripts on Linux and macOS
+
+`setup.ps1` and `run.ps1` work on both systems. With PowerShell 7 installed
+([installing it](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)),
+the same commands run on Linux and macOS:
+
+```bash
+pwsh ./setup.ps1
+pwsh ./run.ps1
+```
+
+There is no separate window to open on those systems, so every service runs
+in the background and what it says is written to `backend/logs/<service>.log`.
+`setup.sh` and `run.sh` remain the shorter way on Linux and macOS.
+
 ### Doing it by hand
 
 ```powershell
@@ -497,18 +512,26 @@ as they do for the other browser tests.
 
 | What | How |
 |---|---|
-| Every service starts, answers and can be stopped | `./run.sh` on Linux, `.\run.ps1` on Windows |
+| Every service starts, answers and can be stopped | `./run.sh` and `pwsh ./run.ps1` |
+| The setup makes every environment, writes the settings and creates the accounts | `./setup.sh` and `pwsh ./setup.ps1` |
 | Every service opens in the workspace, signed in, with the right role | the browser tests above |
 | The whole platform works from one address | `same-origin.mjs` |
 | The backend, the four running services and the two web applications | the tests of every part |
 
-Linux was checked by running the platform and the tests above. Windows was
-checked by reading the scripts and the code of that path — `setup.ps1`,
-`run.ps1`, the compiled-file repair of the backend, and the paths of every
-script — because a Windows machine was not available. The parts of the
-platform that differ between the two systems are the start scripts, the
-place of the interpreter in a virtual environment, and the compiled files
-of the libraries; nothing else in the code is specific to one system.
+Both systems were checked by running the platform on them. Linux was checked
+with `setup.sh` and `run.sh`, and with `setup.ps1` and `run.ps1` under
+PowerShell 7 — the scripts of Windows are the same scripts, and they work on
+both. The scripts of Windows were not run on Windows itself, because no
+Windows machine was available; what that path has that the other has not is
+the place of the interpreter in a virtual environment
+(`.venv\Scripts\python.exe`), the windows that are opened, and the compiled
+files of the libraries, and each of those is handled in the script rather
+than in the code.
+
+The tests of `backend/tests/test_powershell_scripts.py` keep the scripts
+readable by PowerShell and keep two names that differ only in case out of
+them, which is the trap that broke the setup on Windows: PowerShell does not
+tell `$python` and `$Python` apart.
 
 ---
 
