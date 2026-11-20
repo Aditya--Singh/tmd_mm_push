@@ -106,33 +106,66 @@ class HybridIndex:
         vectors: list[np.ndarray] = []
         stale: list[int] = []
         with session_scope() as db:
+            # Only the columns the index uses are read. The full text and the raw
+            # HTML of every circular, repeated for each of its chunks, is hundreds
+            # of megabytes on a machine that holds the whole corpus, and it is slow
+            # to read and to hold in memory for nothing.
             rows = (
-                db.query(Chunk, Circular)
+                db.query(
+                    Chunk.id,
+                    Chunk.circular_id,
+                    Chunk.ordinal,
+                    Chunk.header,
+                    Chunk.text,
+                    Chunk.embedding,
+                    Chunk.embedding_model,
+                    Circular.title,
+                    Circular.url,
+                    Circular.source,
+                    Circular.rbi_ref,
+                    Circular.published_at,
+                    Circular.superseded_by,
+                )
                 .join(Circular, Chunk.circular_id == Circular.id)
                 .order_by(Chunk.id)
                 .all()
             )
-            for ch, circ in rows:
-                if ch.embedding is None or ch.embedding_model != emb.name:
-                    stale.append(ch.id)
+            for row in rows:
+                (
+                    chunk_id,
+                    circular_id,
+                    ordinal,
+                    header,
+                    text,
+                    embedding,
+                    embedding_model,
+                    title,
+                    url,
+                    source,
+                    rbi_ref,
+                    published_at,
+                    superseded_by,
+                ) = row
+                if embedding is None or embedding_model != emb.name:
+                    stale.append(chunk_id)
                     continue
-                vec = np.frombuffer(ch.embedding, dtype=np.float32)
+                vec = np.frombuffer(embedding, dtype=np.float32)
                 if vec.shape[0] != emb.dim:
-                    stale.append(ch.id)
+                    stale.append(chunk_id)
                     continue
                 records.append(
                     ChunkRecord(
-                        chunk_id=ch.id,
-                        circular_id=circ.id,
-                        ordinal=ch.ordinal,
-                        header=ch.header,
-                        text=ch.text,
-                        title=circ.title,
-                        url=circ.url,
-                        source=circ.source,
-                        rbi_ref=circ.rbi_ref,
-                        published_at=as_utc(circ.published_at),
-                        superseded=circ.superseded_by is not None,
+                        chunk_id=chunk_id,
+                        circular_id=circular_id,
+                        ordinal=ordinal,
+                        header=header,
+                        text=text,
+                        title=title,
+                        url=url,
+                        source=source,
+                        rbi_ref=rbi_ref,
+                        published_at=as_utc(published_at),
+                        superseded=superseded_by is not None,
                     )
                 )
                 vectors.append(vec)
