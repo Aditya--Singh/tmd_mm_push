@@ -52,7 +52,9 @@ app.add_middleware(
 async def frame_headers(request, call_next):
     """Let the hub frame this app, and nobody else."""
     response = await call_next(request)
-    ancestors = ", ".join(settings.frame_ancestor_list) or "'none'"
+    # A Content-Security-Policy source list is separated by spaces. A comma here
+    # makes the browser drop the list, and the hub's frame stays empty.
+    ancestors = " ".join(settings.frame_ancestor_list) or "'none'"
     response.headers["Content-Security-Policy"] = f"frame-ancestors {ancestors}"
     return response
 

@@ -26,6 +26,19 @@ page.on('console', (m) => {
 });
 page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
 
+// The app swaps the hub's ticket for a token of its own, and that token is what its
+// API calls carry. It is taken from the exchange itself, so the check speaks to the
+// app the way the app speaks to itself.
+let accessToken = '';
+page.on('response', async (response) => {
+    if (!response.url().includes('/api/auth/exchange') || !response.ok()) return;
+    try {
+        accessToken = (await response.json()).access_token || '';
+    } catch {
+        /* the body was already taken */
+    }
+});
+
 let failures = 0;
 function check(label, condition, detail = '') {
     if (condition) {
@@ -72,12 +85,14 @@ const hasPasswordField = await frame.locator('input[type="password"]').count();
 check('the analyzer shows no sign-in form', hasPasswordField === 0);
 
 // The identity and the role must have travelled with the sign-in.
-const who = await appFrame.evaluate(async () => {
-    const response = await fetch('/api/auth/me');
+const who = await appFrame.evaluate(async (token) => {
+    const response = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+    });
     return response.ok ? await response.json() : { error: response.status };
-});
+}, accessToken);
 
-check('the analyzer knows the person', who !== null, JSON.stringify(who));
+check('the analyzer knows the person', who?.username === USER, JSON.stringify(who));
 check(
     'the analyzer signed the person in as the right person',
     who?.username === USER,
@@ -113,12 +128,13 @@ check(
 await page.screenshot({ path: '/workspace/analyzer-circular.png' });
 
 // A reader may not delete a document; the app must refuse it.
-const refused = await appFrame.evaluate(async () => {
+const refused = await appFrame.evaluate(async (token) => {
     const response = await fetch('/api/document-assistant/files/nope', {
         method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
     });
     return response.status;
-});
+}, accessToken);
 check('a reader may not delete a document', refused === 403, String(refused));
 
 // Signing out of the hub must end the session in the app too.
@@ -146,7 +162,10 @@ check('the hub closes the workspace once the app has signed out', frameGone);
 const backToLogin = await page.locator('.login-page').count();
 check('the hub returns to its sign-in screen', backToLogin === 1);
 
-check('no errors in the browser console', errors.length === 0, errors.join(' | '));
+// The refusal of the reader was asked for on purpose, and the browser writes it
+// into the console. Nothing else may be there.
+const unexpected = errors.filter((e) => !e.includes('403 (Forbidden)'));
+check('no errors in the browser console', unexpected.length === 0, unexpected.join(' | '));
 
 console.log('');
 console.log('Checks: ' + (failures ? failures + ' failed' : 'all passed'));

@@ -272,6 +272,10 @@ so that the settings match the machine they are on:
 | `CORS_ORIGINS` | The browser origins allowed to call the API. |
 | `KPI_APP_URL` | Where Peer Benchmarking is listening. `http://127.0.0.1:8077`. |
 | `KPI_HANDOFF_SECRET` | The secret the two servers share. **The same value as `HANDOFF_SECRET` in `benchmarking/.env`.** |
+| `SENTINEL_APP_URL` | Where the Data Summarizer is listening. `http://127.0.0.1:8090`. |
+| `SENTINEL_HANDOFF_SECRET` | The secret the two servers share. **The same value as `HANDOFF_SECRET` in `sentinel/.env`.** |
+| `ANALYZER_APP_URL` | Where the Data Analyzer is listening. `http://127.0.0.1:8095`. |
+| `ANALYZER_HANDOFF_SECRET` | The secret the two servers share. **The same value as `HANDOFF_SECRET` in `dataanalyzer/.env`.** |
 
 ### `benchmarking/.env`
 
@@ -314,6 +318,25 @@ python scripts/make_env.py
 ```
 
 It writes one secret into each pair of files and leaves everything else alone.
+
+### `dataanalyzer/.env`
+
+The Data Analyzer, which is the PNB Employee Productivity Tool.
+
+| Setting | Meaning |
+|---|---|
+| `PORT` | The port the analyzer listens on. `8095`. |
+| `JWT_SECRET` | Signs the tokens the analyzer issues. Generated for you. |
+| `HANDOFF_SECRET` | The secret the hub and the analyzer share. **The same value as `ANALYZER_HANDOFF_SECRET` in `backend/.env`.** |
+| `HANDOFF_TICKET_SECONDS` | How long a sign-in ticket lives. `120`. |
+| `FRAME_ANCESTORS` | The sites allowed to show this app in a frame. |
+| `EMBED_PARENT_ORIGINS` | The sites allowed to drive this app. |
+| `CORS_ORIGINS` | The browser origins allowed to call the API. |
+| `OLLAMA_URL` | Where the local model server is. |
+| `OLLAMA_MODEL` | The model to use. The setup writes the best model that is really installed; empty means the default `gpt-oss:20b`. |
+| `LANGUAGETOOL_URL` | Where the optional grammar checker is. The app works without it and says so. |
+| `MAX_UPLOAD_MB` | The largest document that is accepted. `20`. |
+| `DATA_DIR` | Where the uploaded documents are kept. |
 
 ---
 
@@ -508,7 +531,14 @@ cd sentinel/backend && ../.venv/bin/python -m uvicorn app.main:app --host 127.0.
 ### The app is refused in the frame
 
 `FRAME_ANCESTORS` in `benchmarking/.env` must list the hub's origin.
-For the Data Summarizer it is `FRAME_ANCESTORS` in `sentinel/.env`.
+For the Data Summarizer it is `FRAME_ANCESTORS` in `sentinel/.env`,
+and for the Data Analyzer it is `FRAME_ANCESTORS` in `dataanalyzer/.env`.
+
+The list is written with commas, and the app turns it into the policy the browser
+reads. A list written with spaces works as well. The origin in the list has to be
+the one the browser shows in its address bar: `http://localhost:5174` and
+`http://127.0.0.1:5174` are two different origins, and only the one in use is
+allowed.
 
 ### "No module named kpibench"
 

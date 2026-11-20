@@ -20,8 +20,11 @@ BACKEND_DIR = Path(__file__).resolve().parents[2]
 
 
 class Settings(BaseSettings):
+    # pydantic-settings lets the last file of the list win, so the app's own
+    # `backend/.env` is written last here: that way the first occurrence of a key
+    # wins, the rule the rest of the platform follows.
     model_config = SettingsConfigDict(
-        env_file=(BACKEND_DIR / ".env", BACKEND_DIR.parent / ".env"),
+        env_file=(BACKEND_DIR.parent / ".env", BACKEND_DIR / ".env"),
         extra="ignore",
         case_sensitive=False,
     )
@@ -83,7 +86,13 @@ class Settings(BaseSettings):
 
     @property
     def frame_ancestor_list(self) -> list[str]:
-        return [o.strip() for o in self.frame_ancestors.split(",") if o.strip()]
+        """The sites allowed to frame this app.
+
+        The setting is written as a comma-separated list, the way the other origins
+        are, but a Content-Security-Policy source list is separated by spaces. Both
+        are accepted here, so a list written either way ends up as one policy.
+        """
+        return [o for o in self.frame_ancestors.replace(",", " ").split() if o]
 
     @property
     def embed_parent_origin_list(self) -> list[str]:

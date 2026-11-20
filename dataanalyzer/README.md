@@ -82,7 +82,7 @@ a message cannot be used a second time.
 | `JWT_SECRET` | the app's own signing key for the tokens it issues |
 | `HANDOFF_SECRET` | the secret the hub and this app share (the hub has the same value) |
 | `HANDOFF_TICKET_SECONDS` | how long a ticket lives (120) |
-| `FRAME_ANCESTORS` | who may frame this app |
+| `FRAME_ANCESTORS` | who may frame this app — a list of addresses, separated by commas or by spaces |
 | `EMBED_PARENT_ORIGINS` | who may drive it over the message bridge |
 | `CORS_ORIGINS` | who may call it from a browser |
 | `OLLAMA_URL` | the local model server |
