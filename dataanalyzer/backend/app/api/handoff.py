@@ -166,6 +166,25 @@ def who_am_i(session: dict = Depends(current_session)):
     }
 
 
+@router.get("/meta")
+def meta():
+    """
+    What the app tells the browser before it has a session.
+
+    The browser needs to know which origin may drive it over the message bridge, so that
+    it will listen to the hub and to nobody else.
+    """
+    settings = get_settings()
+
+    return {
+        "app": "data-analyzer",
+        "title": "Data Analyzer",
+        "embed_parent_origins": settings.embed_parent_origin_list,
+        "cors_origins": settings.cors_origin_list,
+        "frame_ancestors": settings.frame_ancestor_list,
+    }
+
+
 @router.get("/ui/manifest")
 def ui_manifest():
     """
