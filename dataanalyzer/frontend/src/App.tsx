@@ -1,19 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import Header from "./components/Header";
-import TabBar from "./components/TabBar";
-import { tabFromHash, type TabId } from "./tabs";
 import DocumentAssistantPage from "./tabs/document_assistant/DocumentAssistantPage";
-import CircularAnalyzerPage from "./tabs/circular_analyzer/CircularAnalyzerPage";
-import ComingSoonPage from "./tabs/coming_soon/ComingSoonPage";
+import { toolFromHash, toolFromPath, type ToolId } from "./tools";
 import { isEmbed } from "./lib/embed";
 import { getHubClient, installBridge, setNavigateHandler, uninstallBridge } from "./lib/hub";
 import { acknowledgeLogout, forgetToken, setToken } from "./lib/token";
-
-const PAGES: Record<TabId, () => React.JSX.Element> = {
-  "document-assistant": DocumentAssistantPage,
-  "circular-analyzer": CircularAnalyzerPage,
-  "coming-soon": ComingSoonPage,
-};
 
 /** How long the hub is given to hand the session over before the app gives up. */
 const HUB_WAIT_MS = 4000;
@@ -28,12 +19,12 @@ async function embedOrigins(): Promise<string[]> {
 }
 
 export default function App() {
-  const [active, setActive] = useState<TabId>(() => tabFromHash(window.location.hash));
+  const [active, setActive] = useState<ToolId>(() => toolFromHash(window.location.hash));
   const [signedIn, setSignedIn] = useState(false);
   const [waiting, setWaiting] = useState(true);
 
   useEffect(() => {
-    const onHash = () => setActive(tabFromHash(window.location.hash));
+    const onHash = () => setActive(toolFromHash(window.location.hash));
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
@@ -106,22 +97,24 @@ export default function App() {
     };
   }, []);
 
-  // The hub's rail moves the app between its screens.
+  // The hub's rail moves the app between the tools.
   useEffect(() => {
     setNavigateHandler((path: string) => {
-      const id = path.replace(/^#?\/?/, "");
-      if (id) window.location.hash = `/${id}`;
+      const id = toolFromPath(path);
+      if (!id) return;
+      window.location.hash = `/${id}`;
+      setActive(id);
     });
 
     return () => setNavigateHandler(null);
   }, []);
 
-  // Tell the hub which screen is on show, so that the rail stays in step.
+  // Tell the hub which tool is on show, so that the rail stays in step.
   useEffect(() => {
     getHubClient()?.reportRoute(`/${active}`);
   }, [active, signedIn]);
 
-  const select = useCallback((id: TabId) => {
+  const select = useCallback((id: ToolId) => {
     window.location.hash = `/${id}`;
     setActive(id);
   }, []);
@@ -150,19 +143,14 @@ export default function App() {
     );
   }
 
-  const Page = PAGES[active];
-
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
-      <TabBar active={active} onSelect={select} />
       <main
-        id={`panel-${active}`}
-        role="tabpanel"
-        aria-labelledby={`tab-${active}`}
+        id={`tool-${active}`}
         className="mx-auto w-full max-w-6xl flex-1 px-6 py-12"
       >
-        <Page />
+        <DocumentAssistantPage mode={active} onModeChange={select} />
       </main>
       <footer className="border-t border-slate-100 py-6 text-center text-xs text-slate-400">
         Punjab National Bank · For internal use only · All processing happens on this machine

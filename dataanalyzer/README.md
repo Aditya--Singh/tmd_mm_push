@@ -13,26 +13,30 @@ The tool itself is the one published at
 
 ## What it does
 
-**Document Assistant** — the working tab:
+The tool is one page with four tools. The hub draws the same four in its own rail, under
+the **Data Analyzer** card, so the person may go straight to one of them:
+
+| Tool | What it does |
+| --- | --- |
+| **Proofread** | Spelling, grammar, punctuation and bank usage are checked. The suggestions that may be taken safely are offered as "Accept all"; the rest are offered one by one. |
+| **Rewrite** | A passage is rewritten — more polite, more formal, shorter — and the result can be compared with the original, word by word. |
+| **Summarize** | A model on this machine writes the summary of the document. |
+| **Ask about data** | A question about a spreadsheet is answered from the spreadsheet: the numbers are computed with pandas and the model is asked to explain them, so an answer that does not match the figures is not given. |
+
+Everything is done with the document that is open:
 
 1. **Extracts.** Upload a Word document, a PDF, a PowerPoint, a spreadsheet, a CSV, a
    JSON file or a plain text file. The text is read out of it, and a spreadsheet is
    read sheet by sheet.
-2. **Summarises.** A model on this machine writes the summary of the document.
-3. **Rewrites.** A passage is rewritten — more polite, more formal, shorter — and the
-   result can be compared with the original, word by word.
-4. **Proofreads.** Spelling, grammar, punctuation and bank usage are checked. The
-   suggestions that may be taken safely are offered as "Accept all"; the rest are
-   offered one by one.
-5. **Exports.** The result is downloaded as a text file or a Word document, and the
+2. **Works on it.** Summarise it, rewrite it, check it, or ask questions about it.
+3. **Exports.** The result is downloaded as a text file or a Word document, and the
    edits are written back into the original file where the format allows it.
-6. **Asks about the data.** A question about a spreadsheet is answered from the
-   spreadsheet: the numbers are computed with pandas and the model is asked to explain
-   them, so an answer that does not match the figures is not given.
 
-**Circular Analyzer** — a placeholder in the upstream, kept as a placeholder.
+Each tool has an address of its own (`/#/proofread`, `/#/rewrite`, `/#/summarize`,
+`/#/data`), so the hub may send the person straight to one of them.
 
-**Coming Soon** — a placeholder in the upstream, kept as a placeholder.
+The upstream's **Circular Analyzer** and **Coming Soon** screens are not part of the tool
+as it is offered here: the first was a placeholder, and the second an announcement.
 
 ## Nothing leaves this machine
 
@@ -135,4 +139,12 @@ cd dataanalyzer\backend
 ..\.venv\Scripts\python.exe -m pytest
 ```
 
-The upstream's own tests are here, plus the tests for the bridge to the hub.
+The upstream's own tests are here, plus the tests for the bridge to the hub and for
+the routes of the four tools.
+
+The interface has its own tests as well:
+
+```bash
+cd dataanalyzer/frontend
+npm test
+```

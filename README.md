@@ -603,8 +603,8 @@ Completed
 - One role per application, held in the users table: `role_news` for the News Feed and
   `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
-- The SQL Genie opened in the workspace, with its address set in `landing/.env`
-- The Data Analyzer: the PNB Employee Productivity Tool — a document is extracted, summarised, rewritten, proofread, exported, and asked about in words
+- The Data Analyzer: the PNB Employee Productivity Tool — a document is extracted, summarised, rewritten, proofread, exported, and asked about in words. The four tools of the tool are drawn in the rail under its card
+- The SQL Genie is kept ready but hidden: its card is commented out in `landing/src/services.js`, and it may be brought back by removing those marks
 
 In Progress
 

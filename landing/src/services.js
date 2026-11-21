@@ -38,18 +38,20 @@ export const NEWS_ROLES = ["admin", "user"];
 export const BENCH_ROLES = ["admin", "maker", "checker", "viewer", "user"];
 
 export const SERVICES = [
-    {
-        id: "sql",
-        name: "SQL Genie",
-        icon: "🧠",
-        description:
-            "Conversational analytics and natural language data exploration",
-        status: SERVICE_STATUS.LIVE,
-        url: env.VITE_SQL_GENIE_APP_URL || "http://localhost:8080/",
-        // The application shares this platform's token and asks the backend
-        // who the person is, so that it decides for itself what they may do.
-        session: SESSION_MODE.TOKEN,
-    },
+    // The SQL Genie is not offered yet. The code is kept as it was, so that the
+    // card can be brought back by removing these marks.
+    // {
+    //     id: "sql",
+    //     name: "SQL Genie",
+    //     icon: "🧠",
+    //     description:
+    //         "Conversational analytics and natural language data exploration",
+    //     status: SERVICE_STATUS.LIVE,
+    //     url: env.VITE_SQL_GENIE_APP_URL || "http://localhost:8080/",
+    //     // The application shares this platform's token and asks the backend
+    //     // who the person is, so that it decides for itself what they may do.
+    //     session: SESSION_MODE.TOKEN,
+    // },
     {
         id: "analyzer",
         name: "Data Analyzer",

@@ -78,7 +78,12 @@ const userName = (await page.locator(".header-user-info strong").innerText()).tr
 check("signed-in user is shown", userName === USERNAME, userName);
 
 const cardCount = await page.locator(".app-card").count();
-check("all five intelligence services are listed", cardCount === 5, `${cardCount}`);
+check("all four intelligence services are listed", cardCount === 4, `${cardCount}`);
+
+check(
+    "the SQL Genie is not offered at the moment",
+    (await page.locator(".app-card", { hasText: "SQL Genie" }).count()) === 0,
+);
 
 check(
     "Peer Benchmarking is no longer marked as planned",
@@ -146,7 +151,7 @@ check(
 
 check(
     "the collapsed rail keeps the service names",
-    (await page.locator(".app-card .app-name").count()) === 5,
+    (await page.locator(".app-card .app-name").count()) === 4,
 );
 
 check(
@@ -186,7 +191,7 @@ check(
 );
 
 const plannedBadge = await page
-    .locator(".app-card", { hasText: "SQL Genie" })
+    .locator(".app-card", { hasText: "Data Analyzer" })
     .locator(".app-badge")
     .count();
 check(
@@ -196,25 +201,12 @@ check(
 );
 
 // ------------------------------------------------------------------
-// 3. The SQL Genie opens the application it is pointed at
+// 3. The SQL Genie is kept, but is not offered
 // ------------------------------------------------------------------
 
-await page.locator(".app-card", { hasText: "SQL Genie" }).click();
-await page.waitForTimeout(800);
-
-const sqlFrame = page.locator(".workspace-frame iframe");
-
 check(
-    "the SQL Genie opens a frame",
-    (await sqlFrame.count()) === 1,
-);
-
-const sqlSrc = (await sqlFrame.getAttribute("src")) || "";
-
-check(
-    "the frame points at the application of the SQL Genie",
-    sqlSrc.includes("8080") && sqlSrc.includes("embedded=1"),
-    sqlSrc,
+    "the SQL Genie has no card in the rail",
+    (await page.locator(".app-card", { hasText: "SQL Genie" }).count()) === 0,
 );
 
 // ------------------------------------------------------------------

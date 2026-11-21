@@ -147,18 +147,38 @@ def test_the_person_is_asked_who_they_are(client, a_signed_in_person):
     assert body["role"] == "user"
 
 
-def test_the_manifest_names_the_three_tabs(client):
+def test_the_manifest_names_the_four_tools(client):
     response = client.get("/api/ui/manifest")
 
     assert response.status_code == 200
     body = response.json()
     assert body["service"] == "data-analyzer"
-    assert body["defaultSection"] == "document-assistant"
+    assert body["defaultSection"] == "proofread"
     assert [s["id"] for s in body["sections"]] == [
-        "document-assistant",
-        "circular-analyzer",
-        "coming-soon",
+        "proofread",
+        "rewrite",
+        "summarize",
+        "data",
     ]
+    assert [s["title"] for s in body["sections"]] == [
+        "Proofread",
+        "Rewrite",
+        "Summarize",
+        "Ask about data",
+    ]
+    # Every tool is a route of the app, so the hub may send the person to it.
+    for section in body["sections"]:
+        assert section["path"] == f"/#/{section['id']}"
+
+
+def test_the_manifest_names_no_other_screen(client):
+    body = client.get("/api/ui/manifest").json()
+
+    ids = [s["id"] for s in body["sections"]]
+
+    # The screens that were taken out of the app are not in the rail either.
+    assert "circular-analyzer" not in ids
+    assert "coming-soon" not in ids
 
 
 def test_the_health_is_open(client):

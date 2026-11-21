@@ -104,28 +104,75 @@ check(
     who?.role + ' (expected ' + EXPECTED_ROLE + ')',
 );
 
-// The hub's rail must offer the screens of the analyzer.
+// The hub's rail must offer the tools of the analyzer.
 const sections = (await page.locator('.app-section').allTextContents()).map((s) =>
     s.trim(),
 );
 check(
-    'the hub rail offers the screens of the analyzer',
-    sections.length >= 3 && sections[0] === 'Document Assistant',
+    'the hub rail offers the four tools of the analyzer',
+    JSON.stringify(sections) ===
+        JSON.stringify(['Proofread', 'Rewrite', 'Summarize', 'Ask about data']),
     JSON.stringify(sections),
 );
 
-// Choosing a screen in the rail must move the app to it.
-await page.locator('.app-section', { hasText: 'Circular Analyzer' }).click();
-await page.waitForTimeout(2500);
-
-const onCircular = await appFrame.evaluate(() => location.hash);
 check(
-    'choosing a screen in the rail moves the app to it',
-    onCircular.includes('circular-analyzer'),
-    onCircular,
+    'the rail no longer offers the screens that were taken out',
+    !sections.some((s) => /circular|soon/i.test(s)),
+    JSON.stringify(sections),
 );
 
-await page.screenshot({ path: '/workspace/analyzer-circular.png' });
+// Choosing a tool in the rail must move the app to it.
+await page.locator('.app-section', { hasText: 'Summarize' }).click();
+await page.waitForTimeout(2500);
+
+const onSummarize = await appFrame.evaluate(() => location.hash);
+check(
+    'choosing a tool in the rail moves the app to it',
+    onSummarize === '#/summarize',
+    onSummarize,
+);
+
+// The app itself must show that tool, and not only change its address.
+const shownTool = await appFrame.evaluate(() => {
+    const chosen = Array.from(
+        document.querySelectorAll('[role="radio"][aria-checked="true"]'),
+    ).map((b) => (b.textContent || '').trim());
+
+    return chosen.join(', ');
+});
+check(
+    'the app shows the tool that was chosen in the rail',
+    shownTool === 'Summarize',
+    shownTool,
+);
+
+// The app must not show the block of the old tab bar.
+const appText = await appFrame.evaluate(() => document.body.innerText);
+check(
+    'the app shows no tab bar of its own',
+    !/Document Assistant|Circular Analyzer|Coming Soon/.test(appText),
+    appText.slice(0, 160),
+);
+check(
+    'the app still says whether the services are online',
+    /Services online|Checking services|Backend offline/.test(appText),
+    appText.slice(0, 160),
+);
+
+// Choosing a tool inside the app must move the rail of the hub.
+await appFrame.locator('[role="radio"]', { hasText: 'Rewrite' }).click();
+await page.waitForTimeout(2500);
+
+const railFollows = await page
+    .locator('.app-section.active .app-section-name')
+    .innerText();
+check(
+    'choosing a tool in the app moves the rail of the hub',
+    railFollows.trim() === 'Rewrite',
+    railFollows,
+);
+
+await page.screenshot({ path: '/workspace/analyzer-rail.png' });
 
 // A reader may not delete a document; the app must refuse it.
 const refused = await appFrame.evaluate(async (token) => {

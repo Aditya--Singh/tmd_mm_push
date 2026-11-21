@@ -38,3 +38,5 @@ Thumbs.db
 # Logs
 *.log
 backend/logs/
+# The cache of the TypeScript compiler of the analyzer.
+*.tsbuildinfo

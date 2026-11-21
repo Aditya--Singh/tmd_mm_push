@@ -34,25 +34,31 @@ log = logging.getLogger("analyzer.handoff")
 
 router = APIRouter(prefix="/api", tags=["handoff"])
 
-#: The screens of this app, which the hub draws in its own rail.
+#: The tools of this app, which the hub draws in its own rail.
 SECTIONS = [
     {
-        "id": "document-assistant",
-        "title": "Document Assistant",
-        "icon": "📄",
-        "path": "/#/document-assistant",
+        "id": "proofread",
+        "title": "Proofread",
+        "icon": "✅",
+        "path": "/#/proofread",
     },
     {
-        "id": "circular-analyzer",
-        "title": "Circular Analyzer",
-        "icon": "🔔",
-        "path": "/#/circular-analyzer",
+        "id": "rewrite",
+        "title": "Rewrite",
+        "icon": "✍️",
+        "path": "/#/rewrite",
     },
     {
-        "id": "coming-soon",
-        "title": "Coming Soon",
-        "icon": "✨",
-        "path": "/#/coming-soon",
+        "id": "summarize",
+        "title": "Summarize",
+        "icon": "📝",
+        "path": "/#/summarize",
+    },
+    {
+        "id": "data",
+        "title": "Ask about data",
+        "icon": "📊",
+        "path": "/#/data",
     },
 ]
 
@@ -197,6 +203,6 @@ def ui_manifest():
     return {
         "service": "data-analyzer",
         "title": "Data Analyzer",
-        "defaultSection": "document-assistant",
+        "defaultSection": "proofread",
         "sections": SECTIONS,
     }

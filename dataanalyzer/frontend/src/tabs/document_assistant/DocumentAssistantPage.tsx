@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   deleteFile,
@@ -34,7 +34,6 @@ const STORAGE_KEY = "pnb.documentAssistant.v1";
 type Style = "formal" | "polite";
 
 type Saved = {
-  mode: Mode;
   text: string;
   file: ExtractResult | null;
   result: string;
@@ -72,13 +71,19 @@ const ACTION_LABEL: Record<Mode, [string, string]> = {
   summarize: ["Summarize", "Summarizing…"],
   rewrite: ["Rewrite", "Rewriting…"],
   proofread: ["Check text", "Checking…"],
-  draft: ["Draft", "Drafting…"],
   data: ["Ask", "Thinking…"],
 };
 
-export default function DocumentAssistantPage() {
+type Props = {
+  /** The tool that is on show. The hub's rail chooses it, and so does the person. */
+  mode: Mode;
+  /** Called when the person picks another tool, so that the hub's rail follows. */
+  onModeChange: (mode: Mode) => void;
+};
+
+export default function DocumentAssistantPage({ mode: wanted, onModeChange }: Props) {
   const [saved] = useState(loadSaved);
-  const [mode, setMode] = useState<Mode>(saved?.mode ?? "summarize");
+  const [mode, setMode] = useState<Mode>(wanted);
   const [text, setText] = useState(saved?.text ?? "");
   const [file, setFile] = useState<ExtractResult | null>(saved?.file ?? null);
   const [result, setResult] = useState<ResultState>(
@@ -97,14 +102,30 @@ export default function DocumentAssistantPage() {
 
   useEffect(() => {
     try {
-      const data: Saved = { mode, text, file, result: result.text, style, rewrite, proofread, chat };
+      // The tool is not saved: it is in the address of the page, and the hub's
+      // rail knows it too.
+      const data: Saved = { text, file, result: result.text, style, rewrite, proofread, chat };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch {
       // Storage full or blocked: work continues, it just will not survive a refresh.
     }
-  }, [mode, text, file, result.text, style, rewrite, proofread, chat]);
+  }, [text, file, result.text, style, rewrite, proofread, chat]);
 
   useEffect(() => () => abortRef.current?.abort(), []);
+
+  // The tool may be chosen in the hub's rail while the app is open, so the two
+  // are kept in step.
+  useEffect(() => {
+    setMode(wanted);
+  }, [wanted]);
+
+  const selectMode = useCallback(
+    (next: Mode) => {
+      setMode(next);
+      onModeChange(next);
+    },
+    [onModeChange],
+  );
 
   const streaming =
     result.status === "streaming" ||
@@ -379,15 +400,7 @@ export default function DocumentAssistantPage() {
 
   return (
     <section>
-      <h1 className="text-2xl font-semibold text-pnb-maroon">Document Assistant</h1>
-      <p className="mt-2 max-w-2xl text-slate-600">
-        Proofread, rewrite and summarize letters, circulars, reports and data files, and ask
-        questions about spreadsheets. Everything runs on this machine.
-      </p>
-
-      <div className="mt-8">
-        <ModeSelector active={mode} onSelect={setMode} disabled={streaming} />
-      </div>
+      <ModeSelector active={mode} onSelect={selectMode} disabled={streaming} />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div>

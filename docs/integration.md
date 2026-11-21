@@ -308,10 +308,30 @@ dataanalyzer/.env   HANDOFF_SECRET           the one below
 served by the analyzer itself on port 8095, so there is one address to allow in the
 browser and one to frame.
 
+**It has one screen with four tools, and the hub's rail names them.** The rail of the hub
+draws the tools of the application under its card, and each tool is a route of the app
+(`/#/proofread`, `/#/rewrite`, `/#/summarize`, `/#/data`):
+
+```text
+hub rail                  analyzer
+Proofread     --------->  #/proofread     the spelling and grammar check
+Rewrite      --------->  #/rewrite       the passage, written another way
+Summarize    --------->  #/summarize     the summary of the document
+Ask about data -------->  #/data         the question about a spreadsheet
+```
+
+The list is one list: the analyzer's manifest (`GET /api/ui/manifest`) names the four
+tools, and the application draws the same four as its own buttons. The two cannot
+disagree.
+
 ## 3.9 The SQL Genie in the workspace
 
-The SQL Genie is an application of its own that the hub opens in its
-workspace, like the other three. It is not part of this repository and
+The SQL Genie is **not offered at the moment**. Its card is hidden in the hub, and the
+code of the card is kept in `landing/src/services.js` with the marks that hide it, so
+that it may be brought back by removing them.
+
+It is an application of its own that the hub opens in its
+workspace, like the other four. It is not part of this repository and
 is not started by the setup script: it is pointed at by name.
 
 ```bash
@@ -560,7 +580,7 @@ independently usable.
 | `VITE_NEWS_APP_URL` | `http://localhost:5173/` | URL of the news application opened in the workspace. |
 | `VITE_BENCHMARKING_APP_URL` | `http://localhost:8077/` | URL of Peer Benchmarking opened in the workspace. |
 | `VITE_SUMMARIZER_APP_URL` | `http://localhost:8090/` | URL of the Data Summarizer opened in the workspace. |
-| `VITE_SQL_GENIE_APP_URL` | `http://localhost:8080/` | URL of the SQL Genie opened in the workspace. |
+| `VITE_SQL_GENIE_APP_URL` | `http://localhost:8080/` | URL of the SQL Genie, whose card is hidden at the moment. |
 | `VITE_ANALYZER_APP_URL` | `http://localhost:8095/` | URL of the Data Analyzer opened in the workspace. |
 | `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. The origin of the SQL Genie has to be in this list. |
 
