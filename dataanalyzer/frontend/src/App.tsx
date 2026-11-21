@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import Header from "./components/Header";
 import DocumentAssistantPage from "./tabs/document_assistant/DocumentAssistantPage";
 import { toolFromHash, toolFromPath, type ToolId } from "./tools";
 import { isEmbed } from "./lib/embed";
@@ -145,10 +144,9 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header />
       <main
         id={`tool-${active}`}
-        className="mx-auto w-full max-w-6xl flex-1 px-6 py-12"
+        className="mx-auto w-full max-w-6xl flex-1 px-6 py-8"
       >
         <DocumentAssistantPage mode={active} onModeChange={select} />
       </main>

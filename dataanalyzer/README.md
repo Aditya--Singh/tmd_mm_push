@@ -38,6 +38,16 @@ Each tool has an address of its own (`/#/proofread`, `/#/rewrite`, `/#/summarize
 The upstream's **Circular Analyzer** and **Coming Soon** screens are not part of the tool
 as it is offered here: the first was a placeholder, and the second an announcement.
 
+## What the view shows
+
+The view starts with the four tools, and nothing else is above them: the hub draws the
+chrome of the platform, so the tool shows no banner of its own. The only thing beside the
+tools is a small sign at the right, which says whether the services of this machine are
+answering — **Services online**, **Checking services…** or **Backend offline**.
+
+Opened on its own, without the hub around it, the tool says so and asks to be opened from
+the dashboard.
+
 ## Nothing leaves this machine
 
 The model server and the grammar checker are both local services. The tool refuses to

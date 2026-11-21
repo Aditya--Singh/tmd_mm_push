@@ -308,6 +308,10 @@ dataanalyzer/.env   HANDOFF_SECRET           the one below
 served by the analyzer itself on port 8095, so there is one address to allow in the
 browser and one to frame.
 
+**It shows no chrome of its own.** The hub draws the header and the rail, so the tool
+begins straight at its four tools, and the only thing beside them is a small sign at the
+right that says whether the services of the machine are answering.
+
 **It has one screen with four tools, and the hub's rail names them.** The rail of the hub
 draws the tools of the application under its card, and each tool is a route of the app
 (`/#/proofread`, `/#/rewrite`, `/#/summarize`, `/#/data`):

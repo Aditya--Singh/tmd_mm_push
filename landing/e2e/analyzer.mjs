@@ -153,6 +153,32 @@ check(
     !/Document Assistant|Circular Analyzer|Coming Soon/.test(appText),
     appText.slice(0, 160),
 );
+
+// The app must not show a banner of its own either: the hub draws the chrome.
+check(
+    'the app shows no banner of its own',
+    !/Employee Productivity Tool/.test(appText),
+    appText.slice(0, 160),
+);
+
+// The view must begin with the four tools.
+const firstRow = await appFrame.evaluate(() => {
+    const main = document.querySelector('main');
+    if (!main) return '';
+
+    const row = main.querySelector('div');
+    if (!row) return '';
+
+    return Array.from(row.querySelectorAll('[role="radio"]'))
+        .map((b) => (b.textContent || '').trim())
+        .join(', ');
+});
+check(
+    'the view begins with the four tools',
+    firstRow === 'Proofread, Rewrite, Summarize, Ask about data',
+    firstRow,
+);
+
 check(
     'the app still says whether the services are online',
     /Services online|Checking services|Backend offline/.test(appText),

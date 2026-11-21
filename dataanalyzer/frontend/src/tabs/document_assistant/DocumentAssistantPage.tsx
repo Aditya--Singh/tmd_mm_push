@@ -10,6 +10,7 @@ import {
   type StreamEvent,
   type StreamPath,
 } from "./api";
+import ServiceStatus from "../../components/ServiceStatus";
 import DataChatPanel, {
   IDLE_CHAT,
   chatHistory,
@@ -400,7 +401,11 @@ export default function DocumentAssistantPage({ mode: wanted, onModeChange }: Pr
 
   return (
     <section>
-      <ModeSelector active={mode} onSelect={selectMode} disabled={streaming} />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <ModeSelector active={mode} onSelect={selectMode} disabled={streaming} />
+
+        <ServiceStatus />
+      </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div>
