@@ -330,18 +330,19 @@ disagree.
 
 ## 3.9 The SQL Genie in the workspace
 
-The SQL Genie is **not offered at the moment**. Its card is hidden in the hub, and the
-code of the card is kept in `landing/src/services.js` with the marks that hide it, so
-that it may be brought back by removing them.
-
-It is an application of its own that the hub opens in its
-workspace, like the other four. It is not part of this repository and
-is not started by the setup script: it is pointed at by name.
+The SQL Genie is **the last card of the rail**, after the Data Analyzer, the Data
+Summarizer, Peer Benchmarking and the News Feed. It is an application of its own that
+the hub opens in its workspace, like the other four. It is not part of this repository
+and is not started by the setup script: it is pointed at by name.
 
 ```bash
 # landing/.env
-VITE_SQL_GENIE_APP_URL=http://localhost:8080/
+VITE_SQL_GENIE_APP_URL=http://10.161.201.157:5174/
 ```
+
+The setup script writes that address when the settings do not name one, and replaces
+an address that an earlier version of the script wrote. An address that was chosen by
+hand is kept.
 
 Two things have to agree with that address:
 
@@ -584,7 +585,7 @@ independently usable.
 | `VITE_NEWS_APP_URL` | `http://localhost:5173/` | URL of the news application opened in the workspace. |
 | `VITE_BENCHMARKING_APP_URL` | `http://localhost:8077/` | URL of Peer Benchmarking opened in the workspace. |
 | `VITE_SUMMARIZER_APP_URL` | `http://localhost:8090/` | URL of the Data Summarizer opened in the workspace. |
-| `VITE_SQL_GENIE_APP_URL` | `http://localhost:8080/` | URL of the SQL Genie, whose card is hidden at the moment. |
+| `VITE_SQL_GENIE_APP_URL` | `http://10.161.201.157:5174/` | URL of the SQL Genie opened in the workspace. |
 | `VITE_ANALYZER_APP_URL` | `http://localhost:8095/` | URL of the Data Analyzer opened in the workspace. |
 | `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. The origin of the SQL Genie has to be in this list. |
 

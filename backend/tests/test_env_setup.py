@@ -354,11 +354,35 @@ def test_the_address_of_the_sql_genie_is_written_down(workspace, tmp_path):
 
     landing = (tmp_path / "landing" / ".env").read_text(encoding="utf-8")
 
-    assert "VITE_SQL_GENIE_APP_URL=http://localhost:8080/" in landing
+    assert "VITE_SQL_GENIE_APP_URL=http://10.161.201.157:5174/" in landing
 
     allowed = module.get_value(landing, "VITE_ALLOWED_CHILD_ORIGINS")
 
-    assert "http://localhost:8080" in allowed
+    assert "http://10.161.201.157:5174" in allowed
+
+
+def test_the_address_of_an_older_setup_is_replaced(workspace, tmp_path):
+    """
+    A machine that was set up before the address changed gets the new one.
+
+    The address the setup wrote before is replaced by the one it writes now,
+    so that the card opens the right application.
+    """
+    module = workspace
+
+    landing = tmp_path / "landing" / ".env"
+    landing.parent.mkdir(parents=True, exist_ok=True)
+    landing.write_text(
+        "VITE_ALLOWED_CHILD_ORIGINS=http://localhost:5173\n"
+        "VITE_SQL_GENIE_APP_URL=http://localhost:8080/\n",
+        encoding="utf-8",
+    )
+
+    workspace.main([])
+
+    written = (tmp_path / "landing" / ".env").read_text(encoding="utf-8")
+
+    assert "VITE_SQL_GENIE_APP_URL=http://10.161.201.157:5174/" in written
 
 
 def test_the_origins_that_are_already_written_are_kept(workspace, tmp_path):

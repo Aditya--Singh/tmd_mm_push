@@ -242,14 +242,13 @@ cd backend
 uv run python run_scraper.py
 ```
 
-### The SQL Genie is not in the rail
+### The SQL Genie shows nothing
 
-Its card is hidden on purpose at the moment, and the code of the card is
-kept in `landing/src/services.js` with the marks that hide it. When the
-application is ready, remove those marks, point the hub at it with
-`VITE_SQL_GENIE_APP_URL` in `landing/.env`, and add its origin to
-`VITE_ALLOWED_CHILD_ORIGINS` in the same file. Without the second one,
-the application is shown but the session is never handed over.
+The SQL Genie is the last card of the rail, and it opens the address in
+`VITE_SQL_GENIE_APP_URL` in `landing/.env` — the setup writes
+`http://10.161.201.157:5174/` there. Its origin has to be in
+`VITE_ALLOWED_CHILD_ORIGINS` in the same file, and the setup adds it. Without
+the second one, the application is shown but the session is never handed over.
 
 ### The Data Analyzer shows no documents
 

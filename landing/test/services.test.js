@@ -14,20 +14,36 @@ function serviceOf(id, services) {
     return services.find((service) => service.id === id);
 }
 
-test("the four services that are built are live", () => {
+test("the five services that are built are live", () => {
     const services = servicesForRoles({ news: "user", bench: "user" });
 
     assert.equal(serviceOf("news", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("benchmark", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.LIVE);
     assert.equal(serviceOf("analyzer", services).status, SERVICE_STATUS.LIVE);
+    assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.LIVE);
 });
 
-test("the SQL Genie is not offered yet", () => {
+test("the SQL Genie is the last card of the rail", () => {
     const services = servicesForRoles({ news: "user", bench: "user" });
 
-    // Its card is hidden, but the code is kept, so that it may be brought back.
-    assert.equal(serviceOf("sql", services), undefined);
+    // The order of the rail is the order of this list.
+    assert.deepEqual(
+        services.map((service) => service.id),
+        ["analyzer", "summarizer", "benchmark", "news", "sql"],
+    );
+});
+
+test("the SQL Genie opens the application it is pointed at", () => {
+    const sql = serviceOf(
+        "sql",
+        servicesForRoles({ news: "user", bench: "user" }),
+    );
+
+    // The address may be set in the settings of the landing page, so only the
+    // presence of one is checked here.
+    assert.ok(sql.url, "the SQL Genie has no address to open");
+    assert.equal(sql.session, SESSION_MODE.TOKEN);
 });
 
 test("the data analyzer is opened by the role of the news feed", () => {
@@ -44,15 +60,6 @@ test("the data analyzer is opened by the role of the news feed", () => {
 
     // And it has an address to open.
     assert.ok(analyzer.url);
-});
-
-test("the SQL Genie keeps its address for the day it returns", () => {
-    // The card is hidden, so the service is not offered. The setting of its
-    // address is left where it was, so that nothing else has to be set up when
-    // it comes back.
-    const sql = SERVICES.find((service) => service.id === "sql");
-
-    assert.equal(sql, undefined);
 });
 
 test("the data summarizer keeps its own sessions", () => {
@@ -122,6 +129,7 @@ test("a role that is not known opens nothing", () => {
 
     // The services that are open to everybody are still listed.
     assert.equal(serviceOf("summarizer", services).status, SERVICE_STATUS.LIVE);
+    assert.equal(serviceOf("sql", services).status, SERVICE_STATUS.LIVE);
 });
 
 test("every service names the column that decides who may open it", () => {

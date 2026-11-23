@@ -264,7 +264,7 @@ sign-out, and the rail on the left holds the services.
 | **Data Summarizer** | The Regulatory Sentinel application: the circulars and the notifications of the Reserve Bank of India, and their summaries. Opens in the workspace, already signed in, with its own sidebar replaced by a slim tab bar. |
 | **News Feed** | Opens in the workspace, already signed in, with its own header hidden. |
 | **Data Analyzer** | The PNB Employee Productivity Tool. Opens in the workspace, already signed in: the document you share is extracted, summarised, rewritten, proofread, exported, and asked about in words. The view starts with the four tools of the tool — Proofread, Rewrite, Summarize and Ask about data — and the rail grows the same four underneath its card, so that choosing one moves the application to it. |
-| **SQL Genie** | Not offered at the moment: its card is hidden in the hub. The code of the card is kept in `landing/src/services.js`, so it may be brought back by removing the marks. When it comes back, point the hub at it with `VITE_SQL_GENIE_APP_URL` in `landing/.env`, and add its origin to `VITE_ALLOWED_CHILD_ORIGINS` there as well. |
+| **SQL Genie** | The last card of the rail. It opens in the workspace, already signed in, at the address in `VITE_SQL_GENIE_APP_URL` in `landing/.env` — the setup writes `http://10.161.201.157:5174/` there, and adds the origin of the address to `VITE_ALLOWED_CHILD_ORIGINS` as well, so that the session is handed over. An address that was set by hand is kept by the setup. |
 
 Signing out of the hub ends the session in every open service as well.
 

@@ -1,14 +1,15 @@
 # 🏦 Top Management Decision Support Platform
 
 An AI-powered banking intelligence platform. A landing page hub owns the
-sign-in and opens four services inside it: the news dashboard, which
+sign-in and opens five services inside it: the news dashboard, which
 collects news from Indian business publications and summarises it with a
 local language model; Peer Benchmarking, which compares PNB with its
 peers quarter by quarter from the banks' own published figures; the
 Data Summarizer, which reads the circulars and the notifications of the
-Reserve Bank of India and writes their summaries; and the Data Analyzer,
+Reserve Bank of India and writes their summaries; the Data Analyzer,
 the PNB Employee Productivity Tool, which reads, summarises, rewrites,
-proofreads and draws the documents that are shared with it.
+proofreads and draws the documents that are shared with it; and the SQL
+Genie, which is opened at the address it is pointed at.
 
 One sign-in opens all of them, with the role the person holds in each.
 
@@ -604,7 +605,7 @@ Completed
   `role_bench` for Peer Benchmarking
 - One rail that drives every service, including the screens of Peer Benchmarking
 - The Data Analyzer: the PNB Employee Productivity Tool — a document is extracted, summarised, rewritten, proofread, exported, and asked about in words. The four tools of the tool are drawn in the rail under its card
-- The SQL Genie is kept ready but hidden: its card is commented out in `landing/src/services.js`, and it may be brought back by removing those marks
+- The SQL Genie as the last card of the rail, opened at the address in `VITE_SQL_GENIE_APP_URL` in `landing/.env`
 
 In Progress
 

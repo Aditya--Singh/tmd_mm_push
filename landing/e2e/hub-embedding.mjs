@@ -78,11 +78,23 @@ const userName = (await page.locator(".header-user-info strong").innerText()).tr
 check("signed-in user is shown", userName === USERNAME, userName);
 
 const cardCount = await page.locator(".app-card").count();
-check("all four intelligence services are listed", cardCount === 4, `${cardCount}`);
+check("all five intelligence services are listed", cardCount === 5, `${cardCount}`);
 
+// The order of the rail is the order of the services.
+const cardNames = (await page.locator(".app-card .app-name").allTextContents()).map(
+    (name) => name.trim(),
+);
 check(
-    "the SQL Genie is not offered at the moment",
-    (await page.locator(".app-card", { hasText: "SQL Genie" }).count()) === 0,
+    "the SQL Genie is the last card of the rail",
+    JSON.stringify(cardNames) ===
+        JSON.stringify([
+            "Data Analyzer",
+            "Data Summarizer",
+            "Peer Benchmarking",
+            "News Feed",
+            "SQL Genie",
+        ]),
+    JSON.stringify(cardNames),
 );
 
 check(
@@ -151,7 +163,7 @@ check(
 
 check(
     "the collapsed rail keeps the service names",
-    (await page.locator(".app-card .app-name").count()) === 4,
+    (await page.locator(".app-card .app-name").count()) === 5,
 );
 
 check(
@@ -201,12 +213,25 @@ check(
 );
 
 // ------------------------------------------------------------------
-// 3. The SQL Genie is kept, but is not offered
+// 3. The SQL Genie opens the application it is pointed at
 // ------------------------------------------------------------------
 
+await page.locator(".app-card", { hasText: "SQL Genie" }).click();
+await page.waitForTimeout(800);
+
+const sqlFrame = page.locator(".workspace-frame iframe");
+
 check(
-    "the SQL Genie has no card in the rail",
-    (await page.locator(".app-card", { hasText: "SQL Genie" }).count()) === 0,
+    "the SQL Genie opens a frame",
+    (await sqlFrame.count()) === 1,
+);
+
+const sqlSrc = (await sqlFrame.getAttribute("src")) || "";
+
+check(
+    "the frame points at the application of the SQL Genie",
+    sqlSrc.includes("10.161.201.157:5174") && sqlSrc.includes("embedded=1"),
+    sqlSrc,
 );
 
 // ------------------------------------------------------------------

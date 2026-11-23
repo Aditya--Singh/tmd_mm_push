@@ -49,7 +49,16 @@ DEFAULT_BACKEND_PORT = "8000"
 #: Where the SQL Genie is served, when the settings do not say. It is an
 #: application of its own, so this is only a guess that the setup script
 #: writes down, so that it may be changed.
-DEFAULT_SQL_GENIE_URL = "http://localhost:8080/"
+DEFAULT_SQL_GENIE_URL = "http://10.161.201.157:5174/"
+
+#: The addresses the setup script has written for the SQL Genie. One of these
+#: is replaced by the current default, so that a new address reaches the
+#: machines that were set up before. An address that was chosen by hand is
+#: left alone.
+SQL_GENIE_URLS_WRITTEN = [
+    "http://localhost:8080/",
+    DEFAULT_SQL_GENIE_URL,
+]
 
 #: The value that means "not set yet" in the example files.
 PLACEHOLDERS = {
@@ -773,8 +782,13 @@ def main(argv: list[str] | None = None) -> int:
                 )
 
             # The SQL Genie is an application of its own, so its address is
-            # written down here, so that it may be changed.
-            if not get_value(web, "VITE_SQL_GENIE_APP_URL"):
+            # written down here, so that it may be changed. An address that an
+            # earlier version of this script wrote is replaced by the current
+            # one, so that a new address reaches the machines that were set up
+            # before. An address that was chosen by hand is kept.
+            sql_url = (get_value(web, "VITE_SQL_GENIE_APP_URL") or "").strip()
+
+            if not sql_url or sql_url in SQL_GENIE_URLS_WRITTEN:
                 web = set_value(
                     web, "VITE_SQL_GENIE_APP_URL", DEFAULT_SQL_GENIE_URL
                 )
