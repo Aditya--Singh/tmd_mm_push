@@ -44,17 +44,21 @@ const DEFAULT_CHILD_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://newsintel.pnbbank.in:5173",
+    "http://topmgmtdash.pnbbank.in:5173",
     "http://localhost:8077",
     "http://127.0.0.1:8077",
     "http://newsintel.pnbbank.in:8077",
+    "http://topmgmtdash.pnbbank.in:8077",
     "http://localhost:8090",
     "http://127.0.0.1:8090",
     "http://newsintel.pnbbank.in:8090",
+    "http://topmgmtdash.pnbbank.in:8090",
     "http://10.161.201.157:5174",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
     "http://localhost:8095",
     "http://127.0.0.1:8095",
+    "http://topmgmtdash.pnbbank.in:8095",
 ];
 
 /**

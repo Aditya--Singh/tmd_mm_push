@@ -46,15 +46,15 @@ Six terminals open side by side:
 
 | Service | URL | Terminal |
 |---|---|---|
-| Landing page hub | <http://localhost:5174> | `Run: landing page` |
-| News dashboard | <http://localhost:5173> | `Run: news frontend` |
-| Peer Benchmarking | <http://localhost:8077> | `Run: benchmarking` |
+| Landing page hub | <http://topmgmtdash.pnbbank.in:5174> | `Run: landing page` |
+| News dashboard | <http://topmgmtdash.pnbbank.in:5173> | `Run: news frontend` |
+| Peer Benchmarking | <http://topmgmtdash.pnbbank.in:8077> | `Run: benchmarking` |
 | Data Summarizer | <http://localhost:8090> | `Run: the Data Summarizer` |
 | Data Analyzer | <http://localhost:8095> | `Run: the Data Analyzer` |
 | FastAPI backend | <http://127.0.0.1:8000> | `Run: backend` |
 | API documentation | <http://127.0.0.1:8000/docs> | |
 
-Open <http://localhost:5174> and sign in with a seeded account, for
+Open <http://topmgmtdash.pnbbank.in:5174> and sign in with a seeded account, for
 example `admin` / `admin@tmd26`. Select **News Feed** in the sidebar
 and the dashboard opens inside the workspace, already signed in. Select
 **Peer Benchmarking** and the benchmarking app opens there, already
@@ -266,6 +266,6 @@ The backend and the benchmarking app have to share a secret. Run
 
 The hub could not sign the app in. The two usual causes are a secret
 that does not match, and `EMBED_PARENT_ORIGINS` that does not list the
-address the hub is served from. `http://localhost:5174` and
+address the hub is served from. `http://topmgmtdash.pnbbank.in:5174` and
 `http://127.0.0.1:5174` are different origins, and the browser uses the
 one it actually typed.

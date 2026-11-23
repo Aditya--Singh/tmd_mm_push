@@ -39,6 +39,16 @@ BENCH_PORT="$(read_port benchmarking/.env 8077)"
 SENTINEL_PORT="$(read_port sentinel/.env 8090)"
 ANALYZER_PORT="$(read_port dataanalyzer/.env 8095)"
 
+# The services that are opened in the browser are told to answer on every
+# address of the machine, so that they may be reached by the name of the hub
+# and not only from the machine itself. The backend of the hub is not one of
+# them: the browser reaches it through the landing page, and it stays on this
+# machine.
+SERVICE_HOST="0.0.0.0"
+
+# The name the hub is reached by, on the network of the bank.
+HUB_NAME="topmgmtdash.pnbbank.in"
+
 cleanup() {
   echo ""
   echo "Stopping the platform."
@@ -139,28 +149,34 @@ start benchmarking bash -c "cd benchmarking && .venv/bin/python -m kpibench.main
 sleep 2
 
 # The Data Summarizer serves its own interface from the same address as its API.
-start sentinel bash -c "cd '$ROOT/sentinel/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port $SENTINEL_PORT"
+start sentinel bash -c "cd '$ROOT/sentinel/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host $SERVICE_HOST --port $SENTINEL_PORT"
 sleep 2
 
 # The Data Analyzer serves its own interface from the same address as its API.
-start analyzer bash -c "cd '$ROOT/dataanalyzer/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port $ANALYZER_PORT"
+start analyzer bash -c "cd '$ROOT/dataanalyzer/backend' && exec ../.venv/bin/python -m uvicorn app.main:app --host $SERVICE_HOST --port $ANALYZER_PORT"
 sleep 2
 
-start news bash -c "cd frontend && npm run dev -- --host 127.0.0.1 --port 5173"
-start landing bash -c "cd landing && npm run dev -- --host 127.0.0.1 --port 5174"
+start news bash -c "cd frontend && npm run dev -- --host $SERVICE_HOST --port 5173"
+start landing bash -c "cd landing && npm run dev -- --host $SERVICE_HOST --port 5174"
 
 cat <<DONE
 
 The platform is starting.
 
-    Landing page hub    http://localhost:5174
-    News dashboard      http://localhost:5173
-    Peer Benchmarking   http://localhost:$BENCH_PORT
-    Data Summarizer     http://localhost:$SENTINEL_PORT
-    Data Analyzer       http://localhost:$ANALYZER_PORT
+    Landing page hub    http://$HUB_NAME:5174
+    News dashboard      http://$HUB_NAME:5173
+    Peer Benchmarking   http://$HUB_NAME:$BENCH_PORT
+    Data Summarizer     http://$HUB_NAME:$SENTINEL_PORT
+    Data Analyzer       http://$HUB_NAME:$ANALYZER_PORT
     Backend and its API http://127.0.0.1:$BACKEND_PORT/docs
 
-Sign in at http://localhost:5174 with admin / admin@tmd26
+Sign in at http://$HUB_NAME:5174 with admin / admin@tmd26
+
+The name $HUB_NAME has to answer to this machine. Add it to the hosts file of
+the machine, and let the ports through the firewall:
+
+    echo "127.0.0.1 $HUB_NAME" | sudo tee -a /etc/hosts
+    sudo ufw allow 5173/tcp 5174/tcp $BENCH_PORT/tcp $SENTINEL_PORT/tcp $ANALYZER_PORT/tcp
 
 DONE
 

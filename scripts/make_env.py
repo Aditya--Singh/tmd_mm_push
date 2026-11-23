@@ -46,6 +46,10 @@ NEWS_EXAMPLE = ROOT / "frontend" / ".env.example"
 #: The port the backend of the hub listens on, when the settings do not say.
 DEFAULT_BACKEND_PORT = "8000"
 
+#: The port the news application listens on. It is the port of its own build
+#: settings, and does not move.
+NEWS_PORT = 5173
+
 #: Where the SQL Genie is served, when the settings do not say. It is an
 #: application of its own, so this is only a guess that the setup script
 #: writes down, so that it may be changed.
@@ -71,9 +75,33 @@ PLACEHOLDERS = {
     "ANALYZER_HANDOFF_SECRET": "",
 }
 
+#: The name the hub is reached by, on the network of the bank. The machine has
+#: to answer to it, and the other services are reached through the same name,
+#: so that a browser on another machine can open them too.
+HUB_HOST = "topmgmtdash.pnbbank.in"
+
 #: The addresses the hub is served from. The applications that are opened in its
 #: workspace may be framed and driven from these and from nowhere else.
-HUB_ORIGINS = "http://localhost:5174,http://127.0.0.1:5174"
+HUB_ORIGINS = (
+    "http://localhost:5174,"
+    "http://127.0.0.1:5174,"
+    "http://10.161.201.157:5174,"
+    f"http://{HUB_HOST}:5174"
+)
+
+#: The same list, separated by spaces, for the rules of the browsers that name
+#: their sources in a list of spaces.
+HUB_FRAME_ANCESTORS = " ".join(HUB_ORIGINS.split(","))
+
+
+def service_url(port: int) -> str:
+    """
+    The address a service is reached by, from the network.
+
+    The name of the hub is used, and not the address of the machine, so that a
+    browser on another machine opens the same services as a browser on this one.
+    """
+    return f"http://{HUB_HOST}:{port}/"
 
 
 def read(path: Path) -> str:
@@ -414,7 +442,11 @@ def origin_of(url: str) -> str:
     return match.group(1) if match else ""
 
 
-def add_origins(content: str, origins: list[str]) -> str:
+def add_origins(
+    content: str,
+    origins: list[str],
+    key: str = "VITE_ALLOWED_CHILD_ORIGINS",
+) -> str:
     """
     Add origins to the list of allowed origins, keeping the ones already there.
 
@@ -424,7 +456,7 @@ def add_origins(content: str, origins: list[str]) -> str:
     """
     current = [
         value.strip()
-        for value in (get_value(content, "VITE_ALLOWED_CHILD_ORIGINS") or "").split(",")
+        for value in (get_value(content, key) or "").split(",")
         if value.strip()
     ]
 
@@ -435,7 +467,7 @@ def add_origins(content: str, origins: list[str]) -> str:
     if not current:
         return content
 
-    return set_value(content, "VITE_ALLOWED_CHILD_ORIGINS", ",".join(current))
+    return set_value(content, key, ",".join(current))
 
 
 def set_up_the_language_model(
@@ -642,18 +674,25 @@ def main(argv: list[str] | None = None) -> int:
 
     backend = set_value(backend, "KPI_HANDOFF_SECRET", shared)
 
+    # The API is called from a browser, from the places the applications are
+    # served from. The sign-in of the hub is a request the browser makes with
+    # an origin of its own, so the address of the hub has to be in this list or
+    # the browser refuses the answer.
+    backend = add_origins(
+        backend,
+        [
+            *HUB_ORIGINS.split(","),
+            f"http://localhost:{NEWS_PORT}",
+            f"http://127.0.0.1:{NEWS_PORT}",
+            f"http://{HUB_HOST}:{NEWS_PORT}",
+        ],
+        key="CORS_ORIGINS",
+    )
+
     # The peer benchmarking app must be allowed to be framed and driven by
     # the hub, in the places the hub is served from.
-    bench = set_value(
-        bench,
-        "EMBED_PARENT_ORIGINS",
-        "http://localhost:5174,http://127.0.0.1:5174",
-    )
-    bench = set_value(
-        bench,
-        "FRAME_ANCESTORS",
-        "'self' http://localhost:5174 http://127.0.0.1:5174",
-    )
+    bench = set_value(bench, "EMBED_PARENT_ORIGINS", HUB_ORIGINS)
+    bench = set_value(bench, "FRAME_ANCESTORS", f"'self' {HUB_FRAME_ANCESTORS}")
 
     # The hub signs people in, so the app has to accept a sign-in ticket
     # for the staff roles as well. Its own password sign-in is untouched:
@@ -661,7 +700,7 @@ def main(argv: list[str] | None = None) -> int:
     bench = set_value(bench, "HANDOFF_ALLOW_STAFF", "true")
     bench = set_value(bench, "HANDOFF_AUTO_CREATE", "true")
     bench = set_value(bench, "HANDOFF_SYNC_ROLE", "true")
-    bench = set_value(bench, "DASHBOARD_URL", "http://localhost:5174/")
+    bench = set_value(bench, "DASHBOARD_URL", f"http://{HUB_HOST}:5174/")
     bench = set_value(bench, "DASHBOARD_NAME", "Executive Intelligence Hub")
 
     # The language model on this machine. The models that are installed are asked
@@ -696,15 +735,13 @@ def main(argv: list[str] | None = None) -> int:
         # The hub must be allowed to frame and drive the summarizer, in the places
         # the hub is served from.
         sentinel = set_value(sentinel, "EMBED_PARENT_ORIGINS", HUB_ORIGINS)
-        sentinel = set_value(
-            sentinel, "FRAME_ANCESTORS", f"http://localhost:5174 http://127.0.0.1:5174"
-        )
+        sentinel = set_value(sentinel, "FRAME_ANCESTORS", HUB_FRAME_ANCESTORS)
 
         # The hub signs people in, so the summarizer keeps its own sign-in switched
         # on and its own accounts: the person who signs in at the hub is signed in
         # here as well, by a ticket that is spent once.
         sentinel = set_value(sentinel, "AUTH_ENABLED", "true")
-        sentinel = set_value(sentinel, "CORS_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174")
+        sentinel = set_value(sentinel, "CORS_ORIGINS", HUB_ORIGINS)
 
         sentinel = set_up_the_summarizer(sentinel, installed, model)
 
@@ -730,12 +767,8 @@ def main(argv: list[str] | None = None) -> int:
         # The hub must be allowed to frame and drive the analyzer, in the places the
         # hub is served from.
         analyzer = set_value(analyzer, "EMBED_PARENT_ORIGINS", HUB_ORIGINS)
-        analyzer = set_value(
-            analyzer, "FRAME_ANCESTORS", "http://localhost:5174,http://127.0.0.1:5174"
-        )
-        analyzer = set_value(
-            analyzer, "CORS_ORIGINS", "http://localhost:5174,http://127.0.0.1:5174"
-        )
+        analyzer = set_value(analyzer, "FRAME_ANCESTORS", HUB_FRAME_ANCESTORS)
+        analyzer = set_value(analyzer, "CORS_ORIGINS", HUB_ORIGINS)
 
         # The model of this machine is named in the settings of the analyzer, so
         # that it says plainly what it will write with.
@@ -758,28 +791,37 @@ def main(argv: list[str] | None = None) -> int:
 
         web = set_value(web, "VITE_API_PROXY_TARGET", f"http://127.0.0.1:{port}")
 
+        if env_path == NEWS_ENV:
+            # The news application is opened in the workspace of the hub, so it
+            # has to accept the messages of the hub from the places the hub is
+            # served from.
+            web = set_value(web, "VITE_ALLOWED_PARENT_ORIGINS", HUB_ORIGINS)
+
         if env_path == LANDING_ENV:
             # The landing page opens the other services in its workspace, so it
-            # has to know where they listen.
+            # has to know where they listen. They are named by the address of
+            # the hub, so that a browser on another machine opens them too.
             web = set_value(
                 web,
                 "VITE_BENCHMARKING_APP_URL",
-                f"http://localhost:{ports['benchmarking']}/",
+                service_url(ports["benchmarking"]),
             )
 
             if "sentinel" in ports:
                 web = set_value(
                     web,
                     "VITE_SUMMARIZER_APP_URL",
-                    f"http://localhost:{ports['sentinel']}/",
+                    service_url(ports["sentinel"]),
                 )
 
             if "analyzer" in ports:
                 web = set_value(
                     web,
                     "VITE_ANALYZER_APP_URL",
-                    f"http://localhost:{ports['analyzer']}/",
+                    service_url(ports["analyzer"]),
                 )
+
+            web = set_value(web, "VITE_NEWS_APP_URL", service_url(NEWS_PORT))
 
             # The SQL Genie is an application of its own, so its address is
             # written down here, so that it may be changed. An address that an

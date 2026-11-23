@@ -423,3 +423,69 @@ def test_the_origin_of_an_address_is_read_without_the_path(workspace):
     )
     assert module.origin_of("") == ""
     assert module.origin_of("not an address") == ""
+
+
+def test_the_services_are_named_by_the_address_of_the_hub(workspace, tmp_path):
+    """
+    The hub is reached by its name, and the services it opens are named the same way.
+
+    A browser on another machine has to open the same services as a browser on
+    the machine itself, so the address of the machine is not used: the name of
+    the hub is.
+    """
+    module = workspace
+
+    workspace.main([])
+
+    landing = value_of(tmp_path / "landing" / ".env", "VITE_NEWS_APP_URL")
+
+    assert landing == "http://topmgmtdash.pnbbank.in:5173/"
+
+    assert value_of(
+        tmp_path / "landing" / ".env", "VITE_BENCHMARKING_APP_URL"
+    ) == "http://topmgmtdash.pnbbank.in:8077/"
+
+    assert value_of(
+        tmp_path / "landing" / ".env", "VITE_ANALYZER_APP_URL"
+    ) == "http://topmgmtdash.pnbbank.in:8095/"
+
+
+def test_the_name_of_the_hub_is_allowed_everywhere(workspace, tmp_path):
+    """
+    Every service has to accept the hub from the place it is served from.
+
+    Without the name of the hub in these lists, the application is shown but
+    the session is never handed over, or the browser refuses the frame.
+    """
+    module = workspace
+
+    workspace.main([])
+
+    origin = "http://topmgmtdash.pnbbank.in:5174"
+
+    # The API of the hub: the sign-in of the browser carries the name.
+    cors = value_of(tmp_path / "backend" / ".env", "CORS_ORIGINS")
+
+    assert origin in cors
+
+    # The applications that are opened in the workspace.
+    for folder in ("benchmarking", "sentinel", "dataanalyzer"):
+        env_file = tmp_path / folder / ".env"
+
+        if not env_file.exists():
+            continue
+
+        assert origin in (value_of(env_file, "EMBED_PARENT_ORIGINS") or "")
+        assert origin in (value_of(env_file, "FRAME_ANCESTORS") or "")
+
+        # Peer Benchmarking is called by the server of the hub and not by a
+        # browser, so it has no list of origins of its own.
+        cors = value_of(env_file, "CORS_ORIGINS")
+
+        if cors is not None:
+            assert origin in cors
+
+    # The news application takes the messages of the hub from the same places.
+    assert origin in (
+        value_of(tmp_path / "frontend" / ".env", "VITE_ALLOWED_PARENT_ORIGINS") or ""
+    )

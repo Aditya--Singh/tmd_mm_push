@@ -547,16 +547,16 @@ cd backend      && .venv/bin/python -m uvicorn app.main:app --reload
 cd benchmarking && .venv/bin/python -m kpibench.main
 cd sentinel/backend && ../.venv/bin/python -m uvicorn app.main:app --port 8090
 cd dataanalyzer/backend && ../.venv/bin/python -m uvicorn app.main:app --port 8095
-cd frontend     && npm run dev                # http://localhost:5173
-cd landing      && npm run dev                # http://localhost:5174
+cd frontend     && npm run dev                # http://topmgmtdash.pnbbank.in:5173
+cd landing      && npm run dev                # http://topmgmtdash.pnbbank.in:5174
 ```
 
-Open <http://localhost:5174> and sign in with a seeded account, for
+Open <http://topmgmtdash.pnbbank.in:5174> and sign in with a seeded account, for
 example `admin` / `admin@tmd26`.
 
 The news application is still reachable on its own at
-<http://localhost:5173>, where it signs in separately. Peer Benchmarking
-is still reachable on its own at <http://localhost:8077>, where it signs
+<http://topmgmtdash.pnbbank.in:5173>, where it signs in separately. Peer Benchmarking
+is still reachable on its own at <http://topmgmtdash.pnbbank.in:8077>, where it signs
 in with its own accounts. This is intentional: each service stays
 independently usable.
 
@@ -582,11 +582,11 @@ independently usable.
 | Variable | Default | Purpose |
 |---|---|---|
 | `VITE_API_BASE_URL` | empty | Base URL of the API. Empty keeps the browser on the current origin, which is what the development proxy and a reverse proxy expect. |
-| `VITE_NEWS_APP_URL` | `http://localhost:5173/` | URL of the news application opened in the workspace. |
-| `VITE_BENCHMARKING_APP_URL` | `http://localhost:8077/` | URL of Peer Benchmarking opened in the workspace. |
-| `VITE_SUMMARIZER_APP_URL` | `http://localhost:8090/` | URL of the Data Summarizer opened in the workspace. |
+| `VITE_NEWS_APP_URL` | `http://topmgmtdash.pnbbank.in:5173/` | URL of the news application opened in the workspace. |
+| `VITE_BENCHMARKING_APP_URL` | `http://topmgmtdash.pnbbank.in:8077/` | URL of Peer Benchmarking opened in the workspace. |
+| `VITE_SUMMARIZER_APP_URL` | `http://topmgmtdash.pnbbank.in:8090/` | URL of the Data Summarizer opened in the workspace. |
 | `VITE_SQL_GENIE_APP_URL` | `http://10.161.201.157:5174/` | URL of the SQL Genie opened in the workspace. |
-| `VITE_ANALYZER_APP_URL` | `http://localhost:8095/` | URL of the Data Analyzer opened in the workspace. |
+| `VITE_ANALYZER_APP_URL` | `http://topmgmtdash.pnbbank.in:8095/` | URL of the Data Analyzer opened in the workspace. |
 | `VITE_ALLOWED_CHILD_ORIGINS` | the development origins | Origins the hub accepts session messages from. The origin of the SQL Genie has to be in this list. |
 
 ### News application (`frontend/.env`)

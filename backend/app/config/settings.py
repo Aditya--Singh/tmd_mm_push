@@ -49,9 +49,11 @@ class Settings(BaseSettings):
         "http://localhost:5173,"
         "http://127.0.0.1:5173,"
         "http://newsintel.pnbbank.in:5173,"
+        "http://topmgmtdash.pnbbank.in:5173,"
         "http://localhost:5174,"
         "http://127.0.0.1:5174,"
-        "http://newsintel.pnbbank.in:5174"
+        "http://newsintel.pnbbank.in:5174,"
+        "http://topmgmtdash.pnbbank.in:5174"
     )
 
     # Peer Benchmarking, which the landing page opens in its workspace.

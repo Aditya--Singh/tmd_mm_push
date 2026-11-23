@@ -16,7 +16,7 @@ export default defineConfig(({ mode }) => {
     base: process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || '/',
     server: {
       host: true,
-      allowedHosts: ["newsintel.pnbbank.in"],
+      allowedHosts: ["newsintel.pnbbank.in", "topmgmtdash.pnbbank.in"],
       // The API is proxied so that the browser stays on a single origin
       // during development, the same way it is behind a reverse proxy in
       // production.

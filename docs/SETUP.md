@@ -5,10 +5,10 @@ them.
 
 | Part | Folder | Runs on | What it is |
 |---|---|---|---|
-| Landing page hub | `landing/` | <http://localhost:5174> | The sign-in and the frame around every service |
+| Landing page hub | `landing/` | <http://topmgmtdash.pnbbank.in:5174> | The sign-in and the frame around every service |
 | Backend | `backend/` | <http://127.0.0.1:8000> | The API: sign-in, the news, the feedback, the bridge to Peer Benchmarking |
-| News dashboard | `frontend/` | <http://localhost:5173> | The news intelligence application |
-| Peer Benchmarking | `benchmarking/` | <http://localhost:8077> | The benchmarking application |
+| News dashboard | `frontend/` | <http://topmgmtdash.pnbbank.in:5173> | The news intelligence application |
+| Peer Benchmarking | `benchmarking/` | <http://topmgmtdash.pnbbank.in:8077> | The benchmarking application |
 
 Peer Benchmarking keeps its own database, its own sessions and its own
 audit trail. The hub does not take that over: it signs the person in and
@@ -66,15 +66,15 @@ Then start everything:
 Six services come up:
 
 ```
-Landing page hub    http://localhost:5174
-News dashboard      http://localhost:5173
-Peer Benchmarking   http://localhost:8077
-Data Summarizer     http://localhost:8090
-Data Analyzer       http://localhost:8095
+Landing page hub    http://topmgmtdash.pnbbank.in:5174
+News dashboard      http://topmgmtdash.pnbbank.in:5173
+Peer Benchmarking   http://topmgmtdash.pnbbank.in:8077
+Data Summarizer     http://topmgmtdash.pnbbank.in:8090
+Data Analyzer       http://topmgmtdash.pnbbank.in:8095
 Backend and its API http://127.0.0.1:8000/docs
 ```
 
-Open <http://localhost:5174> and sign in.
+Open <http://topmgmtdash.pnbbank.in:5174> and sign in.
 
 Stop everything with <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal that
 started `run.sh`; the other services are stopped with it.
@@ -254,7 +254,7 @@ uv run python seed_users.py
 
 ## 5. Using the platform
 
-Open <http://localhost:5174> and sign in. The hub is the frame around
+Open <http://topmgmtdash.pnbbank.in:5174> and sign in. The hub is the frame around
 everything: the header holds the date, the feedback control and the
 sign-out, and the rail on the left holds the services.
 
@@ -403,7 +403,75 @@ The Data Analyzer, which is the PNB Employee Productivity Tool.
 
 ---
 
-## 7. Running it on a server
+## 7. The name the hub answers to
+
+The hub is opened at **<http://topmgmtdash.pnbbank.in:5174>**, and every
+service it opens is reached through the same name:
+
+| Service | Address |
+|---|---|
+| Landing page hub | `http://topmgmtdash.pnbbank.in:5174` |
+| News dashboard | `http://topmgmtdash.pnbbank.in:5173` |
+| Peer Benchmarking | `http://topmgmtdash.pnbbank.in:8077` |
+| Data Summarizer | `http://topmgmtdash.pnbbank.in:8090` |
+| Data Analyzer | `http://topmgmtdash.pnbbank.in:8095` |
+
+The name is written into the settings by the setup script, and the services
+answer on every address of the machine (`0.0.0.0`), so a browser on
+another machine opens the same services as a browser on the machine itself.
+
+### On the Linux machine
+
+Two things are needed on the machine that serves the platform.
+
+**1. The name has to answer to that machine.** If the name is not in the
+internal DNS, it is put in the hosts file:
+
+```bash
+echo "127.0.0.1 topmgmtdash.pnbbank.in" | sudo tee -a /etc/hosts
+```
+
+Use the address of the machine on the network instead of `127.0.0.1` when
+the browser is on another machine:
+
+```bash
+echo "10.161.201.157 topmgmtdash.pnbbank.in" | sudo tee -a /etc/hosts
+```
+
+Check that it answers:
+
+```bash
+getent hosts topmgmtdash.pnbbank.in
+curl -I http://topmgmtdash.pnbbank.in:5174/
+```
+
+**2. The ports have to be let through.** The services answer on the
+addresses of the machine, so the firewall has to let them out:
+
+```bash
+sudo ufw allow 5173/tcp    # the news dashboard
+sudo ufw allow 5174/tcp    # the hub
+sudo ufw allow 8077/tcp    # Peer Benchmarking
+sudo ufw allow 8090/tcp    # the Data Summarizer
+sudo ufw allow 8095/tcp    # the Data Analyzer
+```
+
+On a machine with no firewall, nothing is needed.
+
+The backend of the hub is not in the list: it stays on `127.0.0.1`, because
+the browser reaches it through the landing page.
+
+### A name of your own
+
+The name is one constant in `scripts/make_env.py` (`HUB_HOST`) and one entry
+in the `allowedHosts` of the two Vite builds. To use another name, change
+`HUB_HOST` there, run the setup again, and add the name to `allowedHosts` in
+`landing/vite.config.js` and `frontend/vite.config.js` — a Vite build
+refuses a request whose name it does not know.
+
+---
+
+## 8. Running it on a server
 
 The two web applications are static builds and the backend serves the
 API, so a deployment is a reverse proxy in front of three things.
@@ -443,7 +511,7 @@ browser will not show an `http://` frame inside an `https://` page.
 
 ---
 
-## 8. Tests
+## 9. Tests
 
 ### The tests of every part
 
@@ -535,7 +603,7 @@ tell `$python` and `$Python` apart.
 
 ---
 
-## 9. When something does not work
+## 10. When something does not work
 
 Before anything else, let the platform check itself:
 
@@ -693,11 +761,30 @@ scripts/make_env.py` again to write the model that is really installed into
 the settings. The grammar checker is optional: the app works without it and
 says that it is not there.
 
+### The browser says "Blocked request. This host is not allowed"
+
+The name the browser used is not known to the build of the web application.
+The name has to be in `allowedHosts` in `landing/vite.config.js` and in
+`frontend/vite.config.js`:
+
+```javascript
+allowedHosts: ["newsintel.pnbbank.in", "topmgmtdash.pnbbank.in"],
+```
+
+Then the two web applications have to be started again.
+
 ### The app is refused in the frame
 
 `FRAME_ANCESTORS` in `benchmarking/.env` must list the hub's origin.
 For the Data Summarizer it is `FRAME_ANCESTORS` in `sentinel/.env`,
 and for the Data Analyzer it is `FRAME_ANCESTORS` in `dataanalyzer/.env`.
+
+The setup script writes the name of the hub into those lists. If the name was
+changed by hand, run the setup again:
+
+```bash
+python scripts/make_env.py
+```
 
 The list is written with commas, and the app turns it into the policy the browser
 reads. A list written with spaces works as well. The origin in the list has to be

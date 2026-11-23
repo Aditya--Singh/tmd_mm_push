@@ -126,7 +126,7 @@
         },
         {
             "label": "Run: news frontend",
-            "detail": "News dashboard on http://localhost:5173",
+            "detail": "News dashboard on http://topmgmtdash.pnbbank.in:5173",
             "type": "shell",
             "command": "npm run dev",
             "options": {
@@ -150,7 +150,7 @@
         },
         {
             "label": "Run: landing page",
-            "detail": "Landing page hub on http://localhost:5174",
+            "detail": "Landing page hub on http://topmgmtdash.pnbbank.in:5174",
             "type": "shell",
             "command": "npm run dev",
             "options": {
@@ -174,7 +174,7 @@
         },
         {
             "label": "Run: benchmarking",
-            "detail": "Peer Benchmarking on http://localhost:8077",
+            "detail": "Peer Benchmarking on http://topmgmtdash.pnbbank.in:8077",
             "type": "shell",
             "command": "./.venv/bin/python -m kpibench.main",
             "windows": {
@@ -208,9 +208,9 @@
             "label": "Run: the Data Summarizer",
             "detail": "Serve the Data Summarizer on port 8090",
             "type": "shell",
-            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8090",
+            "command": "${workspaceFolder}/sentinel/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8090",
             "windows": {
-                "command": "${workspaceFolder}\\sentinel\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8090"
+                "command": "${workspaceFolder}\\sentinel\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8090"
             },
             "options": {
                 "cwd": "${workspaceFolder}/sentinel/backend"
@@ -223,9 +223,9 @@
             "label": "Run: the Data Analyzer",
             "detail": "Serve the Data Analyzer on port 8095",
             "type": "shell",
-            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8095",
+            "command": "${workspaceFolder}/dataanalyzer/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8095",
             "windows": {
-                "command": "${workspaceFolder}\\dataanalyzer\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8095"
+                "command": "${workspaceFolder}\\dataanalyzer\\.venv\\Scripts\\python.exe -m uvicorn app.main:app --host 0.0.0.0 --port 8095"
             },
             "options": {
                 "cwd": "${workspaceFolder}/dataanalyzer/backend"

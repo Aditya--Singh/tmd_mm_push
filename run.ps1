@@ -102,6 +102,16 @@ if ($benchmarkingPortLine) { $BenchmarkingPort = [int]$benchmarkingPortLine.Matc
 # apostrophe in it is escaped first.
 $rootEscaped = $root.Replace("'", "''")
 
+# The services that are opened in the browser are told to answer on every
+# address of the machine, so that they may be reached by the name of the hub
+# and not only from the machine itself. The backend of the hub is not one of
+# them: the browser reaches it through the landing page, and it stays on this
+# machine.
+$ServiceHost = '0.0.0.0'
+
+# The name the hub is reached by, on the network of the bank.
+$HubName = 'topmgmtdash.pnbbank.in'
+
 # --------------------------------------------------------------- the backend
 # Everything the backend says is kept, and shown here if it does not come up.
 $logDir = Join-Path $root 'backend/logs'
@@ -217,33 +227,36 @@ Start-Sleep -Seconds 2
 
 # The Data Summarizer. It serves its own interface from the same address as its API.
 $sentinelPython = (The-Interpreter (Join-Path $root "sentinel")).Replace("'", "''")
-Start-A-Service "summarizer" "Set-Location '$rootEscaped/sentinel/backend'; & '$sentinelPython' -m uvicorn app.main:app --host 127.0.0.1 --port $SummarizerPort" (Join-Path $root "sentinel/backend")
+Start-A-Service "summarizer" "Set-Location '$rootEscaped/sentinel/backend'; & '$sentinelPython' -m uvicorn app.main:app --host $ServiceHost --port $SummarizerPort" (Join-Path $root "sentinel/backend")
 
 Start-Sleep -Seconds 2
 
 # The Data Analyzer. It serves its own interface from the same address as its API.
 $analyzerPython = (The-Interpreter (Join-Path $root "dataanalyzer")).Replace("'", "''")
-Start-A-Service "analyzer" "Set-Location '$rootEscaped/dataanalyzer/backend'; & '$analyzerPython' -m uvicorn app.main:app --host 127.0.0.1 --port $AnalyzerPort" (Join-Path $root "dataanalyzer/backend")
+Start-A-Service "analyzer" "Set-Location '$rootEscaped/dataanalyzer/backend'; & '$analyzerPython' -m uvicorn app.main:app --host $ServiceHost --port $AnalyzerPort" (Join-Path $root "dataanalyzer/backend")
 
 Start-Sleep -Seconds 2
 
 # The news dashboard.
-Start-A-Service "news" "Set-Location '$rootEscaped/frontend'; npm run dev -- --host 127.0.0.1 --port 5173" (Join-Path $root "frontend")
+Start-A-Service "news" "Set-Location '$rootEscaped/frontend'; npm run dev -- --host $ServiceHost --port 5173" (Join-Path $root "frontend")
 
 # The landing page hub.
-Start-A-Service "landing" "Set-Location '$rootEscaped/landing'; npm run dev -- --host 127.0.0.1 --port 5174" (Join-Path $root "landing")
+Start-A-Service "landing" "Set-Location '$rootEscaped/landing'; npm run dev -- --host $ServiceHost --port 5174" (Join-Path $root "landing")
 
 Write-Host @"
 
 The platform is starting.
 
-    Landing page hub    http://localhost:5174
-    News dashboard      http://localhost:5173
-    Peer Benchmarking   http://localhost:$BenchmarkingPort
-    Data Summarizer     http://localhost:$SummarizerPort
-    Data Analyzer       http://localhost:$AnalyzerPort
+    Landing page hub    http://${HubName}:5174
+    News dashboard      http://${HubName}:5173
+    Peer Benchmarking   http://${HubName}:$BenchmarkingPort
+    Data Summarizer     http://${HubName}:$SummarizerPort
+    Data Analyzer       http://${HubName}:$AnalyzerPort
     Backend and its API http://127.0.0.1:$BackendPort/docs
 
-Sign in at http://localhost:5174 with admin / admin@tmd26
+Sign in at http://${HubName}:5174 with admin / admin@tmd26
+
+The name $HubName has to answer to this machine. Add it to the hosts file of
+the machine, and let the ports through the firewall.
 
 "@

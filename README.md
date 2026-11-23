@@ -246,7 +246,7 @@ The setup script installs everything, writes `backend/.env`,
 `benchmarking/.env`, `sentinel/.env` and `dataanalyzer/.env` with the
 secrets the servers share, points the applications at the language model
 on the machine, and creates the demo accounts. Then open
-<http://localhost:5174> and sign in with `admin` / `admin@tmd26`.
+<http://topmgmtdash.pnbbank.in:5174> and sign in with `admin` / `admin@tmd26`.
 
 Six services come up: the landing page hub on port 5174, the news
 dashboard on 5173, Peer Benchmarking on 8077, the Data Summarizer on
@@ -485,7 +485,7 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5174> and sign in with a seeded account, for
+Open <http://topmgmtdash.pnbbank.in:5174> and sign in with a seeded account, for
 example `admin` / `admin@tmd26`. The news dashboard and Peer
 Benchmarking both open inside the workspace, already signed in, each with
 the role the person holds in it.
@@ -507,7 +507,7 @@ cd benchmarking
 .venv/bin/python -m kpibench.main      # .venv\\Scripts\\python.exe on Windows
 ```
 
-It listens on <http://localhost:8077>. Opened on its own it signs in with
+It listens on <http://topmgmtdash.pnbbank.in:8077>. Opened on its own it signs in with
 its own accounts (`admin`, `analyst`, `approver`, `gm`); opened from the
 hub it is signed in with the account of the person who signed in there.
 

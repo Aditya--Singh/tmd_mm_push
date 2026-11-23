@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 5174,
-      allowedHosts: ['newsintel.pnbbank.in'],
+      allowedHosts: ['newsintel.pnbbank.in', 'topmgmtdash.pnbbank.in'],
       proxy: {
         '/api': {
           target: apiProxyTarget,

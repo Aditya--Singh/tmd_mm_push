@@ -406,7 +406,7 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:5174> and sign in with a seeded account, for
+Then open <http://topmgmtdash.pnbbank.in:5174> and sign in with a seeded account, for
 example `admin` / `admin@tmd26`.
 
 Select **News Feed** in the sidebar to open the dashboard inside the
@@ -443,7 +443,7 @@ npm install
 npm run dev
 ```
 
-Then open <http://localhost:5174>.
+Then open <http://topmgmtdash.pnbbank.in:5174>.
 
 ## 21. First-Time Machine Checklist
 
